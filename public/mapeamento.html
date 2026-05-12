@@ -15,7 +15,7 @@
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 body{font-family:var(--fb);background:var(--bg);color:var(--text);min-height:100vh}
 /* ── TOPBAR ── */
-.topbar{display:flex;align-items:center;justify-content:space-between;height:var(--th);padding:0 16px;background:var(--surface);border-bottom:1px solid var(--brd);position:fixed;top:0;left:0;right:0;z-index:50}
+.topbar{display:flex;align-items:center;justify-content:space-between;height:var(--th);padding:0 16px;padding-top:env(safe-area-inset-top,0px);height:calc(var(--th) + env(safe-area-inset-top,0px));background:var(--surface);border-bottom:1px solid var(--brd);position:fixed;top:0;left:0;right:0;z-index:50}
 .topbar img{height:28px}
 .hamburger{background:none;border:none;color:var(--muted);cursor:pointer;padding:8px;border-radius:8px;font-size:20px}
 /* ── SIDEBAR ── */
@@ -39,7 +39,7 @@ body{font-family:var(--fb);background:var(--bg);color:var(--text);min-height:100
 .logout-btn{margin-left:auto;background:none;border:none;color:var(--dim);cursor:pointer;font-size:13px;padding:4px 6px;font-family:var(--fb)}
 .logout-btn:hover{color:var(--accent)}
 /* ── MAIN ── */
-.main{padding:calc(var(--th)+20px) 16px 60px}
+.main{padding:calc(var(--th) + 28px) 16px 80px;padding-top:calc(var(--th) + 28px + env(safe-area-inset-top, 0px))}
 /* ── LOADING SCREEN ── */
 #scrLoading{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;gap:24px;text-align:center;padding:32px}
 .load-circle{width:72px;height:72px;border-radius:50%;border:3px solid var(--adim);border-top-color:var(--accent);animation:spin .8s linear infinite}
@@ -601,6 +601,7 @@ function renderReport(data) {
 
   document.getElementById('scrReport').style.display = 'block';
   document.getElementById('actionBar').style.display = 'flex';
+  window.scrollTo({ top: 0, behavior: 'instant' });
   carregarResumoClinico();
   carregarStatusEvolucao();
 }

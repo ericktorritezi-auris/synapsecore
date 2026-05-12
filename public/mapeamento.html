@@ -243,6 +243,19 @@ body{font-family:var(--fb);background:var(--bg);color:var(--text);min-height:100
       <!-- 9 SEÇÕES DO RELATÓRIO -->
       <div id="secoes"></div>
 
+      <!-- RESUMO CLÍNICO IA -->
+      <div class="section-card" id="resumoClinicoCard" style="display:none">
+        <div class="sec-title">
+          <span><span class="sec-icon">&#9997;</span> Resumo Clínico Evolutivo — IA</span>
+          <span style="display:flex;gap:6px;align-items:center">
+            <span class="resumo-versao" id="resumoVersao" style="font-size:10px;color:var(--dim)"></span>
+            <button class="edit-btn" onclick="regenerarResumo()">&#8635; Regenerar</button>
+            <a class="edit-btn" id="btnSessoes" href="#" style="text-decoration:none">Sessões &#8594;</a>
+          </span>
+        </div>
+        <div class="sec-text" id="resumoClinicoText">Carregando...</div>
+      </div>
+
       <div class="disclaimer">&#9888; Este relatório é gerado como suporte ao raciocínio clínico. Não substitui avaliação profissional. Toda decisão clínica é de responsabilidade do terapeuta.</div>
       <div class="page-footer">&copy; 2026 Synapse Core &mdash; Criado por <strong>Erick Torritezi</strong></div>
     </div>
@@ -528,6 +541,7 @@ function renderReport(data) {
 
   document.getElementById('scrReport').style.display = 'block';
   document.getElementById('actionBar').style.display = 'flex';
+  carregarResumoClinico();
 }
 
 // ── RADAR SVG ──
@@ -604,6 +618,44 @@ function toggleEdit(key) {
 }
 
 // ── SAVE ──
+// ── RESUMO CLÍNICO ──
+function carregarResumoClinico() {
+  document.getElementById('btnSessoes').href = '/sessoes/' + PACIENTE_ID;
+  api('/api/sessoes/' + PACIENTE_ID + '/resumo')
+    .then(function(data) {
+      document.getElementById('resumoClinicoCard').style.display = 'block';
+      document.getElementById('resumoVersao').textContent = 'v' + data.versao + ' · ' + new Date(data.gerado_em).toLocaleDateString('pt-BR');
+      document.getElementById('resumoClinicoText').textContent = data.conteudo_ia;
+    })
+    .catch(function() {
+      // No summary yet — show CTA only if there are sessions
+      api('/api/sessoes/' + PACIENTE_ID)
+        .then(function(sessoes) {
+          if (sessoes.length > 0) {
+            document.getElementById('resumoClinicoCard').style.display = 'block';
+            document.getElementById('resumoClinicoText').innerHTML = '<span style="color:var(--dim);font-size:12.5px;font-style:italic">Nenhum resumo gerado ainda. Acesse as sessões e clique em Regenerar.</span>';
+          }
+        }).catch(function(){});
+    });
+}
+
+function regenerarResumo() {
+  var btn = document.querySelector('[onclick="regenerarResumo()"]');
+  if (btn) { btn.disabled = true; btn.textContent = 'Gerando...'; }
+  document.getElementById('resumoClinicoText').innerHTML = '<span style="color:var(--dim);font-size:12.5px">A IA está analisando o histórico de sessões...</span>';
+  api('/api/sessoes/' + PACIENTE_ID + '/resumo/gerar', 'POST', {})
+    .then(function(data) {
+      document.getElementById('resumoVersao').textContent = 'v' + data.versao;
+      document.getElementById('resumoClinicoText').textContent = data.conteudo;
+      if (btn) { btn.disabled = false; btn.textContent = '↻ Regenerar'; }
+      showToast('Resumo clínico atualizado!', 'success');
+    })
+    .catch(function(err) {
+      if (btn) { btn.disabled = false; btn.textContent = '↻ Regenerar'; }
+      showToast(err.message || 'Erro ao regenerar.', 'error');
+    });
+}
+
 function salvarObservacoes() {
   if (!MAPEAMENTO_ID) return;
   var obs = document.getElementById('area_obs_terapeuta').value || document.getElementById('text_obs_terapeuta').textContent;

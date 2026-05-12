@@ -352,6 +352,13 @@ function renderList(patients) {
     }
     actions.appendChild(btnMap);
 
+    // Sessões button
+    var btnSess = document.createElement('a');
+    btnSess.className = 'btn btn-ghost btn-sm';
+    btnSess.href = '/sessoes/' + p.id;
+    btnSess.textContent = p.sessoes_realizadas > 0 ? 'Sessões (' + p.sessoes_realizadas + ')' : 'Sessões';
+    actions.appendChild(btnSess);
+
     if (p.telefone) {
       var tel2 = p.telefone.replace(/\D/g, '');
       var btnWa = document.createElement('a');

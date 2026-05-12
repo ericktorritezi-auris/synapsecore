@@ -378,9 +378,15 @@ async function runMigrations() {
         paciente_id    INTEGER REFERENCES pacientes(id) ON DELETE CASCADE,
         mapeamento_id  INTEGER REFERENCES mapeamentos(id),
         conteudo_json  JSONB NOT NULL,
+        resumo_at      TIMESTAMP,
         expira_em      TIMESTAMP NOT NULL,
         criado_em      TIMESTAMP DEFAULT NOW()
       )
+    `);
+
+    // Add resumo_at if upgrading from older version
+    await client.query(`
+      ALTER TABLE relatorio_tokens ADD COLUMN IF NOT EXISTS resumo_at TIMESTAMP
     `);
 
     console.log('✅ Banco de dados pronto');

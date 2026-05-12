@@ -1,6 +1,6 @@
 {
   "name": "synapse-core",
-  "version": "1.6.4",
+  "version": "1.6.5",
   "description": "Synapse Core — Plataforma de Inteligência Clínica Integrativa",
   "main": "server.js",
   "scripts": { "start": "node server.js" },

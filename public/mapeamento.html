@@ -129,6 +129,7 @@ body{font-family:var(--fb);background:var(--bg);color:var(--text);min-height:100
   .pat-header{padding:20px 32px}
   .report-body{padding:20px 32px}
   .indices-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .action-bar{left:var(--sw)}
 }
 @media(min-width:600px){.main{padding-left:24px;padding-right:24px}}
 ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:2px}
@@ -240,6 +241,17 @@ body{font-family:var(--fb);background:var(--bg);color:var(--text);min-height:100
         <div class="sec-text" id="progJust">--</div>
       </div>
 
+      <!-- EVOLUÇÃO DO PACIENTE — card logo abaixo do programa -->
+      <div class="section-card" id="evolucaoCard" style="background:linear-gradient(135deg,rgba(139,92,246,0.1),rgba(59,130,246,0.06));border:1.5px solid rgba(139,92,246,0.25)">
+        <div class="sec-title">
+          <span><span class="sec-icon">&#9651;</span> Relatório de Evolução para o Paciente</span>
+        </div>
+        <div class="sec-text" style="margin-bottom:16px;font-size:13px">Gere um <strong>link público válido por 7 dias</strong> com o relatório visual de evolução do paciente — radar comparativo (início vs atual), conquistas, objetivos e narrativa motivadora. Copie e envie diretamente para o paciente.</div>
+        <button class="btn" onclick="gerarRelatorioEvolucao()" style="width:100%;justify-content:center;font-size:14px;padding:13px;background:linear-gradient(135deg,#7c3aed,#3b82f6);color:#fff;font-family:var(--f-d);font-weight:700;border:none;border-radius:10px;cursor:pointer">
+          &#9651; Gerar Relatório de Evolução
+        </button>
+      </div>
+
       <!-- 9 SEÇÕES DO RELATÓRIO -->
       <div id="secoes"></div>
 
@@ -266,8 +278,8 @@ body{font-family:var(--fb);background:var(--bg);color:var(--text);min-height:100
 <!-- ACTION BAR (only on report) -->
 <div class="action-bar" id="actionBar" style="display:none">
   <button class="btn btn-ghost btn-sm" onclick="history.back()">&#8592; Voltar</button>
-  <button class="btn btn-ghost btn-sm" id="btnEvolucao" onclick="gerarRelatorioEvolucao()" title="Gerar link de evolução para o paciente">&#9651; Evolução</button>
-  <button class="btn btn-primary" id="btnFinalizar" onclick="salvarObservacoes()">&#10003; Salvar Alterações</button>
+  <button class="btn btn-primary" id="btnEvolucao" onclick="gerarRelatorioEvolucao()" style="flex:1;justify-content:center;background:linear-gradient(135deg,#7c3aed,#3b82f6)">&#9651; Relatório de Evolução</button>
+  <button class="btn btn-ghost btn-sm" id="btnFinalizar" onclick="salvarObservacoes()">&#10003; Salvar</button>
 </div>
 
 <!-- Modal: link de evolução -->

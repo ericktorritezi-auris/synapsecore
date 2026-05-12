@@ -35,8 +35,13 @@ router.get('/:paciente_id/status', verifyToken, async (req, res) => {
       [paciente_id]
     );
     const latestResumoAt = resumoRes.rows[0]?.gerado_em || null;
-    const summaryUpdated = latestResumoAt && existing.resumo_at &&
-      new Date(latestResumoAt) > new Date(existing.resumo_at);
+    // Allow regeneration if:
+    // a) resumo_at on token is null (old token, before column existed)
+    // b) latest summary is newer than when token was generated
+    const summaryUpdated = latestResumoAt && (
+      !existing.resumo_at ||
+      new Date(latestResumoAt) > new Date(existing.resumo_at)
+    );
 
     res.json({
       tem_ativo:   true,
@@ -77,8 +82,10 @@ router.post('/:paciente_id/gerar', verifyToken, async (req, res) => {
 
     if (activeRes.rows.length > 0) {
       const existing = activeRes.rows[0];
-      const summaryUpdated = latestResumoAt && existing.resumo_at &&
-        new Date(latestResumoAt) > new Date(existing.resumo_at);
+      const summaryUpdated = latestResumoAt && (
+        !existing.resumo_at ||
+        new Date(latestResumoAt) > new Date(existing.resumo_at)
+      );
 
       if (!summaryUpdated) {
         // Return the existing token — don't regenerate

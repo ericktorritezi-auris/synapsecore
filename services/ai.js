@@ -300,4 +300,56 @@ NÃO diagnostique. Use linguagem de hipóteses ("sugere", "indica", "observa-se 
   return { relatorio, programa: prog };
 }
 
-module.exports = { calcularIndices, detectarFlags, gerarMapeamento, FLAG_LABELS, sugerirPrograma };
+module.exports = { calcularIndices, detectarFlags, gerarMapeamento, FLAG_LABELS, sugerirPrograma, gerarResumoClinico };
+
+// ── GERA RESUMO CLÍNICO PÓS-SESSÃO ──
+async function gerarResumoClinico({ paciente, sessoes, mapeamento, pacote }) {
+  const indicesStr = mapeamento ? JSON.stringify(mapeamento.indices_json || {}, null, 0) : 'Não disponível';
+  const flagsStr   = mapeamento ? (mapeamento.flags_json || []).join(', ') || 'Nenhuma' : 'Não disponível';
+
+  const sessoesStr = sessoes.map(s =>
+    'Sessão ' + s.sessao_numero + ' (' + new Date(s.data_sessao).toLocaleDateString('pt-BR') + '): ' + (s.resumo_terapeuta || 'Sem resumo registrado.')
+  ).join('\n');
+
+  const prompt = `Você é um assistente de inteligência clínica do Synapse Core — Evolution Therapy.
+Terapeuta: Erick Torritezi — Psicanalista e Psicoterapeuta Estratégico Integrativo.
+
+PACIENTE: ${paciente.nome_completo} | Perfil: ${paciente.perfil_tipo || 'adulto'}
+PROGRAMA: ${pacote ? pacote.nome + ' (' + (pacote.qtd_sessoes || '?') + ' sessões)' : 'Não definido'}
+SESSÃO ATUAL: ${sessoes.length} sessão(ões) realizada(s)
+
+ÍNDICES DO MAPEAMENTO INICIAL: ${indicesStr}
+FLAGS CLÍNICAS: ${flagsStr}
+
+HISTÓRICO DE SESSÕES:
+${sessoesStr}
+
+Gere um Resumo Clínico Evolutivo completo e sofisticado em português brasileiro.
+O resumo deve integrar o mapeamento inicial com a evolução observada nas sessões.
+Use linguagem clínica refinada. NÃO diagnostique — sugira hipóteses e padrões.
+Escreva em prosa contínua, 4-6 parágrafos, cobrindo:
+1. Contexto de chegada e estado inicial
+2. Padrões trabalhados e evolução observada por sessão
+3. O que evoluiu e o que persiste como ponto de atenção
+4. Recursos terapêuticos ativados
+5. Posicionamento atual no processo e próximos focos
+Retorne APENAS o texto do resumo, sem JSON, sem títulos, sem marcadores.`;
+
+  const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': process.env.ANTHROPIC_API_KEY,
+      'anthropic-version': '2023-06-01'
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 2000,
+      messages: [{ role: 'user', content: prompt }]
+    })
+  });
+
+  if (!resp.ok) throw new Error('Anthropic API error: ' + resp.status);
+  const data = await resp.json();
+  return data.content?.[0]?.text || 'Resumo não gerado.';
+}

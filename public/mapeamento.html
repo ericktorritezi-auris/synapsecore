@@ -266,7 +266,29 @@ body{font-family:var(--fb);background:var(--bg);color:var(--text);min-height:100
 <!-- ACTION BAR (only on report) -->
 <div class="action-bar" id="actionBar" style="display:none">
   <button class="btn btn-ghost btn-sm" onclick="history.back()">&#8592; Voltar</button>
+  <button class="btn btn-ghost btn-sm" id="btnEvolucao" onclick="gerarRelatorioEvolucao()" title="Gerar link de evolução para o paciente">&#9651; Evolução</button>
   <button class="btn btn-primary" id="btnFinalizar" onclick="salvarObservacoes()">&#10003; Salvar Alterações</button>
+</div>
+
+<!-- Modal: link de evolução -->
+<div id="evolucaoModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)">
+  <div style="background:#1a2540;border:1px solid var(--acc-brd);border-radius:18px;padding:28px 24px;width:100%;max-width:420px;position:relative">
+    <button onclick="document.getElementById('evolucaoModal').style.display='none'" style="position:absolute;top:14px;right:16px;background:none;border:none;color:var(--dim);cursor:pointer;font-size:18px">&#10005;</button>
+    <div style="font-family:var(--f-d);font-size:16px;font-weight:700;margin-bottom:4px">&#9651; Relatório de Evolução</div>
+    <div style="font-size:12px;color:var(--dim);margin-bottom:16px">Link válido por 7 dias. Compartilhe diretamente com o paciente.</div>
+    <div id="evolucaoLoading" style="text-align:center;padding:16px;color:var(--dim);font-size:13px">
+      <div style="width:32px;height:32px;border:2px solid var(--adim);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 10px"></div>
+      Gerando análise de evolução...
+    </div>
+    <div id="evolucaoResult" style="display:none">
+      <div style="background:rgba(11,19,43,.7);border:1px solid var(--brd);border-radius:9px;padding:12px 14px;font-size:12px;color:var(--muted);word-break:break-all;margin-bottom:14px;font-family:monospace;line-height:1.5" id="evolucaoLink">--</div>
+      <div style="display:flex;gap:10px">
+        <button onclick="copiarEvolucao()" class="btn btn-primary" style="flex:1;height:44px;justify-content:center">&#128203; Copiar Link</button>
+        <a id="evolucaoAbrir" href="#" target="_blank" class="btn btn-ghost" style="height:44px;justify-content:center">Abrir &#8599;</a>
+      </div>
+      <div style="font-size:10.5px;color:var(--dim);text-align:center;margin-top:8px" id="evolucaoExpiry"></div>
+    </div>
+  </div>
 </div>
 
 <script src="/js/shared.js"></script>
@@ -618,7 +640,40 @@ function toggleEdit(key) {
 }
 
 // ── SAVE ──
-// ── RESUMO CLÍNICO ──
+// ── RELATÓRIO DE EVOLUÇÃO ──
+function gerarRelatorioEvolucao() {
+  var modal = document.getElementById('evolucaoModal');
+  modal.style.display = 'flex';
+  document.getElementById('evolucaoLoading').style.display = 'block';
+  document.getElementById('evolucaoResult').style.display  = 'none';
+
+  api('/api/evolucao/' + PACIENTE_ID + '/gerar', 'POST', {})
+    .then(function(data) {
+      document.getElementById('evolucaoLoading').style.display = 'none';
+      document.getElementById('evolucaoResult').style.display  = 'block';
+      document.getElementById('evolucaoLink').textContent      = data.link;
+      document.getElementById('evolucaoAbrir').href            = data.link;
+      var exp = new Date(data.expira_em);
+      document.getElementById('evolucaoExpiry').textContent    = 'Expira em ' + exp.toLocaleDateString('pt-BR');
+    })
+    .catch(function(err) {
+      document.getElementById('evolucaoLoading').style.display = 'none';
+      document.getElementById('evolucaoResult').style.display  = 'block';
+      document.getElementById('evolucaoLink').textContent      = err.message || 'Erro ao gerar.';
+      document.getElementById('evolucaoAbrir').style.display   = 'none';
+    });
+}
+
+function copiarEvolucao() {
+  var link = document.getElementById('evolucaoLink').textContent;
+  copyText(link, null);
+}
+
+function copyText(text) {
+  navigator.clipboard.writeText(text).then(function() { showToast('Link copiado!','success'); }).catch(function(){});
+}
+
+
 function carregarResumoClinico() {
   document.getElementById('btnSessoes').href = '/sessoes/' + PACIENTE_ID;
   api('/api/sessoes/' + PACIENTE_ID + '/resumo')

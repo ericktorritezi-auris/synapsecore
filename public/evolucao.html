@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Meu Relatório de Evolução — Synapse Core</title>
+<meta name="theme-color" content="#0B132B">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<link rel="icon" href="/favicon.ico">
+<link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700,900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#0B132B;--gold:#C4965A;--gold2:#D4AF7F;--text:#1a1f2e;--muted:#4a5568;--dim:#8a92a6;--bg:#F6F7FA;--white:#ffffff;--brd:#e2e6ed;--green:#10b981;--red:#ef4444;--fd:'Satoshi',sans-serif;--fb:'Inter',sans-serif;--r:12px}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--fb);background:var(--bg);color:var(--text);min-height:100vh}
+/* ── LOADING ── */
+#scrLoad{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:16px;text-align:center;padding:32px}
+.load-logo{width:100px;height:auto;margin-bottom:8px}
+.load-circle{width:48px;height:48px;border-radius:50%;border:3px solid rgba(196,150,90,.2);border-top-color:var(--gold);animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* ── ERROR ── */
+#scrError{display:none;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:12px;text-align:center;padding:32px}
+/* ── REPORT ── */
+#scrReport{display:none;max-width:800px;margin:0 auto;padding:32px 20px 60px}
+/* ── TOOLBAR (screen only) ── */
+.toolbar{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;background:var(--navy);border-radius:12px;margin-bottom:24px;gap:12px;flex-wrap:wrap}
+.toolbar-logo{display:flex;align-items:center;gap:10px}
+.toolbar-logo img{height:28px;filter:brightness(0) invert(1)}
+.toolbar-info{font-size:11px;color:rgba(255,255,255,.5);margin-top:2px}
+.toolbar-actions{display:flex;gap:8px}
+.btn-pdf{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;background:linear-gradient(135deg,var(--gold2),var(--gold));color:var(--navy);font-family:var(--fd);font-size:12.5px;font-weight:700;cursor:pointer;border:none;transition:all .2s}
+.btn-pdf:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(196,150,90,.4)}
+/* ── HERO ── */
+.hero{background:linear-gradient(135deg,var(--navy) 0%,#1c2e50 100%);border-radius:16px;padding:28px 24px;margin-bottom:20px;color:white;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;inset:0;background:url("data:image/svg+xml,%3Csvg viewBox='0 0 400 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M-10,80 Q80,20 200,80 T420,60' stroke='%23D4AF7F' stroke-width='.5' fill='none' opacity='.15'/%3E%3Cpath d='M-10,130 Q100,70 220,130 T420,110' stroke='%23D4AF7F' stroke-width='.5' fill='none' opacity='.1'/%3E%3C/svg%3E") center/cover;pointer-events:none}
+.hero-tag{display:inline-flex;align-items:center;gap:5px;background:rgba(212,175,127,.15);border:1px solid rgba(212,175,127,.3);border-radius:20px;padding:4px 12px;font-size:10.5px;font-weight:600;color:var(--gold2);letter-spacing:.5px;text-transform:uppercase;margin-bottom:12px}
+.hero-name{font-family:var(--fd);font-size:26px;font-weight:900;margin-bottom:4px;position:relative}
+.hero-sub{font-size:12.5px;color:rgba(255,255,255,.55);position:relative}
+.hero-score{position:absolute;right:24px;top:50%;transform:translateY(-50%);text-align:center}
+.score-ring{width:72px;height:72px;position:relative;margin:0 auto 4px}
+.score-ring svg{position:absolute;inset:0;transform:rotate(-90deg)}
+.score-num{font-family:var(--fd);font-size:22px;font-weight:900;color:var(--gold2);line-height:1;position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+.score-lbl{font-size:9.5px;color:rgba(255,255,255,.4);letter-spacing:.5px}
+/* ── SECTION CARD ── */
+.card{background:var(--white);border:1px solid var(--brd);border-radius:var(--r);padding:20px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.card-title{font-family:var(--fd);font-size:13px;font-weight:700;color:var(--navy);margin-bottom:14px;display:flex;align-items:center;gap:7px;text-transform:uppercase;letter-spacing:.8px;padding-bottom:10px;border-bottom:1px solid var(--brd)}
+.card-title span{font-size:16px}
+/* ── RADAR ── */
+.radar-wrap{display:flex;justify-content:center;margin-bottom:12px}
+.radar-legend{display:flex;justify-content:center;gap:20px;font-size:11px;color:var(--muted)}
+.leg-dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:4px}
+.leg-ini{background:rgba(11,19,43,.25);border:1.5px solid rgba(11,19,43,.4)}
+.leg-atu{background:rgba(196,150,90,.4);border:1.5px solid var(--gold)}
+/* ── DIMENSIONS ── */
+.dim-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.dim-row{display:flex;flex-direction:column;gap:4px}
+.dim-top{display:flex;justify-content:space-between;align-items:center;font-size:11.5px}
+.dim-label{color:var(--muted);font-size:11px}
+.dim-scores{display:flex;align-items:center;gap:6px}
+.dim-score-ini{font-size:10.5px;color:var(--dim)}
+.dim-score-atu{font-family:var(--fd);font-size:13px;font-weight:700;color:var(--navy)}
+.dim-delta{font-size:10.5px;font-weight:700;padding:1px 6px;border-radius:20px}
+.delta-up  {color:#059669;background:#d1fae5}
+.delta-dn  {color:var(--red);background:#fee2e2}
+.delta-eq  {color:var(--dim);background:var(--brd)}
+.dim-bar{height:5px;background:var(--brd);border-radius:3px;overflow:hidden;position:relative}
+.dim-bar-ini{height:100%;background:rgba(11,19,43,.2);border-radius:3px;position:absolute;top:0;left:0;transition:width 1s ease}
+.dim-bar-atu{height:100%;background:linear-gradient(90deg,var(--gold),var(--gold2));border-radius:3px;transition:width 1.2s ease}
+/* ── CONQUISTAS ── */
+.conquistas-list{display:flex;flex-direction:column;gap:8px}
+.conquista-item{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;background:#f0fdf4;border-radius:9px;border-left:3px solid var(--green)}
+.conq-icon{font-size:14px;flex-shrink:0;margin-top:1px}
+.conq-text{font-size:13px;color:var(--text);line-height:1.5}
+/* ── OBJETIVOS ── */
+.obj-list{display:flex;flex-direction:column;gap:10px}
+.obj-item{padding:12px 14px;border-radius:9px;border:1px solid var(--brd);background:var(--white)}
+.obj-status{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;margin-bottom:6px;letter-spacing:.3px}
+.st-alc  {background:#d1fae5;color:#065f46}
+.st-parc {background:#fef3c7;color:#92400e}
+.st-and  {background:#dbeafe;color:#1e40af}
+.st-rev  {background:#f3f4f6;color:var(--muted)}
+.obj-texto{font-size:13px;color:var(--text);margin-bottom:4px;font-weight:500}
+.obj-ev{font-size:11.5px;color:var(--muted);line-height:1.5}
+/* ── NARRATIVA ── */
+.narrativa-text{font-size:14px;color:var(--text);line-height:1.85}
+.narrativa-text p{margin-bottom:12px}
+.narrativa-text p:last-child{margin-bottom:0}
+/* ── PRÓXIMOS FOCOS ── */
+.proximos-text{font-size:13.5px;color:var(--text);line-height:1.75;background:linear-gradient(135deg,rgba(196,150,90,.06),rgba(196,150,90,.03));border-radius:9px;padding:14px 16px;border-left:3px solid var(--gold)}
+/* ── MENSAGEM ── */
+.msg-card{background:linear-gradient(135deg,var(--navy),#1c2e50);border-radius:var(--r);padding:20px 24px;color:white;text-align:center}
+.msg-text{font-size:15px;line-height:1.7;font-style:italic;margin-bottom:12px;color:rgba(255,255,255,.9)}
+.msg-assinatura{font-family:var(--fd);font-size:13px;font-weight:700;color:var(--gold2)}
+/* ── FOOTER ── */
+.report-footer{text-align:center;padding:20px 0 0;font-size:10.5px;color:var(--dim);border-top:1px solid var(--brd);margin-top:24px}
+.report-footer img{height:20px;opacity:.5;margin-bottom:6px;display:block;margin:0 auto 6px}
+.expiry-note{font-size:10px;color:var(--dim);margin-top:8px}
+/* ── PRINT ── */
+@media print {
+  .toolbar{display:none!important}
+  body{background:white}
+  #scrReport{padding:0;max-width:100%}
+  .card{box-shadow:none;break-inside:avoid}
+  .hero{break-inside:avoid}
+  @page{margin:16mm}
+}
+@media(min-width:600px){
+  #scrReport{padding:32px 32px 60px}
+}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(0,0,0,.1);border-radius:2px}
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div id="scrLoad">
+  <img src="/img/logo-vertical.png" alt="Synapse Core" class="load-logo">
+  <div class="load-circle"></div>
+  <div style="font-family:var(--fd);font-size:14px;color:var(--muted)">Carregando seu relatório...</div>
+</div>
+
+<!-- ERROR -->
+<div id="scrError">
+  <div style="font-size:40px;margin-bottom:8px;opacity:.3">&#128683;</div>
+  <div style="font-family:var(--fd);font-size:20px;font-weight:700;color:var(--navy);margin-bottom:6px">Relatório não encontrado</div>
+  <div style="font-size:13.5px;color:var(--muted);max-width:320px;line-height:1.6" id="errMsg">Este link expirou ou é inválido. Solicite um novo link ao seu terapeuta.</div>
+</div>
+
+<!-- REPORT -->
+<div id="scrReport">
+
+  <!-- Toolbar (screen only) -->
+  <div class="toolbar">
+    <div class="toolbar-logo">
+      <img src="/img/logo-horizontal.png" alt="Synapse Core">
+      <div class="toolbar-info">Relatório de Evolução Terapêutica</div>
+    </div>
+    <div class="toolbar-actions">
+      <button class="btn-pdf" onclick="exportarPDF()">&#128196; Exportar PDF</button>
+    </div>
+  </div>
+
+  <!-- Hero -->
+  <div class="hero">
+    <div class="hero-tag">&#9671; Relatório de Evolução</div>
+    <div class="hero-name" id="heroNome">--</div>
+    <div class="hero-sub" id="heroSub">--</div>
+    <div class="hero-score">
+      <div class="score-ring">
+        <svg viewBox="0 0 72 72" width="72" height="72">
+          <circle cx="36" cy="36" r="30" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="5"/>
+          <circle cx="36" cy="36" r="30" fill="none" stroke="#D4AF7F" stroke-width="5"
+            stroke-dasharray="188.5" stroke-dashoffset="188.5" id="scoreCircle" stroke-linecap="round"/>
+        </svg>
+        <div class="score-num" id="heroScore">--</div>
+      </div>
+      <div class="score-lbl">ÍNDICE GLOBAL</div>
+    </div>
+  </div>
+
+  <!-- Radar + Dimensions -->
+  <div class="card">
+    <div class="card-title"><span>&#9672;</span> Evolução por Dimensão</div>
+    <div class="radar-wrap" id="radarWrap"></div>
+    <div class="radar-legend">
+      <div><span class="leg-dot leg-ini"></span>Início</div>
+      <div><span class="leg-dot leg-atu"></span>Atual</div>
+    </div>
+    <div class="dim-grid" id="dimGrid"></div>
+  </div>
+
+  <!-- Conquistas -->
+  <div class="card" id="conquistasCard" style="display:none">
+    <div class="card-title"><span>&#127775;</span> Suas Conquistas</div>
+    <div class="conquistas-list" id="conquistasList"></div>
+  </div>
+
+  <!-- Narrativa -->
+  <div class="card">
+    <div class="card-title"><span>&#128195;</span> Sua Jornada</div>
+    <div class="narrativa-text" id="narrativaText">--</div>
+  </div>
+
+  <!-- Objetivos -->
+  <div class="card" id="objetivosCard" style="display:none">
+    <div class="card-title"><span>&#127919;</span> Seus Objetivos</div>
+    <div class="obj-list" id="objetivosList"></div>
+  </div>
+
+  <!-- Próximos focos -->
+  <div class="card" id="focosCard" style="display:none">
+    <div class="card-title"><span>&#128301;</span> Próximos Passos</div>
+    <div class="proximos-text" id="focosText">--</div>
+  </div>
+
+  <!-- Mensagem do terapeuta -->
+  <div class="msg-card" id="msgCard" style="display:none">
+    <div class="msg-text" id="msgText">--</div>
+    <div class="msg-assinatura">Erick Torritezi — Evolution Therapy</div>
+  </div>
+
+  <!-- Footer -->
+  <div class="report-footer">
+    <img src="/img/logo-horizontal.png" alt="Synapse Core">
+    Relatório gerado pelo Synapse Core &mdash; Plataforma de Inteligência Clínica Integrativa<br>
+    Evolution Therapy &bull; Erick Torritezi
+    <div class="expiry-note" id="expiryNote"></div>
+  </div>
+
+</div>
+
+<script>
+var TOKEN = location.pathname.split('/').pop();
+
+window.addEventListener('DOMContentLoaded', function() {
+  fetch('/api/evolucao/' + TOKEN)
+    .then(function(r){ return r.json(); })
+    .then(function(d) {
+      if (!d.valido) {
+        document.getElementById('scrLoad').style.display='none';
+        document.getElementById('scrError').style.display='flex';
+        document.getElementById('errMsg').textContent = d.message || 'Link inválido ou expirado.';
+        return;
+      }
+      document.getElementById('scrLoad').style.display='none';
+      renderReport(d.conteudo_json, d.expira_em);
+    })
+    .catch(function() {
+      document.getElementById('scrLoad').style.display='none';
+      document.getElementById('scrError').style.display='flex';
+    });
+});
+
+function renderReport(d, expiraEm) {
+  document.getElementById('scrReport').style.display='block';
+
+  // Hero
+  document.getElementById('heroNome').textContent = d.paciente?.nome || '--';
+  var parts = [];
+  if (d.pacote?.nome) parts.push(d.pacote.nome);
+  if (d.sessoes_total) parts.push(d.sessoes_total + ' sessões realizadas');
+  if (d.data_inicio && d.data_ultima) {
+    parts.push(formatDate(d.data_inicio) + ' a ' + formatDate(d.data_ultima));
+  }
+  document.getElementById('heroSub').textContent = parts.join(' · ');
+
+  // Global score
+  var ini = d.indices_iniciais || {};
+  var atu = d.indices_atuais  || {};
+  var keys = ['D1','D2','D3','D4','D5','D6','D7'];
+  var iniVals = keys.map(function(k){ return ini[k]||50; });
+  var atuVals = keys.map(function(k){ return atu[k]||iniVals[keys.indexOf(k)]; });
+  var globalAtu = Math.round(atuVals.reduce(function(a,b){return a+b;},0)/atuVals.length);
+  document.getElementById('heroScore').textContent = globalAtu;
+
+  // Animate score ring
+  setTimeout(function() {
+    var circ = document.getElementById('scoreCircle');
+    var pct = globalAtu / 100;
+    var total = 188.5;
+    circ.style.strokeDashoffset = total * (1 - pct);
+    circ.style.transition = 'stroke-dashoffset 1.2s ease';
+  }, 200);
+
+  // Radar
+  renderRadar(iniVals, atuVals);
+
+  // Dimensions
+  var dimLabels = ['Emocional','Cognitivo','Relacional','Existencial','Corporal','Comportamental','Psicossocial'];
+  var grid = document.getElementById('dimGrid');
+  grid.innerHTML = '';
+  keys.forEach(function(k, i) {
+    var iv = ini[k] || 50;
+    var av = atu[k] || iv;
+    var dt = av - iv;
+    var dtLabel = dt > 2 ? '+'+Math.round(dt)+' pts' : dt < -2 ? Math.round(dt)+' pts' : 'estável';
+    var dtClass = dt > 2 ? 'delta-up' : dt < -2 ? 'delta-dn' : 'delta-eq';
+
+    var row = document.createElement('div'); row.className='dim-row';
+    row.innerHTML = '<div class="dim-top"><span class="dim-label">'+dimLabels[i]+'</span><div class="dim-scores"><span class="dim-score-ini">'+Math.round(iv)+'</span><span style="color:var(--brd)">→</span><span class="dim-score-atu">'+Math.round(av)+'</span><span class="dim-delta '+dtClass+'">'+dtLabel+'</span></div></div>'
+      + '<div class="dim-bar"><div class="dim-bar-ini" style="width:0%" data-w="'+iv+'%"></div><div class="dim-bar-atu" style="width:0%" data-w="'+av+'%"></div></div>';
+    grid.appendChild(row);
+  });
+  // Animate bars
+  setTimeout(function() {
+    document.querySelectorAll('.dim-bar-ini, .dim-bar-atu').forEach(function(b) {
+      b.style.width = b.dataset.w;
+    });
+  }, 150);
+
+  // Conquistas
+  if (d.conquistas && d.conquistas.length) {
+    document.getElementById('conquistasCard').style.display='block';
+    var cl = document.getElementById('conquistasList'); cl.innerHTML='';
+    d.conquistas.forEach(function(c) {
+      var item = document.createElement('div'); item.className='conquista-item';
+      item.innerHTML='<span class="conq-icon">&#10003;</span><span class="conq-text">'+escHtml(c)+'</span>';
+      cl.appendChild(item);
+    });
+  }
+
+  // Narrativa
+  var narEl = document.getElementById('narrativaText');
+  narEl.innerHTML='';
+  var paras = (d.narrativa_paciente||'').split('\n').filter(function(p){return p.trim();});
+  paras.forEach(function(p) {
+    var pel=document.createElement('p'); pel.textContent=p; narEl.appendChild(pel);
+  });
+
+  // Objetivos
+  if (d.objetivos && d.objetivos.length) {
+    document.getElementById('objetivosCard').style.display='block';
+    var ol=document.getElementById('objetivosList'); ol.innerHTML='';
+    var stMap={
+      'alcancado':'st-alc','alcançado':'st-alc',
+      'parcialmente_alcancado':'st-parc','parcialmente alcançado':'st-parc',
+      'em_andamento':'st-and','em andamento':'st-and',
+      'revisado':'st-rev'
+    };
+    var stLbl={
+      'alcancado':'✓ Alcançado','alcançado':'✓ Alcançado',
+      'parcialmente_alcancado':'◑ Parcialmente alcançado','parcialmente alcançado':'◑ Parcialmente alcançado',
+      'em_andamento':'● Em andamento','em andamento':'● Em andamento',
+      'revisado':'↻ Revisado'
+    };
+    d.objetivos.forEach(function(obj) {
+      var cls = stMap[obj.status] || 'st-and';
+      var lbl = stLbl[obj.status] || obj.status;
+      var item = document.createElement('div'); item.className='obj-item';
+      item.innerHTML='<div class="obj-status '+cls+'">'+lbl+'</div>'
+        +'<div class="obj-texto">'+escHtml(obj.objetivo||'')+'</div>'
+        +(obj.evidencia?'<div class="obj-ev">'+escHtml(obj.evidencia)+'</div>':'');
+      ol.appendChild(item);
+    });
+  }
+
+  // Próximos focos
+  if (d.proximos_focos) {
+    document.getElementById('focosCard').style.display='block';
+    document.getElementById('focosText').textContent=d.proximos_focos;
+  }
+
+  // Mensagem terapeuta
+  if (d.mensagem_terapeuta) {
+    document.getElementById('msgCard').style.display='block';
+    document.getElementById('msgText').textContent='"'+d.mensagem_terapeuta+'"';
+  }
+
+  // Expiry
+  if (expiraEm) {
+    var exp=new Date(expiraEm);
+    document.getElementById('expiryNote').textContent='Este relatório está disponível até '+exp.toLocaleDateString('pt-BR')+'.';
+  }
+}
+
+function renderRadar(iniVals, atuVals) {
+  var cx=160,cy=155,r=110,n=7;
+  var labels=['Emocional','Cognitivo','Relacional','Existencial','Corporal','Comportamental','Psicossocial'];
+
+  function toXY(i,pct) {
+    var angle=(Math.PI*2*i/n)-Math.PI/2;
+    return{x:cx+pct/100*r*Math.cos(angle),y:cy+pct/100*r*Math.sin(angle)};
+  }
+
+  var grid='';
+  [20,40,60,80,100].forEach(function(p) {
+    var gp=Array.from({length:n},function(_,i){var pt=toXY(i,p);return pt.x+','+pt.y;}).join(' ');
+    grid+='<polygon points="'+gp+'" fill="none" stroke="'+((p===100)?'#0B132B':'#e2e6ed')+'" stroke-width="'+(p===100?'1':'0.8')+'"/>';
+  });
+
+  var axes=Array.from({length:n},function(_,i){var p=toXY(i,100);return'<line x1="'+cx+'" y1="'+cy+'" x2="'+p.x+'" y2="'+p.y+'" stroke="#e2e6ed" stroke-width="0.8"/>';}).join('');
+
+  var iniPts=iniVals.map(function(v,i){var p=toXY(i,v);return p.x+','+p.y;}).join(' ');
+  var atuPts=atuVals.map(function(v,i){var p=toXY(i,v);return p.x+','+p.y;}).join(' ');
+
+  var lbls=labels.map(function(l,i) {
+    var p=toXY(i,118);
+    var anchor=p.x<cx-5?'end':p.x>cx+5?'start':'middle';
+    return'<text x="'+p.x+'" y="'+p.y+'" text-anchor="'+anchor+'" fill="#6b7280" font-size="9.5" font-family="Inter">'+l+'</text>';
+  }).join('');
+
+  var dots=atuVals.map(function(v,i){var p=toXY(i,v);return'<circle cx="'+p.x+'" cy="'+p.y+'" r="3.5" fill="'+((v>=(iniVals[i]||50))?'#C4965A':'#ef4444')+'"/>';}).join('');
+
+  document.getElementById('radarWrap').innerHTML='<svg width="320" height="310" viewBox="0 0 320 310" xmlns="http://www.w3.org/2000/svg">'
+    +grid+axes
+    +'<polygon points="'+iniPts+'" fill="rgba(11,19,43,0.06)" stroke="rgba(11,19,43,0.3)" stroke-width="1.5" stroke-dasharray="4 3"/>'
+    +'<polygon points="'+atuPts+'" fill="rgba(196,150,90,0.15)" stroke="#C4965A" stroke-width="2"/>'
+    +dots+lbls
+    +'</svg>';
+}
+
+function formatDate(d) {
+  if (!d) return '';
+  return new Date(d).toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'numeric'});
+}
+
+function escHtml(t) {
+  return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function exportarPDF() {
+  document.title = 'Relatório de Evolução — Synapse Core';
+  window.print();
+}
+</script>
+</body>
+</html>

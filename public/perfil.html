@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Perfil — Synapse Core</title>
+<meta name="theme-color" content="#0B132B">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<link rel="icon" href="/favicon.ico">
+<link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700,900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0B132B;--sf:#1C2541;--s2:rgba(28,37,65,.75);--ac:#D4AF7F;--adim:rgba(212,175,127,.1);--abrd:rgba(212,175,127,.25);--tx:#F5F7FA;--mu:#C9D1D9;--dim:rgba(201,209,217,.4);--brd:rgba(201,209,217,.1);--fd:'Satoshi',sans-serif;--fb:'Inter',sans-serif;--r:12px;--sw:260px;--th:60px;--red:rgba(239,68,68,1);--green:#10b981}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--fb);background:var(--bg);color:var(--tx);min-height:100vh}
+.topbar{display:flex;align-items:center;justify-content:space-between;height:var(--th);padding:0 16px;padding-top:env(safe-area-inset-top,0px);height:calc(var(--th) + env(safe-area-inset-top,0px));background:var(--sf);border-bottom:1px solid var(--brd);position:fixed;top:0;left:0;right:0;z-index:50}
+.topbar img{height:28px}
+.hamburger{background:none;border:none;color:var(--mu);cursor:pointer;padding:8px;border-radius:8px;font-size:20px}
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:40;backdrop-filter:blur(2px)}
+.overlay.open{display:block}
+.sidebar{width:var(--sw);background:var(--sf);border-right:1px solid var(--brd);position:fixed;top:0;left:0;bottom:0;z-index:45;display:flex;flex-direction:column;transform:translateX(-100%);transition:transform .3s cubic-bezier(.4,0,.2,1);overflow-y:auto}
+.sidebar.open{transform:translateX(0)}
+.sb-logo{padding:20px 20px 18px;border-bottom:1px solid var(--brd);flex-shrink:0}
+.sb-logo img{height:32px}
+.sb-nav{flex:1;padding:12px 10px;overflow-y:auto}
+.nav-section{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--dim);padding:14px 10px 6px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:9px;cursor:pointer;color:var(--mu);font-size:13.5px;text-decoration:none;transition:all .18s;margin-bottom:1px;border:1px solid transparent}
+.nav-item:hover{background:rgba(255,255,255,.04);color:var(--tx)}
+.nav-item.active{background:var(--adim);color:var(--ac);border-color:var(--abrd)}
+.nav-item .ni{font-size:16px;width:20px;text-align:center;flex-shrink:0}
+.sb-footer{padding:14px 12px;border-top:1px solid var(--brd);flex-shrink:0}
+.user-pill{display:flex;align-items:center;gap:10px;padding:10px;background:rgba(11,19,43,.5);border-radius:10px;border:1px solid var(--brd)}
+.user-av{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--ac),#b8924e);display:flex;align-items:center;justify-content:center;font-family:var(--fd);font-size:12px;font-weight:700;color:var(--bg);flex-shrink:0;overflow:hidden}
+.user-name{font-size:12.5px;font-weight:500}
+.user-role{font-size:10px;color:var(--dim)}
+.logout-btn{margin-left:auto;background:none;border:none;color:var(--dim);cursor:pointer;font-size:13px;padding:4px 6px;font-family:var(--fb)}
+.logout-btn:hover{color:var(--ac)}
+.main{padding:calc(var(--th) + 28px + env(safe-area-inset-top,0px)) 16px 60px}
+/* Page */
+.ph{margin-bottom:24px}
+.ph-title{font-family:var(--fd);font-size:22px;font-weight:700}
+.ph-sub{font-size:12px;color:var(--dim);margin-top:3px}
+/* Section card */
+.sec{background:var(--s2);border:1px solid var(--brd);border-radius:var(--r);padding:20px;margin-bottom:16px}
+.sec::before{content:'';display:block;height:2px;background:linear-gradient(90deg,var(--ac),transparent);border-radius:2px;margin-bottom:16px}
+.sec-title{font-family:var(--fd);font-size:14px;font-weight:700;display:flex;align-items:center;gap:8px;margin-bottom:16px}
+.sec-icon{font-size:16px}
+/* Form */
+.form-grid{display:grid;grid-template-columns:1fr;gap:14px}
+.field label{display:block;font-size:10.5px;font-weight:500;color:var(--mu);letter-spacing:.8px;text-transform:uppercase;margin-bottom:5px}
+.field input,.field select,.field textarea{width:100%;background:rgba(11,19,43,.6);border:1px solid var(--brd);border-radius:8px;color:var(--tx);font-family:var(--fb);font-size:14px;padding:10px 13px;outline:none;transition:border-color .2s;-webkit-appearance:none}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--abrd)}
+.field input::placeholder,.field textarea::placeholder{color:var(--dim)}
+.field textarea{min-height:80px;resize:vertical;line-height:1.55}
+/* Upload zones */
+.upload-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.upload-zone{border:1.5px dashed var(--brd);border-radius:var(--r);padding:16px;text-align:center;cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
+.upload-zone:hover{border-color:var(--abrd);background:var(--adim)}
+.upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.upload-preview{width:100%;max-height:80px;object-fit:contain;margin-bottom:8px;border-radius:6px;display:none}
+.upload-preview.visible{display:block}
+.upload-icon{font-size:24px;margin-bottom:6px;opacity:.4}
+.upload-label{font-family:var(--fd);font-size:12px;font-weight:700;color:var(--mu);margin-bottom:3px}
+.upload-hint{font-size:10px;color:var(--dim)}
+.upload-zone.has-image .upload-icon{display:none}
+/* Registros */
+.reg-list{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
+.reg-item{display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(11,19,43,.4);border-radius:8px;border:1px solid var(--brd)}
+.reg-inst{font-family:var(--fd);font-size:13px;font-weight:700;color:var(--ac);min-width:90px}
+.reg-num{font-size:12.5px;color:var(--mu);flex:1}
+.reg-del{background:none;border:none;color:var(--dim);cursor:pointer;font-size:16px;padding:4px;border-radius:5px;flex-shrink:0;transition:color .18s}
+.reg-del:hover{color:var(--red)}
+.reg-empty{font-size:12.5px;color:var(--dim);font-style:italic;padding:8px 0}
+.add-reg{display:flex;gap:8px;flex-wrap:wrap}
+.add-reg input{flex:1;min-width:100px}
+/* Btn */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:10px 18px;border-radius:9px;font-family:var(--fd);font-size:13px;font-weight:700;cursor:pointer;border:none;transition:all .2s;text-decoration:none}
+.btn-primary{background:linear-gradient(135deg,var(--ac),#b8924e);color:var(--bg);box-shadow:0 4px 14px rgba(212,175,127,.2)}
+.btn-primary:hover:not(:disabled){transform:translateY(-1px)}
+.btn-primary:disabled{opacity:.6;cursor:not-allowed}
+.btn-ghost{background:var(--adim);color:var(--ac);border:1px solid var(--abrd)}
+.btn-sm{padding:7px 12px;font-size:12px}
+.btn-danger{background:rgba(239,68,68,.1);color:#fca5a5;border:1px solid rgba(239,68,68,.25)}
+.btn-full{width:100%;justify-content:center;margin-top:4px}
+/* Error / success */
+.msg{border-radius:8px;padding:10px 14px;font-size:12.5px;margin-top:10px;display:none}
+.msg.ok {background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.25);color:#6ee7b7}
+.msg.err{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);color:#fca5a5}
+/* Footer */
+.page-footer{text-align:center;padding:20px 0 8px;font-size:10px;color:var(--dim)}
+.page-footer strong{color:rgba(201,209,217,.4)}
+/* Password toggle */
+.pw-wrap{position:relative}
+.pw-wrap input{padding-right:44px}
+.pw-eye{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--dim);cursor:pointer;font-size:16px;padding:2px}
+@media(min-width:960px){
+  .topbar{display:none}.overlay{display:none!important}.sidebar{transform:translateX(0)}
+  .main{margin-left:var(--sw);padding:32px 32px 60px}
+  .form-grid{grid-template-columns:1fr 1fr}
+  .full{grid-column:1/-1}
+}
+@media(min-width:600px){.main{padding-left:24px;padding-right:24px}}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:2px}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <img src="/img/logo-horizontal.png" alt="Synapse Core">
+  <button class="hamburger" onclick="toggleSidebar()">&#9776;</button>
+</div>
+<div class="overlay" id="overlay" onclick="closeSidebar()"></div>
+<aside class="sidebar" id="sidebar">
+  <div class="sb-logo"><img src="/img/logo-horizontal.png" alt="Synapse Core"></div>
+  <nav class="sb-nav">
+    <div class="nav-section">Principal</div>
+    <a href="/dashboard" class="nav-item"><span class="ni">&#9672;</span> Dashboard</a>
+    <a href="/pacientes" class="nav-item"><span class="ni">&#9675;</span> Pacientes</a>
+    <div class="nav-section">Ferramentas</div>
+    <a href="/paciente-novo" class="nav-item"><span class="ni">&#9703;</span> Nova Avaliação</a>
+    <a href="#" class="nav-item"><span class="ni">&#9678;</span> Mapeamentos</a>
+    <div class="nav-section">Clínico</div>
+    <a href="#" class="nav-item"><span class="ni">&#9712;</span> Sessões</a>
+    <a href="#" class="nav-item"><span class="ni">&#8857;</span> Documentos</a>
+    <div class="nav-section">Sistema</div>
+    <a href="#" class="nav-item"><span class="ni">&#9714;</span> Logs LGPD</a>
+    <a href="/perfil" class="nav-item active"><span class="ni">&#9715;</span> Configurações</a>
+  </nav>
+  <div class="sb-footer">
+    <div class="user-pill">
+      <div class="user-av" id="userAvatar">ET</div>
+      <div style="overflow:hidden;flex:1"><div class="user-name" id="userName">--</div><div class="user-role">Evolution Therapy</div></div>
+      <button class="logout-btn" onclick="logout()">Sair</button>
+    </div>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="ph">
+    <div class="ph-title">Perfil &amp; Configurações</div>
+    <div class="ph-sub">Seus dados, registros profissionais e imagens para documentos</div>
+  </div>
+
+  <!-- ① Identidade Visual -->
+  <div class="sec">
+    <div class="sec-title"><span class="sec-icon">🎨</span> Identidade Visual</div>
+    <div class="upload-grid">
+      <div>
+        <div style="font-size:10.5px;color:var(--mu);letter-spacing:.8px;text-transform:uppercase;margin-bottom:7px">Foto de Perfil</div>
+        <div class="upload-zone" id="zoneFoto" onclick="triggerUpload('inputFoto')">
+          <input type="file" id="inputFoto" accept="image/*" onchange="handleUpload('inputFoto','prevFoto','zoneFoto','foto_url')">
+          <img id="prevFoto" class="upload-preview" alt="Foto">
+          <div class="upload-icon">👤</div>
+          <div class="upload-label">Foto do terapeuta</div>
+          <div class="upload-hint">Aparece no relatório de evolução</div>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:10.5px;color:var(--mu);letter-spacing:.8px;text-transform:uppercase;margin-bottom:7px">Logo da Clínica</div>
+        <div class="upload-zone" id="zoneLogo" onclick="triggerUpload('inputLogo')">
+          <input type="file" id="inputLogo" accept="image/*" onchange="handleUpload('inputLogo','prevLogo','zoneLogo','logo_url')">
+          <img id="prevLogo" class="upload-preview" alt="Logo">
+          <div class="upload-icon">🏢</div>
+          <div class="upload-label">Logo da Evolution Therapy</div>
+          <div class="upload-hint">Usada nos documentos clínicos</div>
+        </div>
+      </div>
+    </div>
+    <div id="msgUploadVisual" class="msg"></div>
+    <button class="btn btn-primary btn-full" onclick="salvarUploads(['foto_url','logo_url'],'msgUploadVisual')" style="margin-top:14px">Salvar Imagens</button>
+  </div>
+
+  <!-- ② Dados Pessoais -->
+  <div class="sec">
+    <div class="sec-title"><span class="sec-icon">👤</span> Dados Pessoais</div>
+    <div class="form-grid">
+      <div class="field full">
+        <label>Nome Completo <span style="color:var(--ac)">*</span></label>
+        <input type="text" id="pNome" placeholder="Seu nome completo">
+      </div>
+      <div class="field">
+        <label>Email</label>
+        <input type="email" id="pEmail" placeholder="email@exemplo.com">
+      </div>
+      <div class="field">
+        <label>Telefone / WhatsApp</label>
+        <input type="tel" id="pTelefone" placeholder="(11) 99999-9999">
+      </div>
+      <div class="field full">
+        <label>Especialidades</label>
+        <input type="text" id="pEspecialidades" placeholder="Ex: Psicanalista · Psicoterapeuta Integrativo · Master Hipnoterapeuta">
+      </div>
+      <div class="field full">
+        <label>Bio Profissional</label>
+        <textarea id="pBio" placeholder="Breve apresentação profissional que aparecerá nos documentos..."></textarea>
+      </div>
+    </div>
+    <div id="msgDados" class="msg"></div>
+    <button class="btn btn-primary btn-full" onclick="salvarDados()" style="margin-top:14px">Salvar Dados Pessoais</button>
+  </div>
+
+  <!-- ③ Registros Profissionais -->
+  <div class="sec">
+    <div class="sec-title"><span class="sec-icon">🏛️</span> Registros Profissionais</div>
+    <div class="reg-list" id="regList">
+      <div class="reg-empty">Carregando...</div>
+    </div>
+    <div class="add-reg">
+      <div class="field" style="flex:1;min-width:100px;margin:0">
+        <input type="text" id="regInstituicao" placeholder="Ex: ABRAPH">
+      </div>
+      <div class="field" style="flex:1;min-width:100px;margin:0">
+        <input type="text" id="regNumero" placeholder="Nº do registro">
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="adicionarRegistro()" style="height:42px;align-self:flex-end">+ Adicionar</button>
+    </div>
+    <div id="msgRegistros" class="msg"></div>
+  </div>
+
+  <!-- ④ Documentos Clínicos -->
+  <div class="sec">
+    <div class="sec-title"><span class="sec-icon">✍️</span> Documentos Clínicos</div>
+    <div style="font-size:12.5px;color:var(--mu);margin-bottom:16px;line-height:1.55">Imagens usadas na geração de documentos clínicos. Assinatura: fundo transparente (PNG). Carimbo: imagem com seus dados profissionais.</div>
+    <div class="upload-grid">
+      <div>
+        <div style="font-size:10.5px;color:var(--mu);letter-spacing:.8px;text-transform:uppercase;margin-bottom:7px">Assinatura</div>
+        <div class="upload-zone" id="zoneAssinatura" onclick="triggerUpload('inputAssinatura')">
+          <input type="file" id="inputAssinatura" accept="image/*" onchange="handleUpload('inputAssinatura','prevAssinatura','zoneAssinatura','assinatura_url')">
+          <img id="prevAssinatura" class="upload-preview" alt="Assinatura">
+          <div class="upload-icon">✍️</div>
+          <div class="upload-label">Assinatura digital</div>
+          <div class="upload-hint">PNG com fundo transparente</div>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:10.5px;color:var(--mu);letter-spacing:.8px;text-transform:uppercase;margin-bottom:7px">Carimbo</div>
+        <div class="upload-zone" id="zoneCarimbo" onclick="triggerUpload('inputCarimbo')">
+          <input type="file" id="inputCarimbo" accept="image/*" onchange="handleUpload('inputCarimbo','prevCarimbo','zoneCarimbo','carimbo_url')">
+          <img id="prevCarimbo" class="upload-preview" alt="Carimbo">
+          <div class="upload-icon">🔏</div>
+          <div class="upload-label">Carimbo profissional</div>
+          <div class="upload-hint">Com seus dados e registros</div>
+        </div>
+      </div>
+    </div>
+    <div id="msgUploadDocs" class="msg"></div>
+    <button class="btn btn-primary btn-full" onclick="salvarUploads(['assinatura_url','carimbo_url'],'msgUploadDocs')" style="margin-top:14px">Salvar Documentos</button>
+  </div>
+
+  <!-- ⑤ Segurança -->
+  <div class="sec">
+    <div class="sec-title"><span class="sec-icon">🔒</span> Segurança</div>
+    <div class="form-grid">
+      <div class="field full">
+        <label>Senha Atual</label>
+        <div class="pw-wrap">
+          <input type="password" id="senhaAtual" placeholder="••••••••" autocomplete="current-password">
+          <button type="button" class="pw-eye" onclick="togglePw('senhaAtual',this)">👁</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>Nova Senha</label>
+        <div class="pw-wrap">
+          <input type="password" id="senhaNova" placeholder="Mínimo 6 caracteres" autocomplete="new-password">
+          <button type="button" class="pw-eye" onclick="togglePw('senhaNova',this)">👁</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>Confirmar Nova Senha</label>
+        <div class="pw-wrap">
+          <input type="password" id="senhaConfirm" placeholder="Repita a nova senha" autocomplete="new-password">
+          <button type="button" class="pw-eye" onclick="togglePw('senhaConfirm',this)">👁</button>
+        </div>
+      </div>
+    </div>
+    <div id="msgSenha" class="msg"></div>
+    <button class="btn btn-primary btn-full" onclick="alterarSenha()" style="margin-top:14px">Alterar Senha</button>
+  </div>
+
+  <div class="page-footer">&copy; 2026 Synapse Core &mdash; <strong>Erick Torritezi</strong> &mdash; v1.7.0</div>
+</main>
+
+<script src="/js/shared.js"></script>
+<script>
+checkAuth();
+renderUserPill();
+
+var uploads = {};     // pending uploads keyed by field
+var perfil  = null;
+
+// ── LOAD PROFILE ──
+window.addEventListener('DOMContentLoaded', function() {
+  api('/api/perfil').then(function(d) {
+    perfil = d;
+    document.getElementById('pNome').value          = d.nome          || '';
+    document.getElementById('pEmail').value         = d.email         || '';
+    document.getElementById('pTelefone').value      = d.telefone      || '';
+    document.getElementById('pEspecialidades').value= d.especialidades|| '';
+    document.getElementById('pBio').value           = d.bio           || '';
+    if (d.foto_url)       showPreview('prevFoto',      'zoneFoto',      d.foto_url);
+    if (d.logo_url)       showPreview('prevLogo',      'zoneLogo',      d.logo_url);
+    if (d.assinatura_url) showPreview('prevAssinatura','zoneAssinatura',d.assinatura_url);
+    if (d.carimbo_url)    showPreview('prevCarimbo',   'zoneCarimbo',   d.carimbo_url);
+    renderRegistros(d.registros || []);
+  }).catch(function() {
+    showToast('Erro ao carregar perfil.','error');
+  });
+});
+
+// ── IMAGE HANDLING ──
+function triggerUpload(inputId) {
+  // Prevent double-fire since input is overlaid
+}
+
+function handleUpload(inputId, previewId, zoneId, field) {
+  var file = document.getElementById(inputId).files[0];
+  if (!file) return;
+  if (file.size > 1024 * 1024) { showToast('Imagem muito grande. Use até 1MB.','error'); return; }
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    uploads[field] = e.target.result;
+    showPreview(previewId, zoneId, e.target.result);
+  };
+  reader.readAsDataURL(file);
+}
+
+function showPreview(previewId, zoneId, src) {
+  var img  = document.getElementById(previewId);
+  var zone = document.getElementById(zoneId);
+  img.src = src;
+  img.classList.add('visible');
+  zone.classList.add('has-image');
+}
+
+// ── SAVE UPLOADS ──
+function salvarUploads(fields, msgId) {
+  var payload = {};
+  var hasData = false;
+  fields.forEach(function(f) {
+    if (uploads[f] !== undefined) { payload[f] = uploads[f]; hasData = true; }
+    else if (perfil && perfil[f])  { payload[f] = perfil[f]; }
+  });
+  if (!hasData) { showMsg(msgId,'Selecione pelo menos uma imagem antes de salvar.','err'); return; }
+  api('/api/perfil/uploads','PUT', payload)
+    .then(function() {
+      fields.forEach(function(f){ if (uploads[f]) { if(perfil) perfil[f]=uploads[f]; delete uploads[f]; }});
+      showMsg(msgId,'Imagens salvas com sucesso!','ok');
+      // Update user pill photo if foto_url changed
+      if (payload.foto_url) { var u=getUser(); if(u){u.foto_url=payload.foto_url; localStorage.setItem('sc_terapeuta',JSON.stringify(u));} renderUserPill(); }
+    })
+    .catch(function(err){ showMsg(msgId, err.message||'Erro ao salvar.','err'); });
+}
+
+// ── SAVE PERSONAL DATA ──
+function salvarDados() {
+  var nome = document.getElementById('pNome').value.trim();
+  if (!nome) { showMsg('msgDados','Nome é obrigatório.','err'); return; }
+  api('/api/perfil/dados','PUT',{
+    nome, email: document.getElementById('pEmail').value||null,
+    telefone: document.getElementById('pTelefone').value||null,
+    especialidades: document.getElementById('pEspecialidades').value||null,
+    bio: document.getElementById('pBio').value||null
+  })
+  .then(function() {
+    showMsg('msgDados','Dados salvos com sucesso!','ok');
+    var u = getUser(); if(u){ u.nome = nome; localStorage.setItem('sc_terapeuta',JSON.stringify(u)); } renderUserPill();
+  })
+  .catch(function(err){ showMsg('msgDados',err.message||'Erro ao salvar.','err'); });
+}
+
+// ── REGISTROS ──
+function renderRegistros(list) {
+  var wrap = document.getElementById('regList');
+  wrap.innerHTML = '';
+  if (!list.length) {
+    var em = document.createElement('div'); em.className='reg-empty';
+    em.textContent = 'Nenhum registro cadastrado.'; wrap.appendChild(em); return;
+  }
+  list.forEach(function(r) {
+    var item = document.createElement('div'); item.className='reg-item';
+    var inst = document.createElement('span'); inst.className='reg-inst'; inst.textContent=r.instituicao;
+    var num  = document.createElement('span'); num.className='reg-num';  num.textContent='Nº '+r.numero;
+    var del  = document.createElement('button'); del.className='reg-del'; del.innerHTML='&#10005;';
+    del.dataset.id = r.id;
+    del.addEventListener('click', function(){ removerRegistro(this.dataset.id); });
+    item.appendChild(inst); item.appendChild(num); item.appendChild(del);
+    wrap.appendChild(item);
+  });
+}
+
+function adicionarRegistro() {
+  var inst = document.getElementById('regInstituicao').value.trim();
+  var num  = document.getElementById('regNumero').value.trim();
+  if (!inst || !num) { showMsg('msgRegistros','Preencha instituição e número.','err'); return; }
+  api('/api/perfil/registros','POST',{ instituicao:inst, numero:num })
+    .then(function(data) {
+      document.getElementById('regInstituicao').value='';
+      document.getElementById('regNumero').value='';
+      if (perfil) perfil.registros = (perfil.registros||[]).concat([data]);
+      renderRegistros(perfil ? perfil.registros : [data]);
+      showMsg('msgRegistros','Registro adicionado!','ok');
+    })
+    .catch(function(err){ showMsg('msgRegistros',err.message||'Erro.','err'); });
+}
+
+function removerRegistro(id) {
+  if (!confirm('Remover este registro?')) return;
+  api('/api/perfil/registros/'+id,'DELETE')
+    .then(function() {
+      if (perfil) perfil.registros = (perfil.registros||[]).filter(function(r){return r.id!=id;});
+      renderRegistros(perfil ? perfil.registros : []);
+      showMsg('msgRegistros','Registro removido.','ok');
+    })
+    .catch(function(err){ showMsg('msgRegistros',err.message||'Erro.','err'); });
+}
+
+// ── SENHA ──
+function togglePw(inputId, btn) {
+  var inp = document.getElementById(inputId);
+  inp.type = inp.type==='password'?'text':'password';
+  btn.textContent = inp.type==='password'?'👁':'🙈';
+}
+
+function alterarSenha() {
+  var atual   = document.getElementById('senhaAtual').value;
+  var nova    = document.getElementById('senhaNova').value;
+  var confirm = document.getElementById('senhaConfirm').value;
+  if (!atual||!nova||!confirm) { showMsg('msgSenha','Preencha todos os campos.','err'); return; }
+  if (nova !== confirm) { showMsg('msgSenha','Nova senha e confirmação não conferem.','err'); return; }
+  if (nova.length < 6) { showMsg('msgSenha','A nova senha deve ter ao menos 6 caracteres.','err'); return; }
+  api('/api/perfil/senha','PUT',{ senha_atual:atual, senha_nova:nova, senha_confirmacao:confirm })
+    .then(function() {
+      document.getElementById('senhaAtual').value='';
+      document.getElementById('senhaNova').value='';
+      document.getElementById('senhaConfirm').value='';
+      showMsg('msgSenha','Senha alterada com sucesso!','ok');
+    })
+    .catch(function(err){ showMsg('msgSenha',err.message||'Erro ao alterar senha.','err'); });
+}
+
+// ── HELPERS ──
+function showMsg(id, text, type) {
+  var el = document.getElementById(id);
+  el.textContent = text;
+  el.className = 'msg ' + type;
+  el.style.display = 'block';
+  setTimeout(function(){ el.style.display='none'; }, 4000);
+}
+</script>
+</body>
+</html>

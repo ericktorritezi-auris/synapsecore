@@ -139,7 +139,7 @@ body{font-family:var(--fb);background:var(--bg);color:var(--tx);min-height:100vh
     <a href="#" class="nav-item active"><span class="ni">&#9712;</span> Sessões</a>
     <div class="nav-section">Sistema</div>
     <a href="#" class="nav-item"><span class="ni">&#9714;</span> Logs LGPD</a>
-    <a href="#" class="nav-item"><span class="ni">&#9715;</span> Configurações</a>
+    <a href="/perfil" class="nav-item"><span class="ni">&#9715;</span> Configurações</a>
   </nav>
   <div class="sb-footer">
     <div class="user-pill">
@@ -182,6 +182,26 @@ body{font-family:var(--fb);background:var(--bg);color:var(--tx);min-height:100vh
   <div class="btn-row">
     <button class="btn btn-primary" onclick="toggleForm()">&#43; Registrar Sessão</button>
     <button class="btn btn-ghost" id="btnResumo" onclick="verResumo()">&#9654; Resumo Clínico IA</button>
+    <button class="btn btn-ghost" onclick="abrirEvolucao()" id="btnEvolSess">&#9651; Relatório de Evolução</button>
+  </div>
+
+  <!-- Evolution link panel (inside sessoes) -->
+  <div id="evolSessPanel" style="display:none;background:linear-gradient(135deg,rgba(139,92,246,0.08),rgba(28,37,65,.5));border:1px solid rgba(139,92,246,.25);border-radius:var(--r);padding:18px;margin-bottom:20px">
+    <div style="font-family:var(--fd);font-size:13px;font-weight:700;color:var(--tx);margin-bottom:4px">&#9651; Relatório de Evolução</div>
+    <div style="font-size:12px;color:var(--mu);margin-bottom:12px">Gera um link público (7 dias) com a evolução visual do paciente para você compartilhar.</div>
+    <div id="evolSessLoading" style="display:none;text-align:center;padding:12px;color:var(--dim);font-size:13px">
+      <div style="width:28px;height:28px;border:2px solid var(--adim);border-top-color:var(--ac);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 8px"></div>
+      Gerando análise de evolução...
+    </div>
+    <div id="evolSessResult" style="display:none">
+      <div style="background:rgba(11,19,43,.6);border:1px solid var(--brd);border-radius:8px;padding:11px 13px;font-size:11.5px;color:var(--mu);word-break:break-all;margin-bottom:12px;font-family:monospace" id="evolSessLink">--</div>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-primary btn-sm" onclick="copiarEvolLink()" style="flex:1;justify-content:center">&#128203; Copiar Link</button>
+        <a class="btn btn-ghost btn-sm" id="evolSessAbrir" href="#" target="_blank" style="justify-content:center">Abrir &#8599;</a>
+      </div>
+      <div style="font-size:10.5px;color:var(--dim);margin-top:8px;text-align:center" id="evolSessExpiry"></div>
+    </div>
+    <button onclick="gerarEvolSess()" class="btn btn-ghost" id="btnGerarEvolSess" style="width:100%;justify-content:center;margin-top:4px">Gerar agora</button>
   </div>
 
   <!-- Add session form -->
@@ -499,6 +519,46 @@ function gerarResumo() {
       btn.disabled=false; btn.innerHTML='&#8635; Regenerar';
       showToast(err.message||'Erro ao gerar resumo.','error');
     });
+}
+
+// ── RELATÓRIO DE EVOLUÇÃO (sessões) ──
+function abrirEvolucao() {
+  var panel = document.getElementById('evolSessPanel');
+  if (panel.style.display === 'none') {
+    panel.style.display = 'block';
+    panel.scrollIntoView({behavior:'smooth', block:'start'});
+  } else {
+    panel.style.display = 'none';
+  }
+}
+
+function gerarEvolSess() {
+  var btn = document.getElementById('btnGerarEvolSess');
+  btn.style.display = 'none';
+  document.getElementById('evolSessLoading').style.display = 'block';
+  document.getElementById('evolSessResult').style.display  = 'none';
+
+  api('/api/evolucao/' + PACIENTE_ID + '/gerar', 'POST', {})
+    .then(function(data) {
+      document.getElementById('evolSessLoading').style.display = 'none';
+      document.getElementById('evolSessResult').style.display  = 'block';
+      document.getElementById('evolSessLink').textContent      = data.link;
+      document.getElementById('evolSessAbrir').href            = data.link;
+      var exp = new Date(data.expira_em);
+      document.getElementById('evolSessExpiry').textContent    = 'Expira em ' + exp.toLocaleDateString('pt-BR');
+    })
+    .catch(function(err) {
+      document.getElementById('evolSessLoading').style.display = 'none';
+      btn.style.display = '';
+      showToast(err.message || 'Erro ao gerar. Verifique se há mapeamento e sessões registradas.', 'error');
+    });
+}
+
+function copiarEvolLink() {
+  var link = document.getElementById('evolSessLink').textContent;
+  navigator.clipboard.writeText(link)
+    .then(function() { showToast('Link copiado!', 'success'); })
+    .catch(function() { showToast('Não foi possível copiar.', 'error'); });
 }
 
 // ── INATIVAR / EXCLUIR ──

@@ -492,11 +492,11 @@ function gerarResumo() {
     .then(function(data) {
       document.getElementById('resumoBadge').textContent='v'+data.versao;
       document.getElementById('resumoText').textContent=data.conteudo;
-      btn.disabled=false; btn.textContent='&#8635; Regenerar';
+      btn.disabled=false; btn.innerHTML='&#8635; Regenerar';
       showToast('Resumo clínico atualizado!','success');
     })
     .catch(function(err) {
-      btn.disabled=false; btn.textContent='&#8635; Regenerar';
+      btn.disabled=false; btn.innerHTML='&#8635; Regenerar';
       showToast(err.message||'Erro ao gerar resumo.','error');
     });
 }

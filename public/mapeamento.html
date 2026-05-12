@@ -647,11 +647,11 @@ function regenerarResumo() {
     .then(function(data) {
       document.getElementById('resumoVersao').textContent = 'v' + data.versao;
       document.getElementById('resumoClinicoText').textContent = data.conteudo;
-      if (btn) { btn.disabled = false; btn.textContent = '↻ Regenerar'; }
+      if (btn) { btn.disabled = false; btn.innerHTML = '&#8635; Regenerar'; }
       showToast('Resumo clínico atualizado!', 'success');
     })
     .catch(function(err) {
-      if (btn) { btn.disabled = false; btn.textContent = '↻ Regenerar'; }
+      if (btn) { btn.disabled = false; btn.innerHTML = '&#8635; Regenerar'; }
       showToast(err.message || 'Erro ao regenerar.', 'error');
     });
 }

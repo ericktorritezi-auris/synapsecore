@@ -307,6 +307,20 @@ async function gerarResumoClinico({ paciente, sessoes, mapeamento, pacote }) {
   const indicesStr = mapeamento ? JSON.stringify(mapeamento.indices_json || {}, null, 0) : 'Não disponível';
   const flagsStr   = mapeamento ? (mapeamento.flags_json || []).join(', ') || 'Nenhuma' : 'Não disponível';
 
+  // Extract therapist observations from mapping protocol
+  const proto = mapeamento?.protocolo_json || {};
+  const obsText       = proto.obs_terapeuta     || '';
+  const objText       = proto.objetivos_iniciais || '';
+  const protocolText  = proto.protocolo_sugerido || '';
+  const sinteseText   = proto.sintese_caso       || '';
+
+  const obsBlock = [
+    obsText      ? 'Observações do terapeuta: ' + obsText : '',
+    objText      ? 'Objetivos iniciais definidos: ' + objText : '',
+    protocolText ? 'Protocolo sugerido (editado): ' + protocolText : '',
+    sinteseText  ? 'Síntese inicial do caso: ' + sinteseText : ''
+  ].filter(Boolean).join('\n\n');
+
   const sessoesStr = sessoes.map(s =>
     'Sessão ' + s.sessao_numero + ' (' + new Date(s.data_sessao).toLocaleDateString('pt-BR') + '): ' + (s.resumo_terapeuta || 'Sem resumo registrado.')
   ).join('\n');
@@ -321,11 +335,14 @@ SESSÃO ATUAL: ${sessoes.length} sessão(ões) realizada(s)
 ÍNDICES DO MAPEAMENTO INICIAL: ${indicesStr}
 FLAGS CLÍNICAS: ${flagsStr}
 
+${obsBlock ? 'OBSERVAÇÕES E DIRECIONAMENTOS DO TERAPEUTA:\n' + obsBlock : ''}
+
 HISTÓRICO DE SESSÕES:
 ${sessoesStr}
 
-Gere um Resumo Clínico Evolutivo completo e sofisticado em português brasileiro.
-O resumo deve integrar o mapeamento inicial com a evolução observada nas sessões.
+Gere um Resumo Clínico Evolutivo completo em português brasileiro.
+Integre o mapeamento inicial, as observações do terapeuta e a evolução observada nas sessões.
+Quando o terapeuta tiver registrado objetivos ou direcionamentos específicos, referencie-os na narrativa.
 Use linguagem clínica refinada. NÃO diagnostique — sugira hipóteses e padrões.
 Escreva em prosa contínua, 4-6 parágrafos, cobrindo:
 1. Contexto de chegada e estado inicial

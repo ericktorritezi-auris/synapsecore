@@ -1,2 +1,13 @@
-# synapsecore
-O Synapse Core é uma plataforma de inteligência clínica integrativa que transforma dados terapêuticos multidimensionais em mapas clínicos, relatórios estruturados e protocolos personalizados de atendimento, auxiliando o terapeuta na organização do raciocínio clínico e na tomada de decisão terapêutica.
+# SYNAPSE CORE
+### Plataforma de Inteligência Clínica Integrativa
+
+> Onde dados emocionais se tornam direção clínica.
+
+**Versão:** 1.0.0  
+**Stack:** Node.js + Express + PostgreSQL  
+**Deploy:** Railway  
+**Domínio:** https://www.synapsecore.app.br
+
+---
+
+Desenvolvido para Evolution Therapy — Erick Torritezi.

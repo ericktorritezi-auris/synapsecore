@@ -246,10 +246,37 @@ body{font-family:var(--fb);background:var(--bg);color:var(--text);min-height:100
         <div class="sec-title">
           <span><span class="sec-icon">&#9651;</span> Relatório de Evolução para o Paciente</span>
         </div>
-        <div class="sec-text" style="margin-bottom:16px;font-size:13px">Gere um <strong>link público válido por 7 dias</strong> com o relatório visual de evolução do paciente — radar comparativo (início vs atual), conquistas, objetivos e narrativa motivadora. Copie e envie diretamente para o paciente.</div>
-        <button class="btn" onclick="gerarRelatorioEvolucao()" style="width:100%;justify-content:center;font-size:14px;padding:13px;background:linear-gradient(135deg,#7c3aed,#3b82f6);color:#fff;font-family:var(--f-d);font-weight:700;border:none;border-radius:10px;cursor:pointer">
-          &#9651; Gerar Relatório de Evolução
-        </button>
+        <!-- Estado: carregando -->
+        <div id="evolucaoStatusLoad" style="font-size:12.5px;color:var(--dim);padding:4px 0 8px">Verificando status...</div>
+        <!-- Estado: sem relatório ativo -->
+        <div id="evolucaoEstadoGerar" style="display:none">
+          <div class="sec-text" style="margin-bottom:16px;font-size:13px">Gere um <strong>link público válido por 7 dias</strong> com o relatório visual de evolução — radar comparativo, conquistas, objetivos e narrativa. Copie e envie ao paciente.</div>
+          <button class="btn" onclick="gerarRelatorioEvolucao()" id="btnEvolucaoGerar" style="width:100%;justify-content:center;font-size:14px;padding:13px;background:linear-gradient(135deg,#7c3aed,#3b82f6);color:#fff;font-family:var(--f-d);font-weight:700;border:none;border-radius:10px;cursor:pointer">
+            &#9651; Gerar Relatório de Evolução
+          </button>
+        </div>
+        <!-- Estado: relatório ativo existente -->
+        <div id="evolucaoEstadoAtivo" style="display:none">
+          <div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);border-radius:9px;padding:12px 14px;margin-bottom:12px">
+            <div style="font-size:12px;font-weight:600;color:#6ee7b7;margin-bottom:6px">&#10003; Relatório ativo</div>
+            <div style="font-size:11.5px;color:var(--muted);margin-bottom:8px" id="evolucaoAtivoInfo">--</div>
+            <div style="font-size:11px;word-break:break-all;color:var(--dim);font-family:monospace;background:rgba(11,19,43,.4);padding:8px 10px;border-radius:6px;margin-bottom:10px" id="evolucaoAtivoLink">--</div>
+            <div style="display:flex;gap:8px">
+              <button onclick="copiarLinkAtivo()" class="btn btn-primary btn-sm" style="flex:1;justify-content:center">&#128203; Copiar Link</button>
+              <a id="evolucaoAtivoAbrir" href="#" target="_blank" class="btn btn-ghost btn-sm" style="flex:1;justify-content:center">Abrir &#8599;</a>
+            </div>
+          </div>
+          <div style="font-size:11.5px;color:var(--dim)">Você poderá gerar um novo relatório após a expiração ou quando o resumo clínico for atualizado.</div>
+        </div>
+        <!-- Estado: pode regerar (resumo atualizado) -->
+        <div id="evolucaoEstadoAtualizar" style="display:none">
+          <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:9px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:#fcd34d">
+            &#9888; Resumo clínico atualizado — você pode gerar um novo relatório de evolução.
+          </div>
+          <button class="btn" onclick="gerarRelatorioEvolucao()" id="btnEvolucaoRegerar" style="width:100%;justify-content:center;font-size:14px;padding:13px;background:linear-gradient(135deg,#7c3aed,#3b82f6);color:#fff;font-family:var(--f-d);font-weight:700;border:none;border-radius:10px;cursor:pointer">
+            &#8635; Gerar Novo Relatório de Evolução
+          </button>
+        </div>
       </div>
 
       <!-- 9 SEÇÕES DO RELATÓRIO -->
@@ -278,8 +305,7 @@ body{font-family:var(--fb);background:var(--bg);color:var(--text);min-height:100
 <!-- ACTION BAR (only on report) -->
 <div class="action-bar" id="actionBar" style="display:none">
   <button class="btn btn-ghost btn-sm" onclick="history.back()">&#8592; Voltar</button>
-  <button class="btn btn-primary" id="btnEvolucao" onclick="gerarRelatorioEvolucao()" style="flex:1;justify-content:center;background:linear-gradient(135deg,#7c3aed,#3b82f6)">&#9651; Relatório de Evolução</button>
-  <button class="btn btn-ghost btn-sm" id="btnFinalizar" onclick="salvarObservacoes()">&#10003; Salvar</button>
+  <button class="btn btn-primary" id="btnEvolucao" onclick="gerarRelatorioEvolucao()" style="flex:1;justify-content:center;background:linear-gradient(135deg,#7c3aed,#3b82f6)">&#9651; Relatório de Evolução</button>  <button class="btn btn-ghost btn-sm" id="btnFinalizar" onclick="salvarObservacoes()">&#10003; Salvar</button>
 </div>
 
 <!-- Modal: link de evolução -->
@@ -576,6 +602,7 @@ function renderReport(data) {
   document.getElementById('scrReport').style.display = 'block';
   document.getElementById('actionBar').style.display = 'flex';
   carregarResumoClinico();
+  carregarStatusEvolucao();
 }
 
 // ── RADAR SVG ──
@@ -653,6 +680,47 @@ function toggleEdit(key) {
 
 // ── SAVE ──
 // ── RELATÓRIO DE EVOLUÇÃO ──
+var evolucaoLinkAtivo = '';
+
+function carregarStatusEvolucao() {
+  api('/api/evolucao/' + PACIENTE_ID + '/status')
+    .then(function(data) {
+      document.getElementById('evolucaoStatusLoad').style.display = 'none';
+      if (!data.tem_ativo) {
+        // No active report — show generate button
+        document.getElementById('evolucaoEstadoGerar').style.display = 'block';
+      } else if (data.pode_gerar) {
+        // Summary updated — allow regeneration
+        document.getElementById('evolucaoEstadoAtualizar').style.display = 'block';
+        evolucaoLinkAtivo = data.link;
+      } else {
+        // Active report exists — show it
+        var exp = new Date(data.expira_em);
+        var cri = new Date(data.criado_em);
+        document.getElementById('evolucaoEstadoAtivo').style.display = 'block';
+        document.getElementById('evolucaoAtivoInfo').textContent =
+          'Gerado em ' + cri.toLocaleDateString('pt-BR') + ' · Expira em ' + exp.toLocaleDateString('pt-BR');
+        document.getElementById('evolucaoAtivoLink').textContent = data.link;
+        document.getElementById('evolucaoAtivoAbrir').href = data.link;
+        evolucaoLinkAtivo = data.link;
+        // Also update action bar button
+        var btnBar = document.getElementById('btnEvolucao');
+        if (btnBar) { btnBar.textContent = '⊳ Ver Evolução'; btnBar.style.background = 'linear-gradient(135deg,#059669,#0d9488)'; }
+      }
+    })
+    .catch(function() {
+      // On error just show generate button
+      document.getElementById('evolucaoStatusLoad').style.display = 'none';
+      document.getElementById('evolucaoEstadoGerar').style.display = 'block';
+    });
+}
+
+function copiarLinkAtivo() {
+  navigator.clipboard.writeText(evolucaoLinkAtivo)
+    .then(function() { showToast('Link copiado!', 'success'); })
+    .catch(function() { showToast('Copie manualmente o link acima.', 'info'); });
+}
+
 function gerarRelatorioEvolucao() {
   var modal = document.getElementById('evolucaoModal');
   modal.style.display = 'flex';
@@ -665,8 +733,11 @@ function gerarRelatorioEvolucao() {
       document.getElementById('evolucaoResult').style.display  = 'block';
       document.getElementById('evolucaoLink').textContent      = data.link;
       document.getElementById('evolucaoAbrir').href            = data.link;
+      evolucaoLinkAtivo = data.link;
       var exp = new Date(data.expira_em);
-      document.getElementById('evolucaoExpiry').textContent    = 'Expira em ' + exp.toLocaleDateString('pt-BR');
+      document.getElementById('evolucaoExpiry').textContent = 'Expira em ' + exp.toLocaleDateString('pt-BR');
+      // Refresh card state
+      setTimeout(function() { carregarStatusEvolucao(); }, 500);
     })
     .catch(function(err) {
       document.getElementById('evolucaoLoading').style.display = 'none';
@@ -678,11 +749,13 @@ function gerarRelatorioEvolucao() {
 
 function copiarEvolucao() {
   var link = document.getElementById('evolucaoLink').textContent;
-  copyText(link, null);
+  navigator.clipboard.writeText(link)
+    .then(function() { showToast('Link copiado!', 'success'); })
+    .catch(function() {});
 }
 
 function copyText(text) {
-  navigator.clipboard.writeText(text).then(function() { showToast('Link copiado!','success'); }).catch(function(){});
+  navigator.clipboard.writeText(text).then(function() { showToast('Link copiado!', 'success'); }).catch(function(){});
 }
 
 

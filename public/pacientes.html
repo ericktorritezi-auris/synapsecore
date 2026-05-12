@@ -342,6 +342,16 @@ function renderList(patients) {
     });
     actions.appendChild(btnLink);
 
+    // Mapeamento button
+    var btnMap = document.createElement('a');
+    btnMap.className = 'btn btn-ghost btn-sm';
+    btnMap.href = '/mapeamento/' + p.id;
+    btnMap.textContent = p.total_mapeamentos > 0 ? 'Ver Mapeamento' : 'Gerar Mapeamento';
+    if (p.total_mapeamentos === 0 && p.link_ativo === 0) {
+      btnMap.style.opacity = '.5';
+    }
+    actions.appendChild(btnMap);
+
     if (p.telefone) {
       var tel2 = p.telefone.replace(/\D/g, '');
       var btnWa = document.createElement('a');

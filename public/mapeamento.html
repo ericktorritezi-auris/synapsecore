@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Mapeamento — Synapse Core</title>
+<meta name="theme-color" content="#0B132B">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<link rel="icon" type="image/x-icon" href="/favicon.ico">
+<link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700,900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0B132B;--surface:#1C2541;--s2:rgba(28,37,65,0.75);--accent:#D4AF7F;--adim:rgba(212,175,127,0.1);--abrd:rgba(212,175,127,0.25);--text:#F5F7FA;--muted:#C9D1D9;--dim:rgba(201,209,217,0.4);--brd:rgba(201,209,217,0.1);--fd:'Satoshi',sans-serif;--fb:'Inter',sans-serif;--r:12px;--sw:260px;--th:60px}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--fb);background:var(--bg);color:var(--text);min-height:100vh}
+/* ── TOPBAR ── */
+.topbar{display:flex;align-items:center;justify-content:space-between;height:var(--th);padding:0 16px;background:var(--surface);border-bottom:1px solid var(--brd);position:fixed;top:0;left:0;right:0;z-index:50}
+.topbar img{height:28px}
+.hamburger{background:none;border:none;color:var(--muted);cursor:pointer;padding:8px;border-radius:8px;font-size:20px}
+/* ── SIDEBAR ── */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:40;backdrop-filter:blur(2px)}
+.overlay.open{display:block}
+.sidebar{width:var(--sw);background:var(--surface);border-right:1px solid var(--brd);position:fixed;top:0;left:0;bottom:0;z-index:45;display:flex;flex-direction:column;transform:translateX(-100%);transition:transform .3s cubic-bezier(.4,0,.2,1);overflow-y:auto}
+.sidebar.open{transform:translateX(0)}
+.sb-logo{padding:20px 20px 18px;border-bottom:1px solid var(--brd);flex-shrink:0}
+.sb-logo img{height:32px}
+.sb-nav{flex:1;padding:12px 10px;overflow-y:auto}
+.nav-section{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--dim);padding:14px 10px 6px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:9px;cursor:pointer;color:var(--muted);font-size:13.5px;text-decoration:none;transition:all .18s;margin-bottom:1px;border:1px solid transparent}
+.nav-item:hover{background:rgba(255,255,255,.04);color:var(--text)}
+.nav-item.active{background:var(--adim);color:var(--accent);border-color:var(--abrd)}
+.nav-item .ni{font-size:16px;width:20px;text-align:center;flex-shrink:0}
+.sb-footer{padding:14px 12px;border-top:1px solid var(--brd);flex-shrink:0}
+.user-pill{display:flex;align-items:center;gap:10px;padding:10px;background:rgba(11,19,43,.5);border-radius:10px;border:1px solid var(--brd)}
+.user-av{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#b8924e);display:flex;align-items:center;justify-content:center;font-family:var(--fd);font-size:12px;font-weight:700;color:var(--bg);flex-shrink:0;overflow:hidden}
+.user-name{font-size:12.5px;font-weight:500}
+.user-role{font-size:10px;color:var(--dim)}
+.logout-btn{margin-left:auto;background:none;border:none;color:var(--dim);cursor:pointer;font-size:13px;padding:4px 6px;font-family:var(--fb)}
+.logout-btn:hover{color:var(--accent)}
+/* ── MAIN ── */
+.main{padding:calc(var(--th)+20px) 16px 60px}
+/* ── LOADING SCREEN ── */
+#scrLoading{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;gap:24px;text-align:center;padding:32px}
+.load-circle{width:72px;height:72px;border-radius:50%;border:3px solid var(--adim);border-top-color:var(--accent);animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.load-title{font-family:var(--fd);font-size:20px;font-weight:700}
+.load-msg{font-size:13px;color:var(--muted);max-width:280px;line-height:1.6}
+.load-steps{display:flex;flex-direction:column;gap:8px;width:100%;max-width:320px}
+.load-step{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:9px;background:var(--s2);border:1px solid var(--brd);font-size:12.5px;color:var(--muted);transition:all .4s}
+.load-step.done{color:var(--accent);border-color:var(--abrd);background:var(--adim)}
+.load-step.active{color:var(--text);border-color:var(--accent)}
+.step-dot{width:7px;height:7px;border-radius:50%;background:currentColor;flex-shrink:0}
+/* ── GENERATE SCREEN ── */
+#scrGenerate{padding:20px 0}
+.gen-card{background:linear-gradient(135deg,rgba(212,175,127,0.08),rgba(212,175,127,0.03));border:1px solid var(--abrd);border-radius:16px;padding:28px 24px;text-align:center;margin-bottom:20px}
+.gen-icon{font-size:40px;margin-bottom:12px}
+.gen-title{font-family:var(--fd);font-size:18px;font-weight:700;margin-bottom:6px}
+.gen-sub{font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:20px}
+/* ── REPORT ── */
+#scrReport{padding:0}
+/* Patient header */
+.pat-header{background:linear-gradient(135deg,rgba(212,175,127,0.08),rgba(28,37,65,0.5));border-bottom:1px solid var(--brd);padding:20px 16px;display:flex;align-items:center;gap:16px}
+.pat-av{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--fd);font-size:18px;font-weight:700;flex-shrink:0;background:linear-gradient(135deg,#7c3aed,#3b82f6);color:#fff}
+.pat-name{font-family:var(--fd);font-size:18px;font-weight:700}
+.pat-meta{font-size:11.5px;color:var(--muted);margin-top:3px;display:flex;gap:12px;flex-wrap:wrap}
+.global-score{margin-left:auto;text-align:center}
+.score-num{font-family:var(--fd);font-size:36px;font-weight:900;background:linear-gradient(135deg,var(--accent),#c4965a);-webkit-background-clip:text;-webkit-text-fill-color:transparent;line-height:1}
+.score-lbl{font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:1px;margin-top:2px}
+/* Risk badge */
+.risk-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase}
+.risk-verde  {background:rgba(16,185,129,.12);color:#6ee7b7;border:1px solid rgba(16,185,129,.25)}
+.risk-amarelo{background:rgba(245,158,11,.12);color:#fcd34d;border:1px solid rgba(245,158,11,.25)}
+.risk-vermelho{background:rgba(239,68,68,.12);color:#fca5a5;border:1px solid rgba(239,68,68,.25)}
+/* Content area */
+.report-body{padding:16px}
+/* Section card */
+.section-card{background:var(--s2);border:1px solid var(--brd);border-radius:var(--r);padding:18px;margin-bottom:14px}
+.section-card::before{content:'';display:block;height:2px;background:linear-gradient(90deg,var(--accent),transparent);border-radius:2px;margin-bottom:14px}
+.sec-title{font-family:var(--fd);font-size:13px;font-weight:700;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.sec-icon{font-size:15px}
+.sec-text{font-size:13.5px;color:var(--muted);line-height:1.75}
+.edit-btn{background:none;border:1px solid var(--brd);border-radius:7px;color:var(--dim);font-size:11px;padding:3px 10px;cursor:pointer;font-family:var(--fb);transition:all .18s;white-space:nowrap}
+.edit-btn:hover{border-color:var(--abrd);color:var(--accent)}
+.edit-area{width:100%;min-height:100px;background:rgba(11,19,43,.6);border:1px solid var(--abrd);border-radius:9px;color:var(--text);font-family:var(--fb);font-size:13.5px;padding:12px;outline:none;resize:vertical;line-height:1.7;margin-top:8px}
+.edit-area::placeholder{color:var(--dim)}
+/* Radar chart */
+.radar-wrap{display:flex;justify-content:center;margin:4px 0 10px}
+/* Indices */
+.indices-grid{display:flex;flex-direction:column;gap:10px}
+.idx-row{display:flex;flex-direction:column;gap:5px}
+.idx-top{display:flex;justify-content:space-between;font-size:11.5px}
+.idx-label{color:var(--muted)}
+.idx-val{font-family:var(--fd);font-weight:700}
+.idx-bar{height:5px;background:rgba(255,255,255,.07);border-radius:3px;overflow:hidden}
+.idx-fill{height:100%;border-radius:3px;transition:width 1.2s ease;background:linear-gradient(90deg,var(--accent),#b8924e)}
+/* Flags */
+.flags-wrap{display:flex;flex-wrap:wrap;gap:7px;margin-top:4px}
+.flag-chip{font-size:11px;padding:4px 11px;border-radius:20px;font-weight:500}
+.fc-red   {background:rgba(239,68,68,.12);color:#fca5a5;border:1px solid rgba(239,68,68,.25)}
+.fc-orange{background:rgba(249,115,22,.12);color:#fdba74;border:1px solid rgba(249,115,22,.25)}
+.fc-yellow{background:rgba(245,158,11,.12);color:#fcd34d;border:1px solid rgba(245,158,11,.25)}
+.fc-blue  {background:rgba(59,130,246,.12);color:#93c5fd;border:1px solid rgba(59,130,246,.25)}
+.fc-purple{background:rgba(139,92,246,.12);color:#c4b5fd;border:1px solid rgba(139,92,246,.25)}
+/* Program card */
+.prog-card{background:linear-gradient(135deg,rgba(139,92,246,.08),rgba(59,130,246,.06));border:1px solid rgba(139,92,246,.2);border-radius:var(--r);padding:16px;margin-bottom:14px}
+.prog-title{font-family:var(--fd);font-size:15px;font-weight:700;margin-bottom:4px}
+.prog-compat{font-size:11px;color:var(--muted);margin-bottom:10px}
+.compat-num{font-family:var(--fd);font-size:22px;font-weight:900;color:#c4b5fd}
+/* Disclaimer */
+.disclaimer{background:rgba(245,158,11,.05);border:1px solid rgba(245,158,11,.2);border-radius:9px;padding:12px 14px;font-size:11.5px;color:rgba(252,211,77,.7);line-height:1.65;margin-bottom:14px}
+/* Alert (vermelho) */
+.alert-crise{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);border-radius:var(--r);padding:16px;margin-bottom:14px}
+.alert-title{font-family:var(--fd);font-size:14px;font-weight:700;color:#fca5a5;margin-bottom:6px}
+.alert-text{font-size:13px;color:rgba(252,165,165,.8);line-height:1.65}
+/* Action bar */
+.action-bar{position:fixed;bottom:0;left:0;right:0;padding:12px 16px;background:rgba(11,19,43,.92);backdrop-filter:blur(12px);border-top:1px solid var(--brd);display:flex;gap:10px;z-index:20}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:10px 16px;border-radius:9px;font-family:var(--fd);font-size:12.5px;font-weight:700;cursor:pointer;border:none;transition:all .2s;text-decoration:none;white-space:nowrap}
+.btn-primary{background:linear-gradient(135deg,var(--accent),#b8924e);color:var(--bg);flex:1;justify-content:center;box-shadow:0 4px 16px rgba(212,175,127,.2)}
+.btn-ghost{background:var(--adim);color:var(--accent);border:1px solid var(--abrd)}
+.btn-sm{padding:8px 14px;font-size:12px}
+.btn:disabled{opacity:.55;cursor:not-allowed}
+/* Footer */
+.page-footer{text-align:center;padding:20px 0 80px;font-size:10px;color:var(--dim)}
+.page-footer strong{color:rgba(201,209,217,.4)}
+@media(min-width:960px){
+  .topbar{display:none}.overlay{display:none!important}.sidebar{transform:translateX(0)}
+  .main{margin-left:var(--sw);padding:32px 32px 80px}
+  .pat-header{padding:20px 32px}
+  .report-body{padding:20px 32px}
+  .indices-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+}
+@media(min-width:600px){.main{padding-left:24px;padding-right:24px}}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:2px}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <img src="/img/logo-horizontal.png" alt="Synapse Core">
+  <button class="hamburger" onclick="toggleSidebar()">&#9776;</button>
+</div>
+<div class="overlay" id="overlay" onclick="closeSidebar()"></div>
+<aside class="sidebar" id="sidebar">
+  <div class="sb-logo"><img src="/img/logo-horizontal.png" alt="Synapse Core"></div>
+  <nav class="sb-nav">
+    <div class="nav-section">Principal</div>
+    <a href="/dashboard" class="nav-item"><span class="ni">&#9672;</span> Dashboard</a>
+    <a href="/pacientes" class="nav-item"><span class="ni">&#9675;</span> Pacientes</a>
+    <div class="nav-section">Ferramentas</div>
+    <a href="/paciente-novo" class="nav-item"><span class="ni">&#9703;</span> Nova Avaliação</a>
+    <a href="#" class="nav-item active"><span class="ni">&#9678;</span> Mapeamentos</a>
+    <div class="nav-section">Clínico</div>
+    <a href="#" class="nav-item"><span class="ni">&#9712;</span> Sessões</a>
+    <a href="#" class="nav-item"><span class="ni">&#8857;</span> Documentos</a>
+    <div class="nav-section">Sistema</div>
+    <a href="#" class="nav-item"><span class="ni">&#9714;</span> Logs LGPD</a>
+    <a href="#" class="nav-item"><span class="ni">&#9715;</span> Configurações</a>
+  </nav>
+  <div class="sb-footer">
+    <div class="user-pill">
+      <div class="user-av" id="userAvatar">ET</div>
+      <div style="overflow:hidden;flex:1"><div class="user-name" id="userName">--</div><div class="user-role">Evolution Therapy</div></div>
+      <button class="logout-btn" onclick="logout()">Sair</button>
+    </div>
+  </div>
+</aside>
+
+<main class="main" id="mainContent">
+
+  <!-- LOADING -->
+  <div id="scrLoading">
+    <div class="load-circle"></div>
+    <div>
+      <div class="load-title">Gerando Mapeamento Clínico</div>
+      <div class="load-msg" id="loadMsg">Iniciando análise das respostas...</div>
+    </div>
+    <div class="load-steps">
+      <div class="load-step active" id="step1"><span class="step-dot"></span>Carregando respostas do formulário</div>
+      <div class="load-step" id="step2"><span class="step-dot"></span>Calculando índices dimensionais</div>
+      <div class="load-step" id="step3"><span class="step-dot"></span>Identificando padrões clínicos</div>
+      <div class="load-step" id="step4"><span class="step-dot"></span>Consultando Inteligência Clínica</div>
+      <div class="load-step" id="step5"><span class="step-dot"></span>Organizando protocolo terapêutico</div>
+      <div class="load-step" id="step6"><span class="step-dot"></span>Finalizando relatório</div>
+    </div>
+  </div>
+
+  <!-- GENERATE -->
+  <div id="scrGenerate" style="display:none">
+    <a href="/pacientes" style="display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-size:13px;text-decoration:none;margin-bottom:18px">&#8592; Pacientes</a>
+    <div class="gen-card">
+      <div class="gen-icon">&#9671;</div>
+      <div class="gen-title" id="genNome">Mapeamento Clínico</div>
+      <div class="gen-sub">Este paciente preencheu o formulário de mapeamento.<br>Clique para gerar o relatório completo com Inteligência Clínica Integrativa.</div>
+      <button class="btn btn-primary" id="btnGerar" onclick="gerarMapeamento()">&#9671; Gerar Mapeamento com IA</button>
+    </div>
+    <div class="disclaimer">&#9888; O relatório gerado é um suporte ao raciocínio clínico. Não substitui avaliação profissional. O terapeuta deve revisar, editar e aprovar antes de utilizar.</div>
+    <div class="page-footer">&copy; 2026 Synapse Core &mdash; <strong>Erick Torritezi</strong></div>
+  </div>
+
+  <!-- REPORT -->
+  <div id="scrReport" style="display:none">
+    <div class="pat-header">
+      <div class="pat-av" id="repAv">--</div>
+      <div>
+        <div class="pat-name" id="repNome">--</div>
+        <div class="pat-meta" id="repMeta">--</div>
+        <div style="margin-top:6px" id="repRisk"></div>
+      </div>
+      <div class="global-score">
+        <div class="score-num" id="repScore">--</div>
+        <div class="score-lbl">Bem-Estar</div>
+      </div>
+    </div>
+
+    <div class="report-body">
+
+      <!-- CRISE ALERT -->
+      <div class="alert-crise" id="alertCrise" style="display:none">
+        <div class="alert-title">&#9888; Alerta de Manejo de Crise</div>
+        <div class="alert-text" id="alertCriseText">O formulário identificou indicadores de risco elevado nas perguntas sentinela. Recomenda-se contato imediato com o paciente antes da próxima sessão. O protocolo padrão não foi gerado — avalie a conduta clínica adequada.</div>
+      </div>
+
+      <!-- RADAR + DIMENSÕES -->
+      <div class="section-card">
+        <div class="sec-title"><span><span class="sec-icon">&#9672;</span> Perfil Multidimensional</span></div>
+        <div class="radar-wrap" id="radarWrap"></div>
+        <div class="indices-grid" id="dimGrid"></div>
+      </div>
+
+      <!-- FLAGS -->
+      <div class="section-card" id="flagsCard" style="display:none">
+        <div class="sec-title"><span><span class="sec-icon">&#9873;</span> Flags Clínicas</span></div>
+        <div class="flags-wrap" id="flagsWrap"></div>
+      </div>
+
+      <!-- PROGRAMA -->
+      <div class="prog-card" id="progCard" style="display:none">
+        <div class="prog-compat"><span class="compat-num" id="compatNum">--</span><span style="font-size:13px;color:var(--muted)">% compatibilidade</span></div>
+        <div class="prog-title" id="progNome">--</div>
+        <div class="sec-text" id="progJust">--</div>
+      </div>
+
+      <!-- 9 SEÇÕES DO RELATÓRIO -->
+      <div id="secoes"></div>
+
+      <div class="disclaimer">&#9888; Este relatório é gerado como suporte ao raciocínio clínico. Não substitui avaliação profissional. Toda decisão clínica é de responsabilidade do terapeuta.</div>
+      <div class="page-footer">&copy; 2026 Synapse Core &mdash; Criado por <strong>Erick Torritezi</strong></div>
+    </div>
+  </div>
+
+</main>
+
+<!-- ACTION BAR (only on report) -->
+<div class="action-bar" id="actionBar" style="display:none">
+  <button class="btn btn-ghost btn-sm" onclick="history.back()">&#8592; Voltar</button>
+  <button class="btn btn-primary" id="btnFinalizar" onclick="salvarObservacoes()">&#10003; Salvar Alterações</button>
+</div>
+
+<script src="/js/shared.js"></script>
+<script>
+checkAuth();
+renderUserPill();
+
+var PACIENTE_ID = location.pathname.split('/').pop();
+var MAPEAMENTO_ID = null;
+var mapeamentoData = null;
+var editando = false;
+
+// ── INIT ──
+window.addEventListener('DOMContentLoaded', function() {
+  document.getElementById('scrLoading').style.display = 'none';
+  // Check if mapping exists
+  api('/api/mapeamentos/' + PACIENTE_ID)
+    .then(function(data) {
+      mapeamentoData = data;
+      MAPEAMENTO_ID = data.id;
+      renderReport(data);
+    })
+    .catch(function(err) {
+      if (err.status === 404) {
+        // No mapping yet - check if there are responses
+        checkRespostas();
+      } else {
+        showToast('Erro ao carregar mapeamento.', 'error');
+        document.getElementById('scrGenerate').style.display = 'block';
+      }
+    });
+});
+
+function checkRespostas() {
+  // Show generate screen
+  api('/api/pacientes/' + PACIENTE_ID)
+    .then(function(p) {
+      document.getElementById('genNome').textContent = p.nome_completo + ' — Gerar Mapeamento';
+      document.getElementById('scrGenerate').style.display = 'block';
+    })
+    .catch(function() {
+      document.getElementById('scrGenerate').style.display = 'block';
+    });
+}
+
+// ── GERAR MAPEAMENTO ──
+var loadStep = 1;
+var loadTimer = null;
+
+function gerarMapeamento() {
+  document.getElementById('scrGenerate').style.display = 'none';
+  document.getElementById('scrLoading').style.display = 'flex';
+  document.getElementById('scrLoading').style.flexDirection = 'column';
+  document.getElementById('scrLoading').style.alignItems = 'center';
+  document.getElementById('scrLoading').style.justifyContent = 'center';
+  document.getElementById('scrLoading').style.minHeight = '60vh';
+  document.getElementById('scrLoading').style.gap = '24px';
+  document.getElementById('scrLoading').style.textAlign = 'center';
+  document.getElementById('scrLoading').style.padding = '32px';
+
+  loadStep = 1;
+  var steps = ['step1','step2','step3','step4','step5','step6'];
+  var msgs = [
+    'Carregando respostas do formulário...',
+    'Calculando índices dimensionais...',
+    'Identificando padrões e flags clínicas...',
+    'Consultando Inteligência Clínica Integrativa...',
+    'Organizando protocolo terapêutico...',
+    'Finalizando relatório...'
+  ];
+
+  function advanceStep() {
+    if (loadStep > steps.length) return;
+    steps.forEach(function(s,i) {
+      var el = document.getElementById(s);
+      if (i < loadStep-1)      { el.classList.add('done'); el.classList.remove('active'); }
+      else if (i === loadStep-1){ el.classList.add('active'); el.classList.remove('done'); }
+      else                      { el.classList.remove('done','active'); }
+    });
+    document.getElementById('loadMsg').textContent = msgs[loadStep-1] || '';
+    loadStep++;
+  }
+
+  advanceStep();
+  loadTimer = setInterval(function() {
+    if (loadStep <= 4) advanceStep(); // Steps 4-6 wait for actual API
+  }, 2500);
+
+  api('/api/mapeamentos/' + PACIENTE_ID + '/gerar', 'POST', {})
+    .then(function(data) {
+      clearInterval(loadTimer);
+      // Finish remaining steps
+      ['step4','step5','step6'].forEach(function(s) {
+        document.getElementById(s).classList.add('done');
+        document.getElementById(s).classList.remove('active');
+      });
+      setTimeout(function() {
+        mapeamentoData = data;
+        MAPEAMENTO_ID = data.mapeamento_id;
+        document.getElementById('scrLoading').style.display = 'none';
+        renderReport(data);
+      }, 800);
+    })
+    .catch(function(err) {
+      clearInterval(loadTimer);
+      document.getElementById('scrLoading').style.display = 'none';
+      document.getElementById('scrGenerate').style.display = 'block';
+      showToast(err.message || 'Erro ao gerar mapeamento. Tente novamente.', 'error');
+    });
+}
+
+// ── RENDER REPORT ──
+function renderReport(data) {
+  var relatorio = data.relatorio || data.protocolo_json || {};
+  var indices   = data.indices   || data.indices_json || {};
+  var flags     = data.flags     || data.flags_json   || [];
+  var risco     = data.risco_nivel || 'verde';
+  var programa  = data.programa  || {};
+
+  // Patient header
+  var nome = data.nome_completo || 'Paciente';
+  var initials = nome.split(' ').map(function(n){return n[0];}).slice(0,2).join('').toUpperCase();
+  document.getElementById('repAv').textContent   = initials;
+  document.getElementById('repNome').textContent  = nome;
+  document.getElementById('repMeta').textContent  = [
+    data.idade ? data.idade + ' anos' : '',
+    data.perfil_tipo || '',
+    'Versão ' + (data.versao || 1)
+  ].filter(Boolean).join(' · ');
+
+  var global = (indices.global || 50);
+  document.getElementById('repScore').textContent = global;
+
+  var riskEl = document.getElementById('repRisk');
+  var riskLabels = {verde:'Verde — Sem risco imediato', amarelo:'Amarelo — Atenção recomendada', vermelho:'Vermelho — Risco identificado'};
+  riskEl.innerHTML = '<span class="risk-badge risk-' + risco + '">' + (riskLabels[risco]||risco) + '</span>';
+
+  // Crise alert
+  if (risco === 'vermelho') {
+    document.getElementById('alertCrise').style.display = 'block';
+  }
+
+  // Radar chart
+  renderRadar(indices.dimensoes || {D1:50,D2:50,D3:50,D4:50,D5:50,D6:50,D7:50});
+
+  // Dimensions grid
+  var dimGrid = document.getElementById('dimGrid');
+  dimGrid.innerHTML = '';
+  var dimLabels = {D1:'Regulação Emocional',D2:'Padrão Cognitivo',D3:'Índice Relacional',D4:'Índice Existencial',D5:'Funcionamento Corporal',D6:'Sustentação Comportamental',D7:'Índice Psicossocial'};
+  Object.keys(dimLabels).forEach(function(k) {
+    var v = (indices.dimensoes||{})[k] || indices[k.toLowerCase()] || 50;
+    var color = v >= 70 ? '#6ee7b7' : v >= 50 ? '#fcd34d' : '#fca5a5';
+    var row = document.createElement('div'); row.className='idx-row';
+    row.innerHTML = '<div class="idx-top"><span class="idx-label">' + dimLabels[k] + '</span><span class="idx-val" style="color:' + color + '">' + v + '</span></div><div class="idx-bar"><div class="idx-fill" style="width:0%" data-width="' + v + '%"></div></div>';
+    dimGrid.appendChild(row);
+  });
+
+  // Also show other indices
+  var otherIdx = [
+    {k:'vulnerabilidade_clinica', l:'Vulnerabilidade Clínica'},
+    {k:'global', l:'Índice Global de Bem-Estar'}
+  ];
+  otherIdx.forEach(function(item) {
+    var v = indices[item.k] || 50;
+    var color = item.k === 'vulnerabilidade_clinica' ? (v>=70?'#6ee7b7':v>=50?'#fcd34d':'#fca5a5') : (v>=70?'#6ee7b7':v>=50?'#fcd34d':'#fca5a5');
+    var row = document.createElement('div'); row.className='idx-row';
+    row.innerHTML = '<div class="idx-top"><span class="idx-label">' + item.l + '</span><span class="idx-val" style="color:' + color + '">' + v + '</span></div><div class="idx-bar"><div class="idx-fill" style="width:0%" data-width="' + v + '%"></div></div>';
+    dimGrid.appendChild(row);
+  });
+
+  // Animate bars after render
+  setTimeout(function() {
+    document.querySelectorAll('.idx-fill').forEach(function(b) {
+      b.style.width = b.dataset.width;
+    });
+  }, 100);
+
+  // Flags
+  if (flags && flags.length) {
+    var flagMap = {red:'fc-red',orange:'fc-orange',yellow:'fc-yellow',blue:'fc-blue',purple:'fc-purple'};
+    var flagLabels = {
+      risco_depressivo:'Risco Depressivo',ansiedade_funcional:'Ansiedade Funcional',
+      apego_ansioso:'Apego Ansioso',padrao_evitativo:'Padrão Evitativo',
+      sobrecarga_emocional:'Sobrecarga Emocional',autocritica_excessiva:'Autocrítica Excessiva',
+      rigidez_emocional:'Rigidez Emocional',dissociacao_leve:'Dissociação Leve',
+      padrao_procrastinacao:'Padrão de Procrastinação',burnout_provavel:'Possível Burnout',
+      neurodivergencia_provavel:'Neurodivergência Provável',avaliacao_psiquiatrica:'Avaliação Psiquiátrica',
+      vulnerabilidade_relacional:'Vulnerabilidade Relacional',vazio_existencial:'Vazio Existencial'
+    };
+    var flagColors = {
+      risco_depressivo:'red',ansiedade_funcional:'orange',apego_ansioso:'orange',
+      padrao_evitativo:'yellow',sobrecarga_emocional:'orange',autocritica_excessiva:'yellow',
+      rigidez_emocional:'yellow',dissociacao_leve:'orange',padrao_procrastinacao:'yellow',
+      burnout_provavel:'red',neurodivergencia_provavel:'blue',avaliacao_psiquiatrica:'red',
+      vulnerabilidade_relacional:'orange',vazio_existencial:'purple'
+    };
+    var wrap = document.getElementById('flagsWrap');
+    wrap.innerHTML = '';
+    flags.forEach(function(f) {
+      var chip = document.createElement('span');
+      var cc = flagMap[flagColors[f]] || 'fc-yellow';
+      chip.className = 'flag-chip ' + cc;
+      chip.textContent = flagLabels[f] || f;
+      wrap.appendChild(chip);
+    });
+    document.getElementById('flagsCard').style.display = 'block';
+  }
+
+  // Programa
+  if (programa && programa.nome) {
+    document.getElementById('compatNum').textContent = programa.compat || 70;
+    document.getElementById('progNome').textContent  = programa.nome;
+    document.getElementById('progJust').textContent  = programa.justificativa || relatorio.programa_recomendado?.justificativa || '';
+    document.getElementById('progCard').style.display = 'block';
+  } else if (relatorio.programa_recomendado) {
+    var pr = relatorio.programa_recomendado;
+    document.getElementById('compatNum').textContent = pr.compatibilidade || 70;
+    document.getElementById('progNome').textContent  = pr.nome || '';
+    document.getElementById('progJust').textContent  = pr.justificativa || '';
+    document.getElementById('progCard').style.display = 'block';
+  }
+
+  // 9 Seções
+  var secoes = [
+    {k:'sintese_caso',          i:'&#128196;', t:'Síntese do Caso',              edit:false},
+    {k:'padroes_predominantes', i:'&#128200;', t:'Padrões Predominantes',        edit:false},
+    {k:'hipoteses_terapeuticas',i:'&#128300;', t:'Hipóteses Terapêuticas',       edit:false},
+    {k:'sinais_alerta',         i:'&#9888;',   t:'Sinais de Alerta',             edit:false},
+    {k:'recursos_paciente',     i:'&#127775;', t:'Recursos do Paciente',         edit:false},
+    {k:'objetivos_iniciais',    i:'&#127919;', t:'Objetivos Iniciais',           edit:true},
+    {k:'protocolo_sugerido',    i:'&#128203;', t:'Protocolo Sugerido',           edit:true},
+    {k:'obs_terapeuta',         i:'&#9998;',   t:'Observações do Terapeuta',     edit:true}
+  ];
+
+  var secoesEl = document.getElementById('secoes');
+  secoesEl.innerHTML = '';
+  secoes.forEach(function(s) {
+    var texto = relatorio[s.k] || (s.k === 'obs_terapeuta' ? '' : 'Não gerado.');
+    var card = document.createElement('div'); card.className='section-card';
+    var title = document.createElement('div'); title.className='sec-title';
+
+    var left = document.createElement('span');
+    left.innerHTML = '<span class="sec-icon">' + s.i + '</span> ' + s.t;
+    title.appendChild(left);
+
+    if (s.edit) {
+      var btn = document.createElement('button');
+      btn.className = 'edit-btn';
+      btn.id = 'editBtn_' + s.k;
+      btn.textContent = 'Editar';
+      btn.addEventListener('click', function() { toggleEdit(s.k); });
+      title.appendChild(btn);
+    }
+    card.appendChild(title);
+
+    var textEl = document.createElement('div');
+    textEl.className = 'sec-text'; textEl.id = 'text_' + s.k;
+    textEl.textContent = texto || (s.edit ? 'Clique em Editar para adicionar suas observações.' : 'Seção não gerada.');
+    if (!texto && s.edit) textEl.style.opacity = '.45';
+    card.appendChild(textEl);
+
+    if (s.edit) {
+      var ta = document.createElement('textarea');
+      ta.className = 'edit-area'; ta.id = 'area_' + s.k;
+      ta.style.display = 'none';
+      ta.placeholder = s.k === 'obs_terapeuta' ? 'Adicione suas observações clínicas...' : 'Edite o conteúdo gerado...';
+      ta.value = typeof texto === 'object' ? JSON.stringify(texto, null, 2) : (texto || '');
+      card.appendChild(ta);
+    }
+    secoesEl.appendChild(card);
+  });
+
+  document.getElementById('scrReport').style.display = 'block';
+  document.getElementById('actionBar').style.display = 'flex';
+}
+
+// ── RADAR SVG ──
+function renderRadar(dims) {
+  var keys = ['D1','D2','D3','D4','D5','D6','D7'];
+  var labels = ['Emocional','Cognitivo','Relacional','Existencial','Corporal','Comportamental','Psicossocial'];
+  var cx=140, cy=140, r=100, n=7;
+  var pts = [];
+
+  function toXY(i, pct) {
+    var angle = (Math.PI * 2 * i / n) - Math.PI/2;
+    return { x: cx + pct/100*r*Math.cos(angle), y: cy + pct/100*r*Math.sin(angle) };
+  }
+
+  // Grid lines
+  var gridLines = '';
+  [20,40,60,80,100].forEach(function(pct) {
+    var gpts = keys.map(function(_,i){ var p=toXY(i,pct); return p.x+','+p.y; }).join(' ');
+    gridLines += '<polygon points="'+gpts+'" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>';
+  });
+
+  // Axes
+  var axes = keys.map(function(_,i){
+    var p = toXY(i,100);
+    return '<line x1="'+cx+'" y1="'+cy+'" x2="'+p.x+'" y2="'+p.y+'" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>';
+  }).join('');
+
+  // Data polygon
+  keys.forEach(function(k,i) {
+    pts.push(toXY(i, dims[k]||50));
+  });
+  var polyPts = pts.map(function(p){return p.x+','+p.y;}).join(' ');
+
+  // Labels
+  var lbls = labels.map(function(l,i) {
+    var p = toXY(i, 115);
+    var anchor = p.x < cx-5 ? 'end' : p.x > cx+5 ? 'start' : 'middle';
+    return '<text x="'+p.x+'" y="'+p.y+'" text-anchor="'+anchor+'" fill="rgba(201,209,217,0.5)" font-size="9" font-family="Inter">'+l+'</text>';
+  }).join('');
+
+  // Dots
+  var dots = pts.map(function(p){
+    return '<circle cx="'+p.x+'" cy="'+p.y+'" r="3" fill="#D4AF7F"/>';
+  }).join('');
+
+  var svg = '<svg width="280" height="280" viewBox="0 0 280 280" xmlns="http://www.w3.org/2000/svg">'
+    + '<defs><linearGradient id="rg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#D4AF7F;stop-opacity:0.4"/><stop offset="100%" style="stop-color:#b8924e;stop-opacity:0.15"/></linearGradient></defs>'
+    + gridLines + axes
+    + '<polygon points="'+polyPts+'" fill="url(#rg)" stroke="#D4AF7F" stroke-width="1.5"/>'
+    + dots + lbls
+    + '</svg>';
+
+  document.getElementById('radarWrap').innerHTML = svg;
+}
+
+// ── EDIT TOGGLE ──
+function toggleEdit(key) {
+  var textEl = document.getElementById('text_' + key);
+  var areaEl = document.getElementById('area_' + key);
+  var btnEl  = document.getElementById('editBtn_' + key);
+  if (areaEl.style.display === 'none') {
+    areaEl.style.display = 'block';
+    textEl.style.display = 'none';
+    btnEl.textContent = 'Concluir';
+    areaEl.focus();
+  } else {
+    var newVal = areaEl.value;
+    textEl.textContent = newVal || 'Clique em Editar para adicionar suas observações.';
+    textEl.style.opacity = newVal ? '1' : '.45';
+    textEl.style.display = 'block';
+    areaEl.style.display = 'none';
+    btnEl.textContent = 'Editar';
+  }
+}
+
+// ── SAVE ──
+function salvarObservacoes() {
+  if (!MAPEAMENTO_ID) return;
+  var obs = document.getElementById('area_obs_terapeuta').value || document.getElementById('text_obs_terapeuta').textContent;
+  var obj = document.getElementById('area_objetivos_iniciais').value || document.getElementById('text_objetivos_iniciais').textContent;
+  var prot = document.getElementById('area_protocolo_sugerido').value || document.getElementById('text_protocolo_sugerido').textContent;
+  if (obs === 'Clique em Editar para adicionar suas observações.') obs = '';
+
+  api('/api/mapeamentos/' + MAPEAMENTO_ID + '/obs', 'PUT', {
+    obs_terapeuta: obs,
+    objetivos_iniciais: obj,
+    protocolo_editado: prot
+  })
+  .then(function() { showToast('Mapeamento salvo com sucesso!', 'success'); })
+  .catch(function() { showToast('Erro ao salvar. Tente novamente.', 'error'); });
+}
+</script>
+</body>
+</html>

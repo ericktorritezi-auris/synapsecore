@@ -194,6 +194,12 @@ async function runMigrations() {
       )
     `);
 
+    // ── ALTER TABLE: guardian fields (safe, idempotent) ──
+    await client.query(`ALTER TABLE pacientes ADD COLUMN IF NOT EXISTS responsavel_nome VARCHAR(255)`);
+    await client.query(`ALTER TABLE pacientes ADD COLUMN IF NOT EXISTS responsavel_cpf VARCHAR(20)`);
+    await client.query(`ALTER TABLE pacientes ADD COLUMN IF NOT EXISTS responsavel_email VARCHAR(255)`);
+    await client.query(`ALTER TABLE pacientes ADD COLUMN IF NOT EXISTS responsavel_telefone VARCHAR(30)`);
+
     console.log('✅ Tabelas verificadas/criadas');
 
     // ── SEED: TERAPEUTA ──
@@ -363,6 +369,19 @@ async function runMigrations() {
     } else {
       console.log('✅ Pacotes já existem');
     }
+
+    // ── RELATORIO TOKENS (evolução do paciente — link público) ──
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS relatorio_tokens (
+        id             SERIAL PRIMARY KEY,
+        token          UUID UNIQUE NOT NULL DEFAULT gen_random_uuid(),
+        paciente_id    INTEGER REFERENCES pacientes(id) ON DELETE CASCADE,
+        mapeamento_id  INTEGER REFERENCES mapeamentos(id),
+        conteudo_json  JSONB NOT NULL,
+        expira_em      TIMESTAMP NOT NULL,
+        criado_em      TIMESTAMP DEFAULT NOW()
+      )
+    `);
 
     console.log('✅ Banco de dados pronto');
   } catch (err) {

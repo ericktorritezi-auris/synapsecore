@@ -300,7 +300,87 @@ NÃO diagnostique. Use linguagem de hipóteses ("sugere", "indica", "observa-se 
   return { relatorio, programa: prog };
 }
 
-module.exports = { calcularIndices, detectarFlags, gerarMapeamento, FLAG_LABELS, sugerirPrograma, gerarResumoClinico };
+module.exports = { calcularIndices, detectarFlags, gerarMapeamento, FLAG_LABELS, sugerirPrograma, gerarResumoClinico, gerarEvolucao };
+
+// ── GERA RELATÓRIO DE EVOLUÇÃO ──
+async function gerarEvolucao({ paciente, mapeamento, sessoes, resumoClinico, pacote }) {
+  const indicesIniciais = mapeamento?.dimensoes_json || mapeamento?.indices_json?.dimensoes || {};
+  const proto = mapeamento?.protocolo_json || {};
+
+  const objetivosText  = proto.objetivos_iniciais || proto.objetivos || 'Não definidos';
+  const protocoloText  = proto.protocolo_sugerido  || 'Não definido';
+  const obsText        = proto.obs_terapeuta        || '';
+  const flagsText      = (mapeamento?.flags_json || []).join(', ') || 'Nenhuma';
+
+  const sessoesStr = sessoes.map(s =>
+    'Sessão ' + s.sessao_numero + ' (' + new Date(s.data_sessao).toLocaleDateString('pt-BR') + '): ' + (s.resumo_terapeuta || 'Sem resumo.')
+  ).join('\n');
+
+  const totalSessoes = sessoes.length;
+  const totalPrograma = pacote?.qtd_sessoes || null;
+
+  const prompt = `Você é um assistente de inteligência clínica do Synapse Core — Evolution Therapy.
+Terapeuta: Erick Torritezi — Psicanalista e Psicoterapeuta Estratégico Integrativo.
+
+PACIENTE: ${paciente.nome_completo} | Perfil: ${paciente.perfil_tipo || 'adulto'}
+PROGRAMA: ${pacote ? pacote.nome + (totalPrograma ? ' — ' + totalPrograma + ' sessões' : '') : 'Não definido'}
+SESSÕES REALIZADAS: ${totalSessoes}${totalPrograma ? ' de ' + totalPrograma : ''}
+
+ÍNDICES INICIAIS DO MAPEAMENTO (D1-D7, escala 0-100):
+${JSON.stringify(indicesIniciais)}
+
+FLAGS CLÍNICAS INICIAIS: ${flagsText}
+
+OBJETIVOS TERAPÊUTICOS DEFINIDOS:
+${objetivosText}
+
+PROTOCOLO SUGERIDO:
+${protocoloText}
+
+${obsText ? 'OBSERVAÇÕES DO TERAPEUTA:\n' + obsText : ''}
+
+HISTÓRICO DE SESSÕES:
+${sessoesStr}
+
+${resumoClinico ? 'RESUMO CLÍNICO ATUAL:\n' + resumoClinico : ''}
+
+Analise a evolução e retorne APENAS um JSON válido, sem texto antes ou depois:
+{
+  "indices_atuais": {"D1": 0, "D2": 0, "D3": 0, "D4": 0, "D5": 0, "D6": 0, "D7": 0},
+  "narrativa_paciente": "Texto motivador e acessível (NÃO clínico) para o paciente. 3-4 parágrafos. Use segunda pessoa (você). Celebre conquistas concretas. Linguagem positiva e encorajadora.",
+  "conquistas": ["conquista 1", "conquista 2", "conquista 3"],
+  "objetivos": [{"objetivo": "...", "status": "em_andamento|parcialmente_alcancado|alcancado|revisado", "evidencia": "breve observação"}],
+  "proximos_focos": "O que será trabalhado nas próximas sessões — linguagem acessível para o paciente.",
+  "mensagem_terapeuta": "Mensagem curta e calorosa do terapeuta para o paciente (1-2 frases)."
+}
+Regras: indices_atuais devem refletir a evolução observada nas sessões (podem subir ou descer). Seja realista — não infle os números sem evidência nas sessões.`;
+
+  const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': process.env.ANTHROPIC_API_KEY,
+      'anthropic-version': '2023-06-01'
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 3000,
+      messages: [{ role: 'user', content: prompt }]
+    })
+  });
+
+  if (!resp.ok) throw new Error('Anthropic API error: ' + resp.status);
+  const data  = await resp.json();
+  const texto = data.content?.[0]?.text || '';
+  const clean = texto.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
+  try {
+    return JSON.parse(clean);
+  } catch (e) {
+    const match = clean.match(/\{[\s\S]*\}/);
+    if (match) return JSON.parse(match[0]);
+    throw new Error('Não foi possível parsear a evolução da IA.');
+  }
+}
 
 // ── GERA RESUMO CLÍNICO PÓS-SESSÃO ──
 async function gerarResumoClinico({ paciente, sessoes, mapeamento, pacote }) {

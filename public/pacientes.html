@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Pacientes — Synapse Core</title>
+<meta name="theme-color" content="#0B132B">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<link rel="icon" type="image/x-icon" href="/favicon.ico">
+<link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700,900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#0B132B;--surface:#1C2541;--surface-2:rgba(28,37,65,0.7);
+  --accent:#D4AF7F;--acc-dim:rgba(212,175,127,0.1);--acc-brd:rgba(212,175,127,0.22);
+  --text:#F5F7FA;--muted:#C9D1D9;--dim:rgba(201,209,217,0.4);--border:rgba(201,209,217,0.1);
+  --sidebar-w:260px;--topbar-h:60px;--f-d:'Satoshi',sans-serif;--f-b:'Inter',sans-serif;--r:12px;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--f-b);background:var(--bg);color:var(--text);min-height:100vh}
+.topbar{display:flex;align-items:center;justify-content:space-between;height:var(--topbar-h);padding:0 16px;background:var(--surface);border-bottom:1px solid var(--border);position:fixed;top:0;left:0;right:0;z-index:50}
+.topbar img{height:28px}
+.hamburger{background:none;border:none;color:var(--muted);cursor:pointer;padding:8px;border-radius:8px;font-size:20px;transition:background .2s}
+.hamburger:hover{background:rgba(255,255,255,.05)}
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:40;backdrop-filter:blur(2px)}
+.overlay.open{display:block}
+.sidebar{width:var(--sidebar-w);background:var(--surface);border-right:1px solid var(--border);position:fixed;top:0;left:0;bottom:0;z-index:45;display:flex;flex-direction:column;transform:translateX(-100%);transition:transform .3s cubic-bezier(.4,0,.2,1);overflow-y:auto}
+.sidebar.open{transform:translateX(0)}
+.sb-logo{padding:20px 20px 18px;border-bottom:1px solid var(--border);flex-shrink:0}
+.sb-logo img{height:32px}
+.sb-nav{flex:1;padding:12px 10px;overflow-y:auto}
+.nav-section{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--dim);padding:14px 10px 6px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:9px;cursor:pointer;color:var(--muted);font-size:13.5px;text-decoration:none;transition:all .18s;margin-bottom:1px;border:1px solid transparent}
+.nav-item:hover{background:rgba(255,255,255,.04);color:var(--text)}
+.nav-item.active{background:var(--acc-dim);color:var(--accent);border-color:var(--acc-brd)}
+.nav-item .ni{font-size:16px;width:20px;text-align:center;flex-shrink:0}
+.nav-badge{margin-left:auto;background:var(--accent);color:var(--bg);font-size:9px;font-weight:700;padding:2px 7px;border-radius:20px}
+.sb-footer{padding:14px 12px;border-top:1px solid var(--border);flex-shrink:0}
+.user-pill{display:flex;align-items:center;gap:10px;padding:10px;background:rgba(11,19,43,.5);border-radius:10px;border:1px solid var(--border)}
+.user-av{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#b8924e);display:flex;align-items:center;justify-content:center;font-family:var(--f-d);font-size:12px;font-weight:700;color:var(--bg);flex-shrink:0;overflow:hidden}
+.user-name{font-size:12.5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.user-role{font-size:10px;color:var(--dim)}
+.logout-btn{margin-left:auto;background:none;border:none;color:var(--dim);cursor:pointer;font-size:13px;padding:4px 6px;border-radius:6px;flex-shrink:0;font-family:var(--f-b);transition:color .2s}
+.logout-btn:hover{color:var(--accent)}
+.main{padding-top:calc(var(--topbar-h)+20px);padding:calc(var(--topbar-h)+20px) 16px 40px}
+/* Page */
+.ph{margin-bottom:20px;display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.ph-title{font-family:var(--f-d);font-size:22px;font-weight:700}
+.ph-sub{font-size:12px;color:var(--dim);margin-top:3px}
+.btn{display:inline-flex;align-items:center;gap:7px;padding:10px 18px;border-radius:9px;font-family:var(--f-d);font-size:13px;font-weight:700;cursor:pointer;border:none;transition:all .2s;text-decoration:none;letter-spacing:.3px}
+.btn-primary{background:linear-gradient(135deg,var(--accent),#b8924e);color:var(--bg);box-shadow:0 4px 16px rgba(212,175,127,.2)}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(212,175,127,.3)}
+.btn-ghost{background:var(--acc-dim);color:var(--accent);border:1px solid var(--acc-brd)}
+.btn-sm{padding:7px 13px;font-size:12px}
+/* Search & Filters */
+.search-bar{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.search-wrap{flex:1;min-width:200px;position:relative}
+.search-wrap input{width:100%;height:42px;background:var(--surface-2);border:1px solid var(--border);border-radius:9px;color:var(--text);font-family:var(--f-b);font-size:13px;padding:0 14px 0 38px;outline:none;transition:border-color .2s;-webkit-appearance:none}
+.search-wrap input:focus{border-color:var(--acc-brd)}
+.search-wrap input::placeholder{color:var(--dim)}
+.search-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--dim);font-size:15px;pointer-events:none}
+.filter-chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px}
+.chip{padding:6px 14px;border-radius:20px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid var(--border);background:var(--surface-2);color:var(--muted);transition:all .18s;-webkit-tap-highlight-color:transparent}
+.chip:hover{border-color:var(--acc-brd);color:var(--accent)}
+.chip.active{background:var(--acc-dim);border-color:var(--acc-brd);color:var(--accent)}
+/* Patient Cards */
+.patients-list{display:flex;flex-direction:column;gap:12px}
+.pt-card{background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r);padding:16px;transition:border-color .2s}
+.pt-card:hover{border-color:rgba(212,175,127,.2)}
+.pt-card-top{display:flex;align-items:flex-start;gap:12px;margin-bottom:12px}
+.pt-av{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--f-d);font-size:14px;font-weight:700;flex-shrink:0;overflow:hidden}
+.pt-av img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+.pt-info{flex:1;min-width:0}
+.pt-name{font-family:var(--f-d);font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pt-meta{font-size:11.5px;color:var(--muted);margin-top:3px}
+.pt-badges{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.badge{font-size:10px;padding:3px 9px;border-radius:20px;font-weight:600;white-space:nowrap}
+.pt-detail{font-size:12px;color:var(--muted);margin-bottom:12px;display:flex;flex-direction:column;gap:4px}
+.pt-detail span{display:flex;align-items:center;gap:6px}
+.pt-actions{display:flex;gap:8px;flex-wrap:wrap}
+/* Empty state */
+.empty{text-align:center;padding:48px 20px}
+.empty-icon{font-size:40px;margin-bottom:12px;opacity:.35}
+.empty-title{font-family:var(--f-d);font-size:16px;font-weight:600;color:var(--muted);margin-bottom:6px}
+.empty-sub{font-size:13px;color:var(--dim);margin-bottom:20px;line-height:1.6}
+/* Link modal */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)}
+.modal-overlay.open{display:flex}
+.modal{background:#1a2540;border:1px solid var(--acc-brd);border-radius:18px;padding:28px 24px;width:100%;max-width:420px;position:relative}
+.modal-title{font-family:var(--f-d);font-size:16px;font-weight:700;margin-bottom:4px}
+.modal-sub{font-size:12px;color:var(--dim);margin-bottom:20px}
+.link-box{background:rgba(11,19,43,.7);border:1px solid var(--border);border-radius:9px;padding:12px 14px;font-size:12px;color:var(--muted);word-break:break-all;margin-bottom:14px;line-height:1.5;font-family:monospace}
+.modal-actions{display:flex;flex-direction:column;gap:10px}
+.modal-row{display:flex;gap:10px}
+.modal-close{position:absolute;top:16px;right:16px;background:none;border:none;color:var(--dim);cursor:pointer;font-size:18px;line-height:1;padding:4px}
+.modal-close:hover{color:var(--text)}
+.expiry{font-size:11px;color:var(--dim);text-align:center;margin-top:8px}
+/* Loading */
+.loading{display:flex;gap:5px;justify-content:center;padding:32px}
+.loading span{width:7px;height:7px;border-radius:50%;background:var(--accent);opacity:.4;animation:ldot 1.2s ease-in-out infinite}
+.loading span:nth-child(2){animation-delay:.2s}
+.loading span:nth-child(3){animation-delay:.4s}
+@keyframes ldot{0%,80%,100%{opacity:.4;transform:scale(1)}40%{opacity:1;transform:scale(1.3)}}
+/* Footer */
+.page-footer{text-align:center;padding:24px 0 8px;font-size:10px;color:var(--dim)}
+.page-footer strong{color:rgba(201,209,217,.5)}
+/* Desktop */
+@media(min-width:960px){
+  .topbar{display:none}
+  .overlay{display:none !important}
+  .sidebar{transform:translateX(0)}
+  .main{margin-left:var(--sidebar-w);padding:32px 32px 40px}
+}
+@media(min-width:600px){
+  .patients-list{gap:14px}
+  .main{padding-left:24px;padding-right:24px}
+}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:2px}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <img src="/img/logo-horizontal.png" alt="Synapse Core">
+  <button class="hamburger" onclick="toggleSidebar()">☰</button>
+</div>
+<div class="overlay" id="overlay" onclick="closeSidebar()"></div>
+<aside class="sidebar" id="sidebar">
+  <div class="sb-logo"><img src="/img/logo-horizontal.png" alt="Synapse Core"></div>
+  <nav class="sb-nav">
+    <div class="nav-section">Principal</div>
+    <a href="/dashboard" class="nav-item"><span class="ni">◈</span> Dashboard</a>
+    <a href="/pacientes" class="nav-item active"><span class="ni">◉</span> Pacientes <span class="nav-badge" id="badgePacientes">0</span></a>
+    <div class="nav-section">Ferramentas</div>
+    <a href="/paciente-novo" class="nav-item"><span class="ni">◧</span> Nova Avaliação</a>
+    <a href="#" class="nav-item" onclick="coming()"><span class="ni">◎</span> Mapeamentos</a>
+    <a href="#" class="nav-item" onclick="coming()"><span class="ni">◫</span> Protocolos</a>
+    <a href="#" class="nav-item" onclick="coming()"><span class="ni">◱</span> Programas</a>
+    <div class="nav-section">Clínico</div>
+    <a href="#" class="nav-item" onclick="coming()"><span class="ni">◰</span> Sessões</a>
+    <a href="#" class="nav-item" onclick="coming()"><span class="ni">⊙</span> Documentos</a>
+    <div class="nav-section">Sistema</div>
+    <a href="#" class="nav-item" onclick="coming()"><span class="ni">◲</span> Logs LGPD</a>
+    <a href="#" class="nav-item" onclick="coming()"><span class="ni">◳</span> Configurações</a>
+  </nav>
+  <div class="sb-footer">
+    <div class="user-pill">
+      <div class="user-av" id="userAvatar">ET</div>
+      <div style="overflow:hidden;flex:1"><div class="user-name" id="userName">—</div><div class="user-role">Evolution Therapy</div></div>
+      <button class="logout-btn" onclick="logout()">Sair</button>
+    </div>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="ph">
+    <div><div class="ph-title">Pacientes</div><div class="ph-sub" id="phSub">Carregando...</div></div>
+    <a href="/paciente-novo" class="btn btn-primary">＋ Novo Paciente</a>
+  </div>
+
+  <div class="search-bar">
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="searchInput" placeholder="Buscar por nome ou email..." oninput="debouncedSearch()">
+    </div>
+  </div>
+
+  <div class="filter-chips">
+    <div class="chip active" onclick="setFilter('')" data-filter="">Todos</div>
+    <div class="chip" onclick="setFilter('adulto')"         data-filter="adulto">Adulto</div>
+    <div class="chip" onclick="setFilter('casal')"          data-filter="casal">Casal</div>
+    <div class="chip" onclick="setFilter('adolescente')"    data-filter="adolescente">Adolescente</div>
+    <div class="chip" onclick="setFilter('neurodivergente')" data-filter="neurodivergente">Neurodivergente</div>
+    <div class="chip" onclick="setFilter('atleta')"         data-filter="atleta">Atleta</div>
+  </div>
+
+  <div id="listWrap">
+    <div class="loading"><span></span><span></span><span></span></div>
+  </div>
+
+  <div class="page-footer">© 2026 Synapse Core. Criado e concebido por <strong>Erick Torritezi</strong>. Todos os direitos reservados. <span style="color:rgba(201,209,217,.2)">v1.2.0</span></div>
+</main>
+
+<!-- Modal: Link do Formulário -->
+<div class="modal-overlay" id="linkModal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div class="modal-title">🔗 Link do Formulário</div>
+    <div class="modal-sub" id="modalPacienteNome">—</div>
+    <div class="link-box" id="linkBox">—</div>
+    <div class="modal-actions">
+      <div class="modal-row">
+        <button class="btn btn-primary" style="flex:1" onclick="copyLink()" id="copyBtn">📋 Copiar Link</button>
+        <a href="#" class="btn btn-ghost" id="waBtn" target="_blank" style="flex:1;justify-content:center">💬 WhatsApp</a>
+      </div>
+    </div>
+    <div class="expiry" id="linkExpiry"></div>
+  </div>
+</div>
+
+<script src="/js/shared.js"></script>
+<script>
+checkAuth();
+renderUserPill();
+setActiveNav();
+
+let currentFilter = '';
+let searchTimer;
+let allPatients = [];
+
+function coming() { event.preventDefault(); }
+
+async function loadPatients(search='', tipo='') {
+  const wrap = document.getElementById('listWrap');
+  wrap.innerHTML = '<div class="loading"><span></span><span></span><span></span></div>';
+  try {
+    let url = '/api/pacientes?';
+    if (search) url += `search=${encodeURIComponent(search)}&`;
+    if (tipo)   url += `tipo=${encodeURIComponent(tipo)}`;
+    const data = await api(url);
+    allPatients = data;
+    document.getElementById('badgePacientes').textContent = data.length;
+    document.getElementById('phSub').textContent = `${data.length} paciente${data.length !== 1 ? 's' : ''} encontrado${data.length !== 1 ? 's' : ''}`;
+    renderList(data);
+  } catch (err) {
+    wrap.innerHTML = `<div class="empty"><div class="empty-title">Erro ao carregar pacientes</div><div class="empty-sub">${err.message}</div></div>`;
+  }
+}
+
+function renderList(patients) {
+  const wrap = document.getElementById('listWrap');
+  if (!patients.length) {
+    wrap.innerHTML = `
+      <div class="empty">
+        <div class="empty-icon">◉</div>
+        <div class="empty-title">Nenhum paciente encontrado</div>
+        <div class="empty-sub">Comece cadastrando seu primeiro paciente<br>e enviando o formulário de mapeamento.</div>
+        <a href="/paciente-novo" class="btn btn-primary">＋ Novo Paciente</a>
+      </div>`;
+    return;
+  }
+  const PC = PERFIL_CONFIG;
+  wrap.innerHTML = `<div class="patients-list">${patients.map(p => {
+    const cfg = PC[p.perfil_tipo] || PC.adulto;
+    const idade = p.idade ? `${p.idade} anos` : '';
+    const prog  = p.pacote_nome ? `${p.pacote_nome}` : 'Sem programa';
+    const sess  = p.pacote_id ? `Sessão ${p.sessoes_realizadas || 0}${p.qtd_sessoes ? '/'+p.qtd_sessoes : ''}` : '';
+    const av    = p.foto_url
+      ? `<img src="${p.foto_url}" alt="">`
+      : p.nome_completo.split(' ').map(n=>n[0]).slice(0,2).join('').toUpperCase();
+    const maped = p.total_mapeamentos > 0
+      ? `<span class="badge" style="background:rgba(16,185,129,.12);color:#6ee7b7">Mapeado</span>` : '';
+    const linkBadge = p.link_ativo > 0
+      ? `<span class="badge" style="background:rgba(245,158,11,.1);color:#fcd34d">Link ativo</span>` : '';
+    const wa = p.telefone
+      ? `<a href="${waLink(p.telefone)}" target="_blank" class="btn btn-ghost btn-sm">💬</a>` : '';
+    return `
+      <div class="pt-card">
+        <div class="pt-card-top">
+          <div class="pt-av" style="background:${cfg.bg};color:${cfg.color}">${p.foto_url ? `<img src="${p.foto_url}" alt="">` : av}</div>
+          <div class="pt-info">
+            <div class="pt-name">${p.nome_completo}</div>
+            <div class="pt-meta">${[idade, prog, sess].filter(Boolean).join(' · ')}</div>
+            <div class="pt-badges">
+              <span class="badge" style="background:${cfg.bg};color:${cfg.color}">${cfg.label}</span>
+              ${maped}${linkBadge}
+            </div>
+          </div>
+        </div>
+        <div class="pt-detail">
+          ${p.email ? `<span>✉️ ${p.email}</span>` : ''}
+          ${p.telefone ? `<span>📱 ${formatPhone(p.telefone)}</span>` : ''}
+        </div>
+        <div class="pt-actions">
+          <button class="btn btn-primary btn-sm" onclick="gerarLink(${p.id},'${p.nome_completo.replace(/'/g,"\\'")}',${JSON.stringify(p.telefone||'')})">🔗 Gerar Link</button>
+          ${wa}
+          <a href="#" class="btn btn-ghost btn-sm" onclick="event.preventDefault()">Ver Perfil →</a>
+        </div>
+      </div>`;
+  }).join('')}</div>`;
+}
+
+function setFilter(tipo) {
+  currentFilter = tipo;
+  document.querySelectorAll('.chip').forEach(c => c.classList.toggle('active', c.dataset.filter === tipo));
+  loadPatients(document.getElementById('searchInput').value, tipo);
+}
+
+function debouncedSearch() {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => loadPatients(document.getElementById('searchInput').value, currentFilter), 350);
+}
+
+// ── LINK MODAL ──
+let currentLinkUrl = '';
+let currentWaUrl   = '';
+
+async function gerarLink(id, nome, tel) {
+  try {
+    showToast('Gerando link...', 'info');
+    const data = await api(`/api/pacientes/${id}/gerar-link`, 'POST', { dias_validade: 7 });
+    currentLinkUrl = data.link;
+    currentWaUrl   = tel ? waLink(tel) : null;
+    document.getElementById('modalPacienteNome').textContent = `Paciente: ${nome}`;
+    document.getElementById('linkBox').textContent = data.link;
+    const exp = new Date(data.expira_em);
+    document.getElementById('linkExpiry').textContent = `⏱ Expira em ${exp.toLocaleDateString('pt-BR')} às ${exp.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}`;
+    const waBtn = document.getElementById('waBtn');
+    if (currentWaUrl) {
+      waBtn.href = `${currentWaUrl}?text=${encodeURIComponent('Olá! Segue o link para preenchimento do formulário de mapeamento: '+data.link)}`;
+      waBtn.style.display = '';
+    } else {
+      waBtn.style.display = 'none';
+    }
+    document.getElementById('linkModal').classList.add('open');
+  } catch (err) {
+    showToast(err.message || 'Erro ao gerar link.', 'error');
+  }
+}
+
+function closeModal() { document.getElementById('linkModal').classList.remove('open'); }
+
+function copyLink() {
+  copyText(currentLinkUrl, document.getElementById('copyBtn'));
+}
+
+document.getElementById('linkModal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+
+loadPatients();
+</script>
+</body>
+</html>

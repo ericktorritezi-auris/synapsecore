@@ -137,12 +137,13 @@ body{font-family:var(--f-b);background:var(--bg);color:var(--text);min-height:10
     </div>
   </div>
   <div class="filter-chips">
-    <div class="chip active" data-filter="">Todos</div>
+    <div class="chip active" data-filter="">Ativos</div>
     <div class="chip" data-filter="adulto">Adulto</div>
     <div class="chip" data-filter="casal">Casal</div>
     <div class="chip" data-filter="adolescente">Adolescente</div>
     <div class="chip" data-filter="neurodivergente">Neurodivergente</div>
     <div class="chip" data-filter="atleta">Atleta</div>
+    <div class="chip" data-filter="inativo" style="border-color:rgba(239,68,68,.3);color:#fca5a5">Inativos</div>
   </div>
   <div id="listWrap">
     <div class="loading"><span></span><span></span><span></span></div>
@@ -200,7 +201,11 @@ function loadPatients(search, tipo) {
   wrap.innerHTML = '<div class="loading"><span></span><span></span><span></span></div>';
   var url = '/api/pacientes?';
   if (search) url += 'search=' + encodeURIComponent(search) + '&';
-  if (tipo) url += 'tipo=' + encodeURIComponent(tipo);
+  if (tipo === 'inativo') {
+    url += 'status=inativo';
+  } else {
+    if (tipo) url += 'tipo=' + encodeURIComponent(tipo);
+  }
 
   api(url).then(function(data) {
     var badge = document.getElementById('badgePacientes');
@@ -361,6 +366,30 @@ function renderList(patients) {
     btnDoc.textContent = '📄 Docs';
     actions.appendChild(btnDoc);
 
+    // Inativo: show reativar + excluir instead
+    if (p.status === 'inativo') {
+      actions.innerHTML = '';
+      var btnReat = document.createElement('button');
+      btnReat.className = 'btn btn-ghost btn-sm';
+      btnReat.style.color = '#6ee7b7';
+      btnReat.style.borderColor = 'rgba(16,185,129,.3)';
+      btnReat.textContent = '↑ Reativar';
+      btnReat.dataset.id = p.id;
+      btnReat.dataset.nome = p.nome_completo;
+      btnReat.addEventListener('click', function(){ reativarPaciente(this.dataset.id, this.dataset.nome); });
+      var btnExc = document.createElement('button');
+      btnExc.className = 'btn btn-sm';
+      btnExc.style.background = 'rgba(239,68,68,.1)';
+      btnExc.style.color = '#fca5a5';
+      btnExc.style.border = '1px solid rgba(239,68,68,.25)';
+      btnExc.textContent = '✕ Excluir';
+      btnExc.dataset.id = p.id;
+      btnExc.dataset.nome = p.nome_completo;
+      btnExc.addEventListener('click', function(){ excluirPaciente(this.dataset.id, this.dataset.nome); });
+      actions.appendChild(btnReat);
+      actions.appendChild(btnExc);
+    }
+
     if (p.telefone) {
       var tel2 = p.telefone.replace(/\D/g, '');
       var btnWa = document.createElement('a');
@@ -380,6 +409,21 @@ function renderList(patients) {
 }
 
 // ── GERAR LINK ──
+function reativarPaciente(id, nome) {
+  if (!confirm('Reativar ' + nome + '?\nEle voltará para a lista ativa.')) return;
+  api('/api/sessoes/' + id + '/reativar', 'PUT', {})
+    .then(function() { showToast(nome + ' reativado!', 'success'); loadPatients('', 'inativo'); })
+    .catch(function(e){ showToast(e.message || 'Erro ao reativar.', 'error'); });
+}
+
+function excluirPaciente(id, nome) {
+  var conf = prompt('Esta ação é IRREVERSÍVEL.\n\nTodos os dados de ' + nome + ' serão excluídos permanentemente:\nmapeamentos, sessões, CIDs, documentos e relatórios.\n\nDigite CONFIRMAR para prosseguir:');
+  if (conf !== 'CONFIRMAR') { if (conf !== null) showToast('Exclusão cancelada.', 'info'); return; }
+  api('/api/sessoes/' + id + '/excluir', 'DELETE', {})
+    .then(function() { showToast(nome + ' excluído permanentemente.', 'success'); loadPatients('', 'inativo'); })
+    .catch(function(e){ showToast(e.message || 'Erro ao excluir.', 'error'); });
+}
+
 function gerarLink(id, nome, tel) {
   showToast('Gerando link...', 'info');
   api('/api/pacientes/' + id + '/gerar-link', 'POST', { dias_validade: 7 })

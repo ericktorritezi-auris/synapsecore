@@ -241,10 +241,16 @@ footer strong { color: rgba(201,209,217,0.65); }
 </div>
 
 <footer>
-  © 2026 Synapse Core. Criado e concebido por <strong>Erick Torritezi</strong>. Todos os direitos reservados.
+  © 2026 Synapse Core &mdash; <strong>Erick Torritezi</strong> &mdash; <span id="loginVersion" style="opacity:.5"></span>
 </footer>
 
 <script>
+// Show version
+fetch('/api/health').then(function(r){return r.json();}).then(function(d){
+  var el = document.getElementById('loginVersion');
+  if (el && d.version) el.textContent = 'v' + d.version;
+}).catch(function(){});
+
 // Redirect se já logado
 (function() {
   if (localStorage.getItem('sc_token')) {

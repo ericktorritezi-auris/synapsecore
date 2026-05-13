@@ -421,6 +421,20 @@ async function runMigrations() {
       )
     `);
 
+    // ── PUSH SUBSCRIPTIONS ──
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS push_subscriptions (
+        id            SERIAL PRIMARY KEY,
+        terapeuta_id  INTEGER REFERENCES terapeutas(id) ON DELETE CASCADE,
+        endpoint      TEXT NOT NULL,
+        p256dh        TEXT NOT NULL,
+        auth          TEXT NOT NULL,
+        user_agent    TEXT,
+        created_at    TIMESTAMP DEFAULT NOW(),
+        UNIQUE(terapeuta_id, endpoint)
+      )
+    `);
+
     console.log('✅ Banco de dados pronto');
   } catch (err) {
     console.error('❌ Erro nas migrations:', err.message);

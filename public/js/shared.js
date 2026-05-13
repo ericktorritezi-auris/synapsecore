@@ -113,6 +113,16 @@ function calcIdade(dataNasc) {
 }
 function formatDate(dateStr) {
   if (!dateStr) return '—';
+  // Parse as local date to avoid UTC-to-local timezone shift
+  // "2026-05-13" → split to avoid new Date() treating as UTC midnight
+  var parts = String(dateStr).substring(0, 10).split('-');
+  if (parts.length === 3) {
+    var d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+    return d.toLocaleDateString('pt-BR');
+  }
+  return new Date(dateStr).toLocaleDateString('pt-BR');
+}
+  if (!dateStr) return '—';
   const d = new Date(dateStr);
   return d.toLocaleDateString('pt-BR');
 }

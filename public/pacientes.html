@@ -202,7 +202,8 @@ function loadPatients(search, tipo) {
   if (tipo) url += 'tipo=' + encodeURIComponent(tipo);
 
   api(url).then(function(data) {
-    document.getElementById('badgePacientes').textContent = data.length;
+    var badge = document.getElementById('badgePacientes');
+    if (badge) badge.textContent = data.length;
     document.getElementById('phSub').textContent = data.length + ' paciente' + (data.length !== 1 ? 's' : '') + ' encontrado' + (data.length !== 1 ? 's' : '');
     renderList(data);
   }).catch(function(err) {

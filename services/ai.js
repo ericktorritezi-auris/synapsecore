@@ -300,7 +300,80 @@ NÃO diagnostique. Use linguagem de hipóteses ("sugere", "indica", "observa-se 
   return { relatorio, programa: prog };
 }
 
-module.exports = { calcularIndices, detectarFlags, gerarMapeamento, FLAG_LABELS, sugerirPrograma, gerarResumoClinico, gerarEvolucao };
+module.exports = { calcularIndices, detectarFlags, gerarMapeamento, FLAG_LABELS, sugerirPrograma, gerarResumoClinico, gerarEvolucao, sugerirCIDs };
+
+// ── SUGERE CIDs (ICD-10) ──
+async function sugerirCIDs({ paciente, respostas, indices, flags }) {
+  const flagLabels = flags.map(f => FLAG_LABELS[f]?.l || f).join(', ') || 'Nenhuma';
+  const ra82 = respostas.Q82 || '';
+  const ra84 = respostas.Q84 || '';
+  const sent = {
+    S1: respostas.S1, S2: respostas.S2, S3: respostas.S3, S4: respostas.S4,
+    S5: respostas.S5, S6: respostas.S6, S7: respostas.S7, S8: respostas.S8
+  };
+
+  const prompt = `Você é um assistente clínico do Synapse Core — Evolution Therapy.
+Terapeuta: Erick Torritezi — Psicanalista e Psicoterapeuta Estratégico Integrativo.
+
+PACIENTE: ${paciente.nome_completo} | Perfil: ${paciente.perfil_tipo || 'adulto'}
+
+ÍNDICES DIMENSIONAIS (0-100):
+- Regulação Emocional: ${indices.regulacao_emocional}
+- Padrão Cognitivo: ${indices.padrao_cognitivo}
+- Índice Relacional: ${indices.indice_relacional}
+- Índice Existencial: ${indices.indice_existencial}
+- Funcionamento Corporal: ${indices.funcionamento_corporal}
+- Sustentação Comportamental: ${indices.sustentacao_comportamental}
+- Índice Psicossocial: ${indices.indice_psicossocial}
+- Vulnerabilidade Clínica: ${indices.vulnerabilidade_clinica}
+
+FLAGS CLÍNICAS: ${flagLabels}
+SENTINELAS: ${JSON.stringify(sent)}
+ESTADO EMOCIONAL RELATADO: "${ra82}"
+DESEJO DE MUDANÇA: "${ra84}"
+
+Com base nesses dados, sugira os CIDs F-code (ICD-10) mais relevantes para este paciente.
+Use apenas códigos F (saúde mental e comportamento). Sugira entre 1 e 5 CIDs.
+Seja conservador — prefira CIDs mais amplos a diagnósticos específicos sem evidência clara.
+IMPORTANTE: Estas são SUGESTÕES para revisão do terapeuta, não diagnósticos.
+
+Retorne APENAS JSON válido, sem texto antes ou depois:
+[
+  {
+    "cid_codigo": "F41.1",
+    "cid_nome": "Transtorno de Ansiedade Generalizada",
+    "relato_paciente": "O paciente relata frequentes preocupações excessivas, dificuldade de controlar pensamentos ansiosos e sintomas físicos associados à ansiedade.",
+    "significado_medico": "Ansiedade generalizada e persistente não restrita a nenhuma circunstância ambiental específica, com sintomas como nervosismo, tremores, tensão muscular, transpiração, sensação de vazio na cabeça, palpitações e tontura."
+  }
+]`;
+
+  const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': process.env.ANTHROPIC_API_KEY,
+      'anthropic-version': '2023-06-01'
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 2000,
+      messages: [{ role: 'user', content: prompt }]
+    })
+  });
+
+  if (!resp.ok) throw new Error('Anthropic API error: ' + resp.status);
+  const data  = await resp.json();
+  const texto = data.content?.[0]?.text || '[]';
+  const clean = texto.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
+  try {
+    const arr = JSON.parse(clean);
+    return Array.isArray(arr) ? arr : [];
+  } catch (e) {
+    const match = clean.match(/\[[\s\S]*\]/);
+    if (match) return JSON.parse(match[0]);
+    return [];
+  }
+}
 
 // ── GERA RELATÓRIO DE EVOLUÇÃO ──
 async function gerarEvolucao({ paciente, mapeamento, sessoes, resumoClinico, pacote }) {

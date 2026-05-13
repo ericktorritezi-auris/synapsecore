@@ -8,6 +8,22 @@ function baseUrl() {
   return (process.env.BASE_URL || 'https://www.synapsecore.app.br').replace(/\/+$/, '');
 }
 
+// ── GET /api/evolucao/:paciente_id/historico (terapeuta) ──
+router.get('/:paciente_id/historico', verifyToken, async (req, res) => {
+  try {
+    const r = await db.query(
+      `SELECT id, indices_json, score_global, sessoes_count, gerado_em
+       FROM evolucao_historico
+       WHERE paciente_id = $1
+       ORDER BY gerado_em ASC`,
+      [req.params.paciente_id]
+    );
+    res.json(r.rows);
+  } catch (err) {
+    res.status(500).json({ message: 'Erro ao buscar histórico.' });
+  }
+});
+
 // ── GET /api/evolucao/:paciente_id/status  (terapeuta) ──
 // Retorna se existe relatório ativo e se pode gerar novo
 router.get('/:paciente_id/status', verifyToken, async (req, res) => {
@@ -169,6 +185,15 @@ router.post('/:paciente_id/gerar', verifyToken, async (req, res) => {
       `INSERT INTO relatorio_tokens (paciente_id, mapeamento_id, conteudo_json, expira_em, resumo_at)
        VALUES ($1, $2, $3, $4, $5) RETURNING token, criado_em`,
       [paciente_id, mapeamento.id, JSON.stringify(conteudo), expira, latestResumoAt]
+    );
+
+    // ── Save permanent evolution snapshot (never expires) ──
+    const scoreGlobal = conteudo.indices_atuais?.global || null;
+    await db.query(
+      `INSERT INTO evolucao_historico (paciente_id, mapeamento_id, indices_json, score_global, sessoes_count)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [paciente_id, mapeamento.id, JSON.stringify(conteudo.indices_atuais || {}),
+       scoreGlobal, sessoes.length]
     );
 
     res.json({

@@ -359,6 +359,13 @@ function renderList(patients) {
     btnSess.textContent = p.sessoes_realizadas > 0 ? 'Sessões (' + p.sessoes_realizadas + ')' : 'Sessões';
     actions.appendChild(btnSess);
 
+    // Documentos button
+    var btnDoc = document.createElement('a');
+    btnDoc.className = 'btn btn-ghost btn-sm';
+    btnDoc.href = '/documentos/' + p.id;
+    btnDoc.textContent = '📄 Docs';
+    actions.appendChild(btnDoc);
+
     if (p.telefone) {
       var tel2 = p.telefone.replace(/\D/g, '');
       var btnWa = document.createElement('a');

@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Documentos — Synapse Core</title>
+<meta name="theme-color" content="#0B132B">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<link rel="icon" href="/favicon.ico">
+<link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700,900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0B132B;--sf:#1C2541;--s2:rgba(28,37,65,.75);--ac:#D4AF7F;--adim:rgba(212,175,127,.1);--abrd:rgba(212,175,127,.25);--tx:#F5F7FA;--mu:#C9D1D9;--dim:rgba(201,209,217,.4);--brd:rgba(201,209,217,.1);--fd:'Satoshi',sans-serif;--fb:'Inter',sans-serif;--r:12px;--sw:260px;--th:60px}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--fb);background:var(--bg);color:var(--tx);min-height:100vh}
+.topbar{display:flex;align-items:center;justify-content:space-between;height:var(--th);padding:0 16px;padding-top:env(safe-area-inset-top,0px);height:calc(var(--th) + env(safe-area-inset-top,0px));background:var(--sf);border-bottom:1px solid var(--brd);position:fixed;top:0;left:0;right:0;z-index:50}
+.topbar img{height:28px}
+.hamburger{background:none;border:none;color:var(--mu);cursor:pointer;padding:8px;border-radius:8px;font-size:20px}
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:40;backdrop-filter:blur(2px)}
+.overlay.open{display:block}
+.sidebar{width:var(--sw);background:var(--sf);border-right:1px solid var(--brd);position:fixed;top:0;left:0;bottom:0;z-index:45;display:flex;flex-direction:column;transform:translateX(-100%);transition:transform .3s cubic-bezier(.4,0,.2,1);overflow-y:auto}
+.sidebar.open{transform:translateX(0)}
+.sb-logo{padding:20px 20px 18px;border-bottom:1px solid var(--brd);flex-shrink:0}
+.sb-logo img{height:32px}
+.sb-nav{flex:1;padding:12px 10px;overflow-y:auto}
+.nav-section{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--dim);padding:14px 10px 6px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:9px;color:var(--mu);font-size:13.5px;text-decoration:none;transition:all .18s;margin-bottom:1px;border:1px solid transparent}
+.nav-item:hover{background:rgba(255,255,255,.04);color:var(--tx)}
+.nav-item.active{background:var(--adim);color:var(--ac);border-color:var(--abrd)}
+.nav-item .ni{font-size:16px;width:20px;text-align:center;flex-shrink:0}
+.sb-footer{padding:14px 12px;border-top:1px solid var(--brd);flex-shrink:0}
+.user-pill{display:flex;align-items:center;gap:10px;padding:10px;background:rgba(11,19,43,.5);border-radius:10px;border:1px solid var(--brd)}
+.user-av{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--ac),#b8924e);display:flex;align-items:center;justify-content:center;font-family:var(--fd);font-size:12px;font-weight:700;color:var(--bg);flex-shrink:0;overflow:hidden}
+.user-name{font-size:12.5px;font-weight:500}
+.user-role{font-size:10px;color:var(--dim)}
+.logout-btn{margin-left:auto;background:none;border:none;color:var(--dim);cursor:pointer;font-size:13px;padding:4px 6px;font-family:var(--fb)}
+.main{padding:calc(var(--th)+28px+env(safe-area-inset-top,0px)) 16px 60px}
+.back-link{display:inline-flex;align-items:center;gap:6px;color:var(--mu);font-size:13px;text-decoration:none;margin-bottom:16px}
+.ph{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px}
+.ph-title{font-family:var(--fd);font-size:22px;font-weight:700}
+.ph-sub{font-size:12px;color:var(--dim);margin-top:3px}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:10px 16px;border-radius:9px;font-family:var(--fd);font-size:13px;font-weight:700;cursor:pointer;border:none;transition:all .2s;text-decoration:none}
+.btn-primary{background:linear-gradient(135deg,var(--ac),#b8924e);color:var(--bg);box-shadow:0 4px 14px rgba(212,175,127,.2)}
+.btn-ghost{background:var(--adim);color:var(--ac);border:1px solid var(--abrd)}
+.btn-sm{padding:7px 12px;font-size:12px}
+.btn:disabled{opacity:.6;cursor:not-allowed}
+/* CIDs section */
+.cid-section{background:var(--s2);border:1px solid var(--brd);border-radius:var(--r);padding:18px;margin-bottom:16px}
+.cid-section::before{content:'';display:block;height:2px;background:linear-gradient(90deg,#7c3aed,transparent);border-radius:2px;margin-bottom:14px}
+.sec-title{font-family:var(--fd);font-size:13px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:7px}
+.cid-list{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+.cid-item{border:1px solid var(--brd);border-radius:9px;overflow:hidden}
+.cid-item.confirmed{border-color:rgba(16,185,129,.3);background:rgba(16,185,129,.04)}
+.cid-item.pending{border-color:rgba(245,158,11,.2);background:rgba(245,158,11,.03)}
+.cid-header{display:flex;align-items:center;gap:10px;padding:10px 12px;cursor:pointer}
+.cid-code{font-family:var(--fd);font-size:13px;font-weight:700;color:var(--ac);min-width:54px}
+.cid-nome{font-size:13px;flex:1;font-weight:500}
+.cid-badge{font-size:9.5px;padding:2px 8px;border-radius:20px;font-weight:600;white-space:nowrap}
+.badge-ia{background:rgba(139,92,246,.12);color:#c4b5fd}
+.badge-conf{background:rgba(16,185,129,.12);color:#6ee7b7}
+.badge-man{background:rgba(212,175,127,.12);color:var(--ac)}
+.cid-body{padding:0 12px 12px;display:none}
+.cid-body.open{display:block}
+.cid-relato{font-size:12.5px;color:var(--mu);margin-bottom:6px;line-height:1.55}
+.cid-sig{font-size:11.5px;color:var(--dim);font-style:italic;line-height:1.5;margin-bottom:10px}
+.cid-actions{display:flex;gap:8px}
+.btn-conf{background:rgba(16,185,129,.12);color:#6ee7b7;border:1px solid rgba(16,185,129,.25);padding:5px 12px;border-radius:7px;font-size:11.5px;font-weight:600;cursor:pointer;font-family:var(--fb)}
+.btn-rej{background:rgba(239,68,68,.08);color:#fca5a5;border:1px solid rgba(239,68,68,.2);padding:5px 12px;border-radius:7px;font-size:11.5px;font-weight:600;cursor:pointer;font-family:var(--fb)}
+.add-cid-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.add-cid-row input{flex:1;min-width:90px;background:rgba(11,19,43,.6);border:1px solid var(--brd);border-radius:8px;color:var(--tx);font-family:var(--fb);font-size:13px;padding:8px 12px;outline:none}
+.add-cid-row input:focus{border-color:var(--abrd)}
+/* Doc types grid */
+.doc-types{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px}
+.doc-type-card{background:var(--s2);border:1px solid var(--brd);border-radius:var(--r);padding:16px;cursor:pointer;transition:all .2s;-webkit-tap-highlight-color:transparent}
+.doc-type-card:hover{border-color:var(--abrd);background:var(--adim)}
+.dtc-icon{font-size:22px;margin-bottom:8px}
+.dtc-title{font-family:var(--fd);font-size:13px;font-weight:700;margin-bottom:3px}
+.dtc-sub{font-size:11px;color:var(--dim);line-height:1.45}
+/* Modal */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(4px)}
+.modal-overlay.open{display:flex}
+.modal{background:#1a2540;border:1px solid var(--abrd);border-radius:18px;padding:24px 20px;width:100%;max-width:400px;position:relative}
+.modal-title{font-family:var(--fd);font-size:16px;font-weight:700;margin-bottom:4px}
+.modal-sub{font-size:12px;color:var(--dim);margin-bottom:18px}
+.modal-close{position:absolute;top:14px;right:16px;background:none;border:none;color:var(--dim);cursor:pointer;font-size:18px}
+.field label{display:block;font-size:10.5px;font-weight:500;color:var(--mu);letter-spacing:.8px;text-transform:uppercase;margin-bottom:5px}
+.field{margin-bottom:12px}
+.field input,.field select,.field textarea{width:100%;background:rgba(11,19,43,.6);border:1px solid var(--brd);border-radius:8px;color:var(--tx);font-family:var(--fb);font-size:14px;padding:10px 12px;outline:none;transition:border-color .2s;-webkit-appearance:none}
+.field input:focus,.field select:focus{border-color:var(--abrd)}
+.field select option{background:#1C2541}
+.gen-loading{text-align:center;padding:16px;color:var(--dim);font-size:13px;display:none}
+.mini-spin{width:18px;height:18px;border:2px solid var(--adim);border-top-color:var(--ac);border-radius:50%;animation:spin .7s linear infinite;display:inline-block;vertical-align:middle;margin-right:8px}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* Doc history list */
+.doc-list{display:flex;flex-direction:column;gap:8px}
+.doc-item{background:var(--s2);border:1px solid var(--brd);border-radius:9px;padding:12px 14px;display:flex;align-items:center;gap:12px}
+.doc-icon{font-size:18px;flex-shrink:0}
+.doc-info{flex:1;min-width:0}
+.doc-titulo{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.doc-data{font-size:11px;color:var(--dim);margin-top:2px}
+.doc-actions{display:flex;gap:6px;flex-shrink:0}
+.empty{text-align:center;padding:32px 16px;color:var(--dim);font-size:13px}
+.page-footer{text-align:center;padding:20px 0 8px;font-size:10px;color:var(--dim)}
+.page-footer strong{color:rgba(201,209,217,.4)}
+@media(min-width:960px){
+  .topbar{display:none}.overlay{display:none!important}.sidebar{transform:translateX(0)}
+  .main{margin-left:var(--sw);padding:32px 32px 60px}
+  .doc-types{grid-template-columns:repeat(3,1fr)}
+}
+@media(min-width:600px){.main{padding-left:24px;padding-right:24px}}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:2px}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <img src="/img/logo-horizontal.png" alt="Synapse Core">
+  <button class="hamburger" onclick="toggleSidebar()">&#9776;</button>
+</div>
+<div class="overlay" id="overlay" onclick="closeSidebar()"></div>
+<aside class="sidebar" id="sidebar">
+  <div class="sb-logo"><img src="/img/logo-horizontal.png" alt="Synapse Core"></div>
+  <nav class="sb-nav">
+    <div class="nav-section">Principal</div>
+    <a href="/dashboard" class="nav-item"><span class="ni">&#9672;</span> Dashboard</a>
+    <a href="/pacientes" class="nav-item"><span class="ni">&#9675;</span> Pacientes</a>
+    <div class="nav-section">Ferramentas</div>
+    <a href="/paciente-novo" class="nav-item"><span class="ni">&#9703;</span> Nova Avaliação</a>
+    <a href="#" class="nav-item"><span class="ni">&#9678;</span> Mapeamentos</a>
+    <div class="nav-section">Clínico</div>
+    <a href="#" class="nav-item"><span class="ni">&#9712;</span> Sessões</a>
+    <a href="#" class="nav-item active"><span class="ni">&#8857;</span> Documentos</a>
+    <div class="nav-section">Sistema</div>
+    <a href="#" class="nav-item"><span class="ni">&#9714;</span> Logs LGPD</a>
+    <a href="/perfil" class="nav-item"><span class="ni">&#9715;</span> Configurações</a>
+  </nav>
+  <div class="sb-footer">
+    <div class="user-pill">
+      <div class="user-av" id="userAvatar">ET</div>
+      <div style="overflow:hidden;flex:1"><div class="user-name" id="userName">--</div><div class="user-role">Evolution Therapy</div></div>
+      <button class="logout-btn" onclick="logout()">Sair</button>
+    </div>
+  </div>
+</aside>
+
+<main class="main">
+  <a href="/pacientes" class="back-link">&#8592; Pacientes</a>
+  <div class="ph">
+    <div>
+      <div class="ph-title" id="phTitle">Documentos</div>
+      <div class="ph-sub" id="phSub">Carregando...</div>
+    </div>
+    <a href="#" class="btn btn-ghost btn-sm" id="btnSessoes">&#9654; Sessões</a>
+  </div>
+
+  <!-- CIDs -->
+  <div class="cid-section" id="cidSection" style="display:none">
+    <div class="sec-title">&#127968; CIDs Identificados pela IA</div>
+    <div class="cid-list" id="cidList"></div>
+    <div style="font-size:11.5px;color:var(--dim);margin-bottom:10px">&#43; Adicionar CID manualmente</div>
+    <div class="add-cid-row">
+      <input type="text" id="addCidCodigo" placeholder="F41.1" style="max-width:90px">
+      <input type="text" id="addCidNome" placeholder="Nome do CID" style="flex:2">
+      <button class="btn btn-ghost btn-sm" onclick="adicionarCID()">&#43;</button>
+    </div>
+  </div>
+
+  <!-- Document types -->
+  <div class="sec-title" style="margin-bottom:12px;font-family:var(--fd);font-size:13px;font-weight:700">&#128196; Gerar Documento</div>
+  <div class="doc-types">
+    <div class="doc-type-card" onclick="abrirModal('recibo-sessao')">
+      <div class="dtc-icon">&#129534;</div>
+      <div class="dtc-title">Recibo de Sessão</div>
+      <div class="dtc-sub">Recibo individual com dados completos da sessão</div>
+    </div>
+    <div class="doc-type-card" onclick="abrirModal('recibo-ir')">
+      <div class="dtc-icon">&#129516;</div>
+      <div class="dtc-title">Recibo para IR</div>
+      <div class="dtc-sub">Consolidado para dedução no imposto de renda</div>
+    </div>
+    <div class="doc-type-card" onclick="abrirModal('declaracao')">
+      <div class="dtc-icon">&#128203;</div>
+      <div class="dtc-title">Declaração de Comparecimento</div>
+      <div class="dtc-sub">Para empregador, escola ou convênio</div>
+    </div>
+    <div class="doc-type-card" onclick="abrirModal('laudo')">
+      <div class="dtc-icon">&#128300;</div>
+      <div class="dtc-title">Laudo Terapêutico</div>
+      <div class="dtc-sub">Documento técnico gerado com IA — revisável</div>
+    </div>
+    <div class="doc-type-card" onclick="abrirModal('alta')">
+      <div class="dtc-icon">&#127775;</div>
+      <div class="dtc-title">Relatório de Alta</div>
+      <div class="dtc-sub">Encerramento do processo com evolução completa</div>
+    </div>
+  </div>
+
+  <!-- Documents history -->
+  <div class="sec-title" style="margin-bottom:12px;font-family:var(--fd);font-size:13px;font-weight:700">&#128451; Documentos Gerados</div>
+  <div id="docList"><div class="empty">Carregando...</div></div>
+
+  <div class="page-footer">&copy; 2026 Synapse Core &mdash; <strong>Erick Torritezi</strong> &mdash; v1.8.0</div>
+</main>
+
+<!-- Modal Gerar Documento -->
+<div class="modal-overlay" id="docModal">
+  <div class="modal">
+    <button class="modal-close" onclick="fecharModal()">&#10005;</button>
+    <div class="modal-title" id="modalTitle">Gerar Documento</div>
+    <div class="modal-sub" id="modalSub">--</div>
+    <div id="modalForm"></div>
+    <div class="gen-loading" id="genLoading"><span class="mini-spin"></span>Gerando documento...</div>
+    <button class="btn btn-primary" id="btnGerar" onclick="gerarDocumento()" style="width:100%;justify-content:center;margin-top:4px">Gerar</button>
+  </div>
+</div>
+
+<script src="/js/shared.js"></script>
+<script>
+checkAuth();
+renderUserPill();
+
+var PACIENTE_ID = location.pathname.split('/').pop();
+var tipoAtual = '';
+var sessoes = [];
+var cids = [];
+
+window.addEventListener('DOMContentLoaded', function() {
+  document.getElementById('btnSessoes').href = '/sessoes/' + PACIENTE_ID;
+  Promise.all([
+    api('/api/pacientes/' + PACIENTE_ID),
+    api('/api/documentos/' + PACIENTE_ID),
+    api('/api/cids/' + PACIENTE_ID),
+    api('/api/sessoes/' + PACIENTE_ID)
+  ]).then(function(r) {
+    var pac = r[0];
+    var docs = r[1];
+    cids = r[2];
+    sessoes = r[3];
+    var ini = pac.nome_completo.split(' ')[0];
+    document.getElementById('phTitle').textContent = 'Documentos — ' + ini;
+    document.getElementById('phSub').textContent = (pac.email||'') + (pac.telefone?' · '+pac.telefone:'');
+    renderCIDs();
+    renderDocs(docs);
+  }).catch(function(e) { showToast('Erro ao carregar.','error'); });
+});
+
+// ── CIDs ──
+function renderCIDs() {
+  if (!cids.length) return;
+  document.getElementById('cidSection').style.display = 'block';
+  var list = document.getElementById('cidList');
+  list.innerHTML = '';
+  cids.forEach(function(c) {
+    var item = document.createElement('div');
+    item.className = 'cid-item ' + (c.confirmado ? 'confirmed' : 'pending');
+    item.id = 'cid_' + c.id;
+
+    var hdr = document.createElement('div'); hdr.className = 'cid-header';
+    hdr.addEventListener('click', function() {
+      var body = item.querySelector('.cid-body');
+      body.classList.toggle('open');
+    });
+
+    var code = document.createElement('span'); code.className='cid-code'; code.textContent=c.cid_codigo;
+    var nome = document.createElement('span'); nome.className='cid-nome'; nome.textContent=c.cid_nome;
+    var badge = document.createElement('span');
+    badge.className = 'cid-badge ' + (c.confirmado?'badge-conf':c.gerado_por_ia?'badge-ia':'badge-man');
+    badge.textContent = c.confirmado ? '✓ Confirmado' : c.gerado_por_ia ? 'IA' : 'Manual';
+
+    hdr.appendChild(code); hdr.appendChild(nome); hdr.appendChild(badge);
+
+    var body = document.createElement('div'); body.className='cid-body';
+    if (c.relato_paciente) { var p1=document.createElement('div'); p1.className='cid-relato'; p1.textContent='Relato: '+c.relato_paciente; body.appendChild(p1); }
+    if (c.significado_medico) { var p2=document.createElement('div'); p2.className='cid-sig'; p2.textContent=c.significado_medico; body.appendChild(p2); }
+
+    if (!c.confirmado) {
+      var acts = document.createElement('div'); acts.className='cid-actions';
+      var btnC = document.createElement('button'); btnC.className='btn-conf'; btnC.textContent='✓ Confirmar';
+      btnC.dataset.id=c.id;
+      btnC.addEventListener('click', function(e){ e.stopPropagation(); confirmarCID(this.dataset.id); });
+      var btnR = document.createElement('button'); btnR.className='btn-rej'; btnR.textContent='✗ Rejeitar';
+      btnR.dataset.id=c.id;
+      btnR.addEventListener('click', function(e){ e.stopPropagation(); rejeitarCID(this.dataset.id); });
+      acts.appendChild(btnC); acts.appendChild(btnR);
+      body.appendChild(acts);
+    }
+
+    item.appendChild(hdr); item.appendChild(body);
+    list.appendChild(item);
+  });
+}
+
+function confirmarCID(id) {
+  api('/api/cids/'+id+'/confirmar','PUT',{})
+    .then(function() {
+      var c = cids.find(function(x){return x.id==id;});
+      if (c) { c.confirmado=true; }
+      var el = document.getElementById('cid_'+id);
+      if (el) { el.className='cid-item confirmed'; var acts=el.querySelector('.cid-actions'); if(acts)acts.remove();
+        var badge=el.querySelector('.cid-badge'); if(badge){badge.className='cid-badge badge-conf';badge.textContent='✓ Confirmado';} }
+      showToast('CID confirmado!','success');
+    })
+    .catch(function(){ showToast('Erro ao confirmar.','error'); });
+}
+
+function rejeitarCID(id) {
+  if (!confirm('Remover este CID?')) return;
+  api('/api/cids/'+id+'/rejeitar','PUT',{})
+    .then(function() {
+      cids = cids.filter(function(c){return c.id!=id;});
+      var el = document.getElementById('cid_'+id); if(el)el.remove();
+      showToast('CID removido.','success');
+    })
+    .catch(function(){ showToast('Erro.','error'); });
+}
+
+function adicionarCID() {
+  var codigo = document.getElementById('addCidCodigo').value.trim();
+  var nome   = document.getElementById('addCidNome').value.trim();
+  if (!codigo||!nome) { showToast('Informe código e nome.','error'); return; }
+  api('/api/cids/'+PACIENTE_ID+'/manual','POST',{cid_codigo:codigo,cid_nome:nome})
+    .then(function(data) {
+      cids.push(data);
+      document.getElementById('addCidCodigo').value='';
+      document.getElementById('addCidNome').value='';
+      renderCIDs();
+      document.getElementById('cidSection').style.display='block';
+      showToast('CID adicionado!','success');
+    })
+    .catch(function(e){ showToast(e.message||'Erro.','error'); });
+}
+
+// ── DOCS LIST ──
+var tipoIcons = {recibo_sessao:'🧾',recibo_ir:'🗂️',declaracao:'📋',laudo:'🔬',alta:'⭐'};
+
+function renderDocs(docs) {
+  var wrap = document.getElementById('docList');
+  wrap.innerHTML='';
+  if (!docs.length) { wrap.innerHTML='<div class="empty">Nenhum documento gerado ainda.</div>'; return; }
+  var list = document.createElement('div'); list.className='doc-list';
+  docs.forEach(function(d) {
+    var item=document.createElement('div'); item.className='doc-item';
+    var icon=document.createElement('span'); icon.className='doc-icon'; icon.textContent=tipoIcons[d.tipo]||'📄';
+    var info=document.createElement('div'); info.className='doc-info';
+    var titulo=document.createElement('div'); titulo.className='doc-titulo'; titulo.textContent=d.titulo||d.tipo;
+    var data=document.createElement('div'); data.className='doc-data';
+    data.textContent=new Date(d.created_at).toLocaleDateString('pt-BR');
+    info.appendChild(titulo); info.appendChild(data);
+    var acts=document.createElement('div'); acts.className='doc-actions';
+    var btnA=document.createElement('a'); btnA.className='btn btn-ghost btn-sm';
+    btnA.href='/doc/'+d.token; btnA.target='_blank'; btnA.textContent='Abrir';
+    var btnD=document.createElement('button'); btnD.className='btn btn-sm';
+    btnD.style.background='rgba(239,68,68,.1)'; btnD.style.color='#fca5a5'; btnD.style.border='1px solid rgba(239,68,68,.2)';
+    btnD.textContent='✕'; btnD.dataset.id=d.id;
+    btnD.addEventListener('click', function(){ removerDoc(this.dataset.id); });
+    acts.appendChild(btnA); acts.appendChild(btnD);
+    item.appendChild(icon); item.appendChild(info); item.appendChild(acts);
+    list.appendChild(item);
+  });
+  wrap.appendChild(list);
+}
+
+function removerDoc(id) {
+  if (!confirm('Remover este documento permanentemente?')) return;
+  api('/api/documentos/'+id,'DELETE')
+    .then(function() { showToast('Removido.','success'); location.reload(); })
+    .catch(function(){ showToast('Erro.','error'); });
+}
+
+// ── MODAL ──
+var modalConfigs = {
+  'recibo-sessao': { title:'Recibo de Sessão', sub:'Selecione a sessão para gerar o recibo.' },
+  'recibo-ir':     { title:'Recibo para IR', sub:'Informe o período para consolidar as sessões.' },
+  'declaracao':    { title:'Declaração de Comparecimento', sub:'Informe o período e a finalidade.' },
+  'laudo':         { title:'Laudo Terapêutico', sub:'A IA irá gerar o laudo. Pode levar até 30 segundos.' },
+  'alta':          { title:'Relatório de Alta', sub:'Gera o relatório de encerramento do processo terapêutico.' }
+};
+
+function abrirModal(tipo) {
+  tipoAtual = tipo;
+  var cfg = modalConfigs[tipo];
+  document.getElementById('modalTitle').textContent = cfg.title;
+  document.getElementById('modalSub').textContent   = cfg.sub;
+  document.getElementById('genLoading').style.display = 'none';
+  document.getElementById('btnGerar').style.display = 'block';
+  var form = document.getElementById('modalForm');
+  form.innerHTML = '';
+
+  if (tipo === 'recibo-sessao') {
+    var realizadas = sessoes.filter(function(s){return s.status==='realizada';});
+    if (!realizadas.length) { form.innerHTML='<div style="color:var(--dim);font-size:13px;margin-bottom:12px">Nenhuma sessão realizada.</div>'; return; }
+    var f = document.createElement('div'); f.className='field';
+    var lbl=document.createElement('label'); lbl.textContent='Sessão';
+    var sel=document.createElement('select'); sel.id='modalSessaoId';
+    realizadas.forEach(function(s) {
+      var opt=document.createElement('option'); opt.value=s.id;
+      opt.textContent='Sessão '+s.sessao_numero+' — '+new Date(s.data_sessao).toLocaleDateString('pt-BR')+(s.valor_cobrado?' — R$ '+parseFloat(s.valor_cobrado).toFixed(2):'');
+      sel.appendChild(opt);
+    });
+    f.appendChild(lbl); f.appendChild(sel); form.appendChild(f);
+  }
+
+  if (tipo === 'recibo-ir' || tipo === 'declaracao') {
+    ['inicio','fim'].forEach(function(p) {
+      var f=document.createElement('div'); f.className='field';
+      var lbl=document.createElement('label'); lbl.textContent=p==='inicio'?'Data inicial':'Data final';
+      var inp=document.createElement('input'); inp.type='date'; inp.id='modal_'+p;
+      if (p==='fim') { var d=new Date(); inp.value=d.toISOString().split('T')[0]; }
+      if (p==='inicio') { var d2=new Date(); d2.setMonth(d2.getMonth()-1); inp.value=d2.toISOString().split('T')[0]; }
+      f.appendChild(lbl); f.appendChild(inp); form.appendChild(f);
+    });
+    if (tipo === 'declaracao') {
+      var ff=document.createElement('div'); ff.className='field';
+      var llbl=document.createElement('label'); llbl.textContent='Finalidade (opcional)';
+      var inp2=document.createElement('input'); inp2.type='text'; inp2.id='modal_finalidade';
+      inp2.placeholder='Ex: Apresentação ao empregador';
+      ff.appendChild(llbl); ff.appendChild(inp2); form.appendChild(ff);
+    }
+  }
+
+  document.getElementById('docModal').classList.add('open');
+}
+
+function fecharModal() {
+  document.getElementById('docModal').classList.remove('open');
+  document.getElementById('genLoading').style.display='none';
+  document.getElementById('btnGerar').style.display='block';
+}
+
+function gerarDocumento() {
+  document.getElementById('btnGerar').style.display='none';
+  document.getElementById('genLoading').style.display='block';
+  var payload = {};
+  if (tipoAtual==='recibo-sessao') payload.sessao_id = document.getElementById('modalSessaoId')?.value;
+  if (tipoAtual==='recibo-ir'||tipoAtual==='declaracao') {
+    payload.periodo_inicio = document.getElementById('modal_inicio')?.value;
+    payload.periodo_fim    = document.getElementById('modal_fim')?.value;
+    if (tipoAtual==='declaracao') payload.finalidade = document.getElementById('modal_finalidade')?.value||null;
+  }
+  api('/api/documentos/'+PACIENTE_ID+'/'+tipoAtual,'POST',payload)
+    .then(function(data) {
+      fecharModal();
+      showToast('Documento gerado!','success');
+      window.open(data.link,'_blank');
+      setTimeout(function(){ location.reload(); },1000);
+    })
+    .catch(function(err){
+      document.getElementById('genLoading').style.display='none';
+      document.getElementById('btnGerar').style.display='block';
+      showToast(err.message||'Erro ao gerar documento.','error');
+    });
+}
+</script>
+</body>
+</html>

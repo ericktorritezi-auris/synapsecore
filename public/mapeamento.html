@@ -241,6 +241,17 @@ body{font-family:var(--fb);background:var(--bg);color:var(--text);min-height:100
         <div class="sec-text" id="progJust">--</div>
       </div>
 
+      <!-- CIDs -->
+      <div class="section-card" id="cidsCard" style="display:none;background:linear-gradient(135deg,rgba(124,58,237,0.08),rgba(59,130,246,0.05));border-color:rgba(124,58,237,0.2)">
+        <div class="sec-title">
+          <span><span class="sec-icon">&#127968;</span> CIDs Identificados pela IA</span>
+          <a href="#" id="linkDocumentos" class="edit-btn" style="text-decoration:none">Documentos &#8594;</a>
+        </div>
+        <div style="font-size:12px;color:var(--dim);margin-bottom:12px">Sugestões para revisão do terapeuta. Confirme os pertinentes antes de gerar documentos.</div>
+        <div id="cidsListMap"></div>
+        <div style="font-size:11px;color:var(--dim);margin-top:8px;line-height:1.5">CIDs confirmados aparecem automaticamente em todos os documentos clínicos do paciente.</div>
+      </div>
+
       <!-- EVOLUÇÃO DO PACIENTE — card logo abaixo do programa -->
       <div class="section-card" id="evolucaoCard" style="background:linear-gradient(135deg,rgba(139,92,246,0.1),rgba(59,130,246,0.06));border:1.5px solid rgba(139,92,246,0.25)">
         <div class="sec-title">
@@ -604,6 +615,7 @@ function renderReport(data) {
   window.scrollTo({ top: 0, behavior: 'instant' });
   carregarResumoClinico();
   carregarStatusEvolucao();
+  carregarCIDs();
 }
 
 // ── RADAR SVG ──
@@ -680,7 +692,35 @@ function toggleEdit(key) {
 }
 
 // ── SAVE ──
-// ── RELATÓRIO DE EVOLUÇÃO ──
+// ── CIDs ──
+function carregarCIDs() {
+  document.getElementById('linkDocumentos').href = '/documentos/' + PACIENTE_ID;
+  api('/api/cids/' + PACIENTE_ID)
+    .then(function(cids) {
+      if (!cids.length) return;
+      document.getElementById('cidsCard').style.display = 'block';
+      var wrap = document.getElementById('cidsListMap');
+      wrap.innerHTML = '';
+      cids.forEach(function(c) {
+        var row = document.createElement('div');
+        row.style.cssText='display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)';
+        var code = document.createElement('span');
+        code.style.cssText='font-family:var(--f-d);font-size:12px;font-weight:700;color:var(--accent);min-width:52px';
+        code.textContent = c.cid_codigo;
+        var nome = document.createElement('span');
+        nome.style.cssText='font-size:12.5px;flex:1;color:var(--text)';
+        nome.textContent = c.cid_nome;
+        var badge = document.createElement('span');
+        badge.style.cssText='font-size:10px;padding:2px 8px;border-radius:20px;font-weight:600;white-space:nowrap;' + (c.confirmado ? 'background:rgba(16,185,129,.12);color:#6ee7b7' : 'background:rgba(245,158,11,.1);color:#fcd34d');
+        badge.textContent = c.confirmado ? '✓ Confirmado' : 'Aguardando';
+        row.appendChild(code); row.appendChild(nome); row.appendChild(badge);
+        wrap.appendChild(row);
+      });
+    })
+    .catch(function(){});
+}
+
+
 var evolucaoLinkAtivo = '';
 
 function carregarStatusEvolucao() {

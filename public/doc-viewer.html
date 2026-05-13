@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Documento — Synapse Core</title>
+<link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700,900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#0B132B;--gold:#C4965A;--gold2:#D4AF7F;--text:#1a1f2e;--muted:#4a5568;--dim:#8a92a6;--bg:#F6F7FA;--white:#fff;--brd:#e2e6ed;--fd:'Satoshi',sans-serif;--fb:'Inter',sans-serif}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--fb);background:var(--bg);color:var(--text);min-height:100vh}
+/* Loading */
+#scrLoad{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:14px}
+.load-circle{width:44px;height:44px;border-radius:50%;border:3px solid rgba(196,150,90,.2);border-top-color:var(--gold);animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* Toolbar */
+.toolbar{background:var(--navy);padding:11px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;position:sticky;top:0;z-index:10}
+.tb-logo img{height:24px}
+.tb-title{font-family:var(--fd);font-size:13px;font-weight:700;color:rgba(255,255,255,.7);flex:1;text-align:center}
+.tb-actions{display:flex;gap:8px}
+.btn-print{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;border-radius:7px;background:linear-gradient(135deg,var(--gold2),var(--gold));color:var(--navy);font-family:var(--fd);font-size:12px;font-weight:700;cursor:pointer;border:none}
+.btn-fechar{display:inline-flex;align-items:center;gap:5px;padding:7px 12px;border-radius:7px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.8);font-family:var(--fd);font-size:12px;font-weight:600;cursor:pointer}
+@media(min-width:960px){.btn-fechar{display:none}}
+/* Doc */
+#docWrap{max-width:760px;margin:0 auto;padding:24px 16px 60px}
+.doc-page{background:var(--white);border-radius:12px;box-shadow:0 2px 16px rgba(0,0,0,.08);overflow:hidden}
+/* Header */
+.doc-header{padding:28px 32px 20px;border-bottom:2px solid var(--brd);display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
+.doc-logo{height:44px;max-width:160px;object-fit:contain}
+.doc-logo-placeholder{font-family:var(--fd);font-size:16px;font-weight:900;color:var(--navy)}
+.doc-terap-info{text-align:right;min-width:0}
+.doc-terap-nome{font-family:var(--fd);font-size:14px;font-weight:700;color:var(--navy)}
+.doc-terap-esp{font-size:11.5px;color:var(--muted);margin-top:2px;line-height:1.5}
+.doc-reg{font-size:11px;color:var(--dim);margin-top:4px}
+/* Body */
+.doc-body{padding:24px 32px}
+.doc-type-tag{display:inline-flex;align-items:center;gap:6px;background:rgba(11,19,43,.06);border:1px solid rgba(11,19,43,.1);border-radius:20px;padding:4px 14px;font-size:10.5px;font-weight:700;color:var(--navy);letter-spacing:.8px;text-transform:uppercase;margin-bottom:16px}
+.doc-title{font-family:var(--fd);font-size:20px;font-weight:900;color:var(--navy);margin-bottom:4px}
+.doc-emissao{font-size:11.5px;color:var(--dim);margin-bottom:20px}
+.doc-divider{height:1px;background:var(--brd);margin:16px 0}
+/* Tables */
+.info-table{width:100%;border-collapse:collapse;margin-bottom:16px}
+.info-table td{padding:7px 0;font-size:13px;vertical-align:top}
+.info-table td:first-child{color:var(--dim);width:130px;font-size:12px;font-weight:500;padding-right:12px}
+.info-table td:last-child{color:var(--text);font-weight:400}
+.sess-table{width:100%;border-collapse:collapse;margin:12px 0}
+.sess-table th{text-align:left;font-size:11px;color:var(--dim);font-weight:600;padding:8px 10px;border-bottom:1.5px solid var(--brd);text-transform:uppercase;letter-spacing:.5px}
+.sess-table td{padding:9px 10px;font-size:13px;border-bottom:1px solid var(--brd)}
+.sess-table tr:last-child td{border-bottom:none}
+.sess-table .total-row td{font-family:var(--fd);font-weight:700;font-size:14px;border-top:2px solid var(--navy);border-bottom:none;padding-top:12px}
+/* CIDs */
+.cid-chips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.cid-chip{background:rgba(11,19,43,.06);border:1px solid rgba(11,19,43,.1);border-radius:6px;padding:4px 10px;font-size:12px;color:var(--navy);font-weight:500}
+/* Laudo / Alta text */
+.doc-text{font-size:13.5px;line-height:1.85;color:var(--text)}
+.doc-text p{margin-bottom:12px}
+.doc-text p:last-child{margin-bottom:0}
+/* Signature */
+.sig-area{margin-top:36px;display:flex;justify-content:flex-end}
+.sig-block{text-align:center;min-width:200px}
+.sig-img{max-height:64px;max-width:200px;object-fit:contain;display:block;margin:0 auto 4px}
+.sig-line{height:1.5px;background:var(--navy);margin-bottom:6px}
+.sig-nome{font-family:var(--fd);font-size:13px;font-weight:700;color:var(--navy)}
+.sig-esp{font-size:11px;color:var(--muted);margin-top:2px}
+.sig-regs{font-size:10.5px;color:var(--dim);margin-top:3px;line-height:1.5}
+.carimbo-img{max-height:80px;max-width:160px;object-fit:contain;display:block;margin:10px auto 0}
+/* Footer */
+.doc-footer{background:rgba(11,19,43,.03);border-top:1px solid var(--brd);padding:12px 32px;text-align:center;font-size:10px;color:var(--dim)}
+/* Textarea for editable docs */
+.edit-note{width:100%;min-height:120px;border:1.5px dashed rgba(196,150,90,.4);border-radius:8px;padding:12px;font-family:var(--fb);font-size:13.5px;color:var(--text);background:rgba(196,150,90,.03);resize:vertical;outline:none;line-height:1.7}
+.edit-note:focus{border-color:var(--gold)}
+.edit-hint{font-size:11px;color:var(--gold);margin-bottom:6px;font-style:italic}
+@media print{
+  .toolbar{display:none!important}
+  body{background:white}
+  #docWrap{padding:0;max-width:100%}
+  .doc-page{box-shadow:none;border-radius:0}
+  .edit-note{border:none;padding:0}
+  .edit-hint{display:none}
+  @page{margin:16mm}
+}
+</style>
+</head>
+<body>
+<div id="scrLoad">
+  <div class="load-circle"></div>
+  <div style="font-family:var(--fd);font-size:14px;color:var(--muted)">Carregando documento...</div>
+</div>
+
+<div id="scrDoc" style="display:none">
+  <div class="toolbar">
+    <div class="tb-logo"><img src="/img/logo-horizontal.png" alt="Synapse Core" style="filter:brightness(0) invert(1)"></div>
+    <div class="tb-title" id="tbTitle">--</div>
+    <div class="tb-actions">
+      <button class="btn-fechar" onclick="voltarPainel()">&#8592; Fechar</button>
+      <button class="btn-print" onclick="window.print()">&#128196; PDF</button>
+    </div>
+  </div>
+  <div id="docWrap"><div class="doc-page" id="docPage"></div></div>
+</div>
+
+<script>
+var TOKEN = location.pathname.split('/').pop();
+
+window.addEventListener('DOMContentLoaded', function() {
+  fetch('/api/documentos/view/' + TOKEN)
+    .then(function(r){return r.json();})
+    .then(function(d) {
+      document.getElementById('scrLoad').style.display='none';
+      document.getElementById('scrDoc').style.display='block';
+      document.getElementById('tbTitle').textContent = d.titulo||'Documento';
+      renderDoc(d.conteudo_json, d.titulo);
+    })
+    .catch(function() {
+      document.getElementById('scrLoad').innerHTML='<div style="text-align:center;padding:32px"><div style="font-size:40px;margin-bottom:12px;opacity:.3">&#128683;</div><div style="font-family:var(--fd);font-size:18px;font-weight:700;margin-bottom:8px">Documento não encontrado</div><div style="color:var(--muted);font-size:13px">Verifique o link e tente novamente.</div></div>';
+    });
+});
+
+function voltarPainel() {
+  if (window.history.length > 1) history.back(); else window.location.href='/dashboard';
+}
+
+function esc(t) { return String(t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function fDate(d) { if(!d)return'—'; return new Date(d).toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'}); }
+function fCur(v) { return 'R$ '+parseFloat(v||0).toFixed(2).replace('.',','); }
+
+function renderHeader(terap) {
+  var logoHtml = terap.logo_url
+    ? '<img src="'+terap.logo_url+'" class="doc-logo" alt="Logo">'
+    : '<div class="doc-logo-placeholder">'+esc(terap.nome)+'</div>';
+  var regs = (terap.registros||[]).filter(function(r){return r.inst;}).map(function(r){return r.inst+': '+r.num;}).join(' &bull; ');
+  return '<div class="doc-header"><div>'+logoHtml+'</div><div class="doc-terap-info"><div class="doc-terap-nome">'+esc(terap.nome)+'</div><div class="doc-terap-esp">'+esc(terap.especialidades||'')+'</div>'+(regs?'<div class="doc-reg">'+regs+'</div>':'')+'</div></div>';
+}
+
+function renderCIDs(cids) {
+  if (!cids||!cids.length) return '';
+  var chips = cids.map(function(c){return'<span class="cid-chip">'+esc(c.cid_codigo)+' — '+esc(c.cid_nome)+'</span>';}).join('');
+  return '<div class="doc-divider"></div><table class="info-table"><tr><td>CIDs</td><td><div class="cid-chips">'+chips+'</div></td></tr></table>';
+}
+
+function renderSig(terap) {
+  var sigImg = terap.assinatura_url ? '<img src="'+terap.assinatura_url+'" class="sig-img" alt="Assinatura">' : '<div style="height:48px"></div>';
+  var carimbo = terap.carimbo_url ? '<img src="'+terap.carimbo_url+'" class="carimbo-img" alt="Carimbo">' : '';
+  var regs = (terap.registros||[]).filter(function(r){return r.inst;}).map(function(r){return r.inst+' '+r.num;}).join(' | ');
+  return '<div class="sig-area"><div class="sig-block">'+sigImg+'<div class="sig-line"></div><div class="sig-nome">'+esc(terap.nome)+'</div><div class="sig-esp">'+esc(terap.especialidades||'')+'</div>'+(regs?'<div class="sig-regs">'+regs+'</div>':'')+''+carimbo+'</div></div>';
+}
+
+function renderDoc(d, titulo) {
+  var t = d.terapeuta; var p = d.paciente; var page = document.getElementById('docPage');
+  var tipo = d.tipo;
+  var typeLabels = {recibo_sessao:'Recibo de Sessão',recibo_ir:'Recibo para Imposto de Renda',declaracao:'Declaração de Comparecimento',laudo:'Laudo Terapêutico',alta:'Relatório de Alta Terapêutica'};
+  var tag = typeLabels[tipo]||tipo;
+  var html = renderHeader(t);
+  html += '<div class="doc-body">';
+  html += '<div class="doc-type-tag">'+tag+'</div>';
+  html += '<div class="doc-title">'+esc(titulo||tag)+'</div>';
+  html += '<div class="doc-emissao">Emitido em '+fDate(d.data_emissao)+'</div>';
+  html += '<div class="doc-divider"></div>';
+
+  if (tipo==='recibo_sessao') {
+    var s = d.sessao;
+    html += '<table class="info-table">';
+    html += '<tr><td>Paciente</td><td>'+esc(p.nome_completo)+(p.cpf?' &mdash; CPF: '+esc(p.cpf):'')+'</td></tr>';
+    html += '<tr><td>Data da Sessão</td><td>'+fDate(s.data_sessao)+'</td></tr>';
+    html += '<tr><td>Duração</td><td>'+(s.duracao_minutos||50)+' minutos</td></tr>';
+    html += '<tr><td>Serviço</td><td>Atendimento de Psicoterapia Individual</td></tr>';
+    html += '<tr><td>Valor</td><td><strong>'+fCur(s.valor_cobrado)+'</strong></td></tr>';
+    if (s.forma_pagamento) html += '<tr><td>Pagamento</td><td>'+esc(s.forma_pagamento.charAt(0).toUpperCase()+s.forma_pagamento.slice(1))+'</td></tr>';
+    html += '</table>';
+    html += renderCIDs(d.cids);
+    html += '<div class="doc-divider"></div>';
+    html += '<div style="font-size:12px;color:var(--dim);line-height:1.6">Declaro para os devidos fins que recebi o valor acima referente ao serviço de psicoterapia prestado ao paciente identificado neste recibo.</div>';
+  }
+
+  if (tipo==='recibo_ir') {
+    html += '<table class="info-table">';
+    html += '<tr><td>Paciente</td><td>'+esc(p.nome_completo)+(p.cpf?' &mdash; CPF: '+esc(p.cpf):'')+'</td></tr>';
+    html += '<tr><td>Período</td><td>'+fDate(d.periodo_inicio)+' a '+fDate(d.periodo_fim)+'</td></tr>';
+    html += '<tr><td>Terapeuta</td><td>'+esc(t.nome)+'</td></tr>';
+    html += '</table>';
+    html += renderCIDs(d.cids);
+    html += '<div class="doc-divider"></div>';
+    html += '<table class="sess-table"><thead><tr><th>Sessão</th><th>Data</th><th>Duração</th><th>Valor</th></tr></thead><tbody>';
+    var total = 0;
+    (d.sessoes||[]).forEach(function(s) {
+      total += parseFloat(s.valor_cobrado||0);
+      html += '<tr><td>Sessão '+s.sessao_numero+'</td><td>'+fDate(s.data_sessao)+'</td><td>'+(s.duracao_minutos||50)+'min</td><td>'+fCur(s.valor_cobrado)+'</td></tr>';
+    });
+    html += '</tbody><tfoot><tr class="total-row"><td colspan="3">Total</td><td>'+fCur(total)+'</td></tr></tfoot></table>';
+    html += '<div style="margin-top:14px;font-size:12px;color:var(--dim);line-height:1.6">Declaro para fins de dedução no Imposto de Renda que recebi o total de <strong>'+fCur(total)+'</strong> referente a serviços de psicoterapia prestados ao paciente identificado neste documento, no período especificado.</div>';
+  }
+
+  if (tipo==='declaracao') {
+    var realizadas = d.sessoes||[];
+    html += '<table class="info-table">';
+    html += '<tr><td>Paciente</td><td>'+esc(p.nome_completo)+(p.cpf?' &mdash; CPF: '+esc(p.cpf):'')+'</td></tr>';
+    html += '<tr><td>Período</td><td>'+fDate(d.periodo_inicio)+' a '+fDate(d.periodo_fim)+'</td></tr>';
+    html += '<tr><td>Total de sessões</td><td>'+realizadas.length+' sessão(ões) realizada(s)</td></tr>';
+    if (d.finalidade) html += '<tr><td>Finalidade</td><td>'+esc(d.finalidade)+'</td></tr>';
+    html += '</table>';
+    if (realizadas.length) {
+      html += '<div class="doc-divider"></div><table class="sess-table"><thead><tr><th>Sessão</th><th>Data</th><th>Duração</th></tr></thead><tbody>';
+      realizadas.forEach(function(s){html+='<tr><td>'+s.sessao_numero+'</td><td>'+fDate(s.data_sessao)+'</td><td>'+(s.duracao_minutos||50)+'min</td></tr>';});
+      html+='</tbody></table>';
+    }
+    html += '<div class="doc-divider"></div>';
+    html += '<div style="font-size:13px;color:var(--text);line-height:1.7">Declaro, para os devidos fins, que o(a) Sr.(a) <strong>'+esc(p.nome_completo)+'</strong> esteve em atendimento psicoterápico nesta clínica no período de '+fDate(d.periodo_inicio)+' a '+fDate(d.periodo_fim)+', tendo realizado '+(realizadas.length)+' sessão(ões) terapêutica(s).</div>';
+  }
+
+  if (tipo==='laudo' || tipo==='alta') {
+    html += '<table class="info-table">';
+    html += '<tr><td>Paciente</td><td>'+esc(p.nome_completo)+(p.cpf?' &mdash; CPF: '+esc(p.cpf):'')+(p.data_nascimento?' &mdash; '+new Date(p.data_nascimento).toLocaleDateString('pt-BR'):'')+'</td></tr>';
+    html += '<tr><td>Período</td><td>'+fDate(d.data_inicio)+' a '+fDate(d.data_ultima)+'</td></tr>';
+    html += '<tr><td>Sessões</td><td>'+d.total_sessoes+' sessão(ões) realizadas</td></tr>';
+    html += '</table>';
+    html += renderCIDs(d.cids);
+    html += '<div class="doc-divider"></div>';
+    var textoChave = tipo==='laudo' ? d.texto_laudo : d.texto_alta;
+    var editId = 'docTextoEdit';
+    html += '<div class="edit-hint">&#9998; Clique para editar antes de imprimir</div>';
+    html += '<textarea class="edit-note" id="'+editId+'">';
+    html += esc(textoChave||'');
+    html += '</textarea>';
+  }
+
+  html += renderSig(t);
+  html += '</div>';
+  html += '<div class="doc-footer">Documento gerado pelo Synapse Core &mdash; Evolution Therapy &mdash; '+esc(t.nome)+'</div>';
+  page.innerHTML = html;
+}
+</script>
+</body>
+</html>

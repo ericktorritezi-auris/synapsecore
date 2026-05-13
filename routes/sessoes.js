@@ -161,16 +161,31 @@ router.put('/:paciente_id/reativar', verifyToken, async (req, res) => {
   }
 });
 
-// ── EXCLUIR PACIENTE (apenas inativos) ──
+// ── EXCLUIR PACIENTE (apenas inativos) ── deleta TUDO relacionado
 router.delete('/:paciente_id/excluir', verifyToken, async (req, res) => {
+  const pid = req.params.paciente_id;
   try {
-    const check = await db.query('SELECT status FROM pacientes WHERE id = $1', [req.params.paciente_id]);
+    const check = await db.query('SELECT status, nome_completo FROM pacientes WHERE id = $1', [pid]);
     if (!check.rows.length) return res.status(404).json({ message: 'Paciente não encontrado.' });
     if (check.rows[0].status !== 'inativo') return res.status(400).json({ message: 'Paciente deve ser inativado antes de excluir.' });
-    await db.query('DELETE FROM pacientes WHERE id = $1', [req.params.paciente_id]);
-    res.json({ message: 'Paciente excluído permanentemente.' });
+
+    // Deletar na ordem correta (FK constraints)
+    await db.query('DELETE FROM evolucao_historico   WHERE paciente_id = $1', [pid]);
+    await db.query('DELETE FROM relatorio_tokens      WHERE paciente_id = $1', [pid]);
+    await db.query('DELETE FROM documentos            WHERE paciente_id = $1', [pid]);
+    await db.query('DELETE FROM cids_paciente         WHERE paciente_id = $1', [pid]);
+    await db.query('DELETE FROM resumos_clinicos      WHERE paciente_id = $1', [pid]);
+    await db.query('DELETE FROM mapeamentos           WHERE paciente_id = $1', [pid]);
+    await db.query('DELETE FROM sessoes               WHERE paciente_id = $1 OR paciente_2_id = $1', [pid]);
+    await db.query('DELETE FROM respostas_formulario  WHERE paciente_id = $1', [pid]);
+    await db.query('DELETE FROM form_tokens           WHERE paciente_id = $1', [pid]);
+    await db.query('DELETE FROM lgpd_logs             WHERE paciente_id = $1', [pid]);
+    await db.query('DELETE FROM pacientes             WHERE id = $1',          [pid]);
+
+    res.json({ message: 'Paciente e todos os dados excluídos permanentemente.' });
   } catch (err) {
-    res.status(500).json({ message: 'Erro ao excluir paciente.' });
+    console.error('excluir paciente:', err.message);
+    res.status(500).json({ message: 'Erro ao excluir: ' + err.message });
   }
 });
 

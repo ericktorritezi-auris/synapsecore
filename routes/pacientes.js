@@ -6,15 +6,17 @@ const router  = express.Router();
 // GET /api/pacientes
 router.get('/', verifyToken, async (req, res) => {
   try {
-    const { search, tipo } = req.query;
+    const { search, tipo, status } = req.query;
     const params = [];
-    let where = `WHERE p.status != 'inativo'`;
+    let where = status === 'inativo'
+      ? `WHERE p.status = 'inativo'`
+      : `WHERE p.status != 'inativo'`;
     if (search) {
       params.push(`%${search}%`);
       const n = params.length;
       where += ` AND (p.nome_completo ILIKE $${n} OR p.email ILIKE $${n})`;
     }
-    if (tipo) {
+    if (tipo && status !== 'inativo') {
       params.push(tipo);
       where += ` AND p.perfil_tipo = $${params.length}`;
     }
@@ -158,7 +160,7 @@ router.post('/:id/gerar-link', verifyToken, async (req, res) => {
       `INSERT INTO form_tokens (paciente_id, expira_em) VALUES ($1, $2) RETURNING token`, [id, expira]
     );
     const token = tok.rows[0].token;
-    const base  = process.env.BASE_URL || 'https://www.synapsecore.app.br';
+    const base  = (process.env.BASE_URL || 'https://www.synapsecore.app.br').replace(/\/+$/, '');
     res.json({ link: `${base}/anamnese/${token}`, token, expira_em: expira, paciente_nome: pac.rows[0].nome_completo });
   } catch (err) {
     console.error('gerar-link:', err.message);

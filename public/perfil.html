@@ -82,6 +82,13 @@ body{font-family:var(--fb);background:var(--bg);color:var(--tx);min-height:100vh
 .btn-sm{padding:7px 12px;font-size:12px}
 .btn-danger{background:rgba(239,68,68,.1);color:#fca5a5;border:1px solid rgba(239,68,68,.25)}
 .btn-full{width:100%;justify-content:center;margin-top:4px}
+/* Manual */
+.manual-topic{border:1px solid var(--brd);border-radius:9px;overflow:hidden;margin-bottom:8px;cursor:pointer}
+.manual-topic-hdr{padding:11px 14px;font-family:var(--fd);font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.02)}
+.manual-topic-hdr::after{content:'▾';margin-left:auto;color:var(--dim);font-size:11px;transition:transform .2s}
+.manual-topic.open .manual-topic-hdr::after{transform:rotate(-180deg)}
+.manual-topic-body{display:none;padding:0 14px 14px;font-size:12.5px;color:var(--mu);line-height:1.7;border-top:1px solid var(--brd)}
+.manual-topic.open .manual-topic-body{display:block}
 /* Error / success */
 .msg{border-radius:8px;padding:10px 14px;font-size:12.5px;margin-top:10px;display:none}
 .msg.ok {background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.25);color:#6ee7b7}
@@ -271,7 +278,83 @@ body{font-family:var(--fb);background:var(--bg);color:var(--tx);min-height:100vh
     <button class="btn btn-primary btn-full" onclick="alterarSenha()" style="margin-top:14px">Alterar Senha</button>
   </div>
 
-  <!-- ⑥ Notificações Push -->
+  <!-- ⑥ Manual do Terapeuta -->
+  <div class="sec">
+    <div class="sec-title" style="cursor:pointer;user-select:none" onclick="toggleManual()">
+      <span><span class="sec-icon">📖</span> Manual do Terapeuta</span>
+      <span id="manualArrow" style="font-size:12px;color:var(--dim);transition:transform .2s">▼</span>
+    </div>
+    <div id="manualBody" style="display:none">
+      <div style="font-size:12.5px;color:var(--mu);margin-bottom:16px;line-height:1.6">
+        Guia completo do Synapse Core — Plataforma de Inteligência Clínica Integrativa.
+      </div>
+
+      <div class="manual-topic" onclick="toggleTopic(this)">
+        <div class="manual-topic-hdr">🧑‍💼 Como cadastrar um paciente</div>
+        <div class="manual-topic-body">
+          No menu lateral, acesse <strong>Pacientes → Nova Avaliação</strong>. Preencha nome, tipo de perfil (adulto, casal, adolescente, neurodivergente ou atleta), email e telefone. Após salvar, um <strong>link de formulário</strong> com validade de 7 dias será gerado — copie e envie ao paciente pelo WhatsApp ou email. O paciente preenche o formulário no próprio celular, sem precisar criar conta.
+        </div>
+      </div>
+
+      <div class="manual-topic" onclick="toggleTopic(this)">
+        <div class="manual-topic-hdr">📋 Formulário de anamnese</div>
+        <div class="manual-topic-body">
+          O formulário contém <strong>94 questões</strong> distribuídas em 7 dimensões clínicas (emocional, cognitivo, relacional, existencial, corporal, comportamental e psicossocial) mais 8 sentinelas de risco invisíveis ao paciente. O sistema classifica automaticamente o nível de risco em Verde, Amarelo ou Vermelho. Você recebe uma notificação push assim que o paciente concluir.
+        </div>
+      </div>
+
+      <div class="manual-topic" onclick="toggleTopic(this)">
+        <div class="manual-topic-hdr">🧠 Mapeamento clínico com IA</div>
+        <div class="manual-topic-body">
+          Após o formulário ser preenchido, acesse o paciente em <strong>Pacientes</strong> e clique em <strong>Gerar Mapeamento</strong>. A IA processa as 7 dimensões, calcula 10 índices, detecta até 14 flags clínicas e gera um relatório completo em 9 seções. O sistema também sugere automaticamente os <strong>CIDs F-code</strong> compatíveis — você confirma ou rejeita cada um. As seções 7, 8 e 9 do relatório são editáveis diretamente na tela.
+        </div>
+      </div>
+
+      <div class="manual-topic" onclick="toggleTopic(this)">
+        <div class="manual-topic-hdr">📅 Registro de sessões</div>
+        <div class="manual-topic-body">
+          Acesse <strong>Sessões</strong> pelo card do paciente. Registre cada sessão com data, número, duração, valor cobrado e observações clínicas. Após salvar a sessão, a IA gera automaticamente um <strong>resumo clínico</strong> integrando suas observações com o protocolo terapêutico do mapeamento. O resumo é regenerável a qualquer momento.
+        </div>
+      </div>
+
+      <div class="manual-topic" onclick="toggleTopic(this)">
+        <div class="manual-topic-hdr">📈 Relatório de evolução</div>
+        <div class="manual-topic-body">
+          No mapeamento do paciente, acesse o card <strong>Relatório de Evolução</strong>. A IA compara o estado inicial com o progresso nas sessões e gera um relatório visual com radar comparativo, conquistas, objetivos e narrativa motivadora. O link é válido por <strong>7 dias</strong> — após esse período o link expira, mas os dados de evolução ficam registrados permanentemente no sistema. Você pode gerar um novo relatório quando atualizar o resumo clínico. A <strong>Linha do Tempo</strong> no mapeamento mostra toda a progressão do paciente.
+        </div>
+      </div>
+
+      <div class="manual-topic" onclick="toggleTopic(this)">
+        <div class="manual-topic-hdr">📄 Documentos clínicos</div>
+        <div class="manual-topic-body">
+          Acesse <strong>Docs</strong> no card do paciente. Você pode gerar 5 tipos de documento: <strong>Recibo de Sessão</strong> (individual), <strong>Recibo para IR</strong> (consolidado por período, para dedução fiscal), <strong>Declaração de Comparecimento</strong> (para empregador ou escola), <strong>Laudo Terapêutico</strong> (gerado pela IA, editável antes de imprimir) e <strong>Relatório de Alta</strong> (encerramento do processo). Todos incluem seus dados, logo, assinatura e carimbo cadastrados no perfil. O botão PDF abre o modo de impressão do navegador.
+        </div>
+      </div>
+
+      <div class="manual-topic" onclick="toggleTopic(this)">
+        <div class="manual-topic-hdr">🏥 CIDs e classificação</div>
+        <div class="manual-topic-body">
+          Após gerar um mapeamento, a IA sugere automaticamente os CIDs F-code (ICD-10) compatíveis com o perfil clínico do paciente. No mapeamento, você verá a seção <strong>CIDs Identificados pela IA</strong> — clique em cada um para ver o relato do paciente e o significado médico. Confirme os pertinentes e rejeite os que não se aplicam. Você também pode adicionar CIDs manualmente em <strong>Documentos</strong>. Os CIDs confirmados aparecem automaticamente em todos os documentos clínicos.
+        </div>
+      </div>
+
+      <div class="manual-topic" onclick="toggleTopic(this)">
+        <div class="manual-topic-hdr">🔔 Notificações push</div>
+        <div class="manual-topic-body">
+          Com o PWA instalado no celular (Android ou iOS 16.4+), você recebe uma notificação em tempo real sempre que um paciente preencher o formulário. Para ativar: acesse <strong>Notificações Push</strong> nesta tela, toque em <strong>Ativar Notificações</strong> e aceite a permissão do navegador. Use <strong>↻ Reconectar Push</strong> se parar de receber notificações — isso reinicia a assinatura e envia um push de teste para confirmar.
+        </div>
+      </div>
+
+      <div class="manual-topic" onclick="toggleTopic(this)">
+        <div class="manual-topic-hdr">⚙️ Perfil e configurações</div>
+        <div class="manual-topic-body">
+          Nesta tela você gerencia: <strong>Identidade Visual</strong> (foto e logo usados nos documentos e relatórios), <strong>Dados Pessoais</strong> (nome, email, telefone, especialidades e bio), <strong>Registros Profissionais</strong> (ABRAPH, ATH e outros — aparecem nos documentos), <strong>Assinatura e Carimbo</strong> (imagens PNG inseridas automaticamente nos documentos clínicos) e <strong>Segurança</strong> (troca de senha). Recomendamos completar o perfil antes de gerar os primeiros documentos.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ⑦ Notificações Push -->
   <div class="sec">
     <div class="sec-title"><span class="sec-icon">🔔</span> Notificações Push</div>
     <div style="font-size:12.5px;color:var(--mu);margin-bottom:16px;line-height:1.6">
@@ -294,7 +377,7 @@ body{font-family:var(--fb);background:var(--bg);color:var(--tx);min-height:100vh
     <div id="msgPush" class="msg" style="margin-top:10px"></div>
   </div>
 
-  <div class="page-footer">&copy; 2026 Synapse Core &mdash; <strong>Erick Torritezi</strong> &mdash; v1.9.0</div>
+  <div class="page-footer">&copy; 2026 Synapse Core &mdash; <strong>Erick Torritezi</strong> &mdash; <span class="app-version">v1.9.3</span></div>
 </main>
 
 <script src="/js/shared.js"></script>
@@ -462,6 +545,18 @@ function showMsg(id, text, type) {
   el.className = 'msg ' + type;
   el.style.display = 'block';
   setTimeout(function(){ el.style.display='none'; }, 4000);
+}
+
+// ── MANUAL ──
+function toggleManual() {
+  var body  = document.getElementById('manualBody');
+  var arrow = document.getElementById('manualArrow');
+  var open  = body.style.display === 'block';
+  body.style.display = open ? 'none' : 'block';
+  arrow.style.transform = open ? '' : 'rotate(-180deg)';
+}
+function toggleTopic(el) {
+  el.classList.toggle('open');
 }
 
 // ── PUSH MANAGEMENT ──

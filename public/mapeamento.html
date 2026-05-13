@@ -206,7 +206,7 @@ body{font-family:var(--fb);background:var(--bg);color:var(--text);min-height:100
       <button class="btn btn-primary" id="btnGerar" onclick="gerarMapeamento()">&#9671; Gerar Mapeamento com IA</button>
     </div>
     <div class="disclaimer">&#9888; O relatório gerado é um suporte ao raciocínio clínico. Não substitui avaliação profissional. O terapeuta deve revisar, editar e aprovar antes de utilizar.</div>
-    <div class="page-footer">&copy; 2026 Synapse Core &mdash; <strong>Erick Torritezi</strong></div>
+    <div class="page-footer">&copy; 2026 Synapse Core &mdash; <strong>Erick Torritezi</strong> &mdash; <span class="app-version">v1.9.3</span></div>
   </div>
 
   <!-- REPORT -->
@@ -328,7 +328,7 @@ body{font-family:var(--fb);background:var(--bg);color:var(--text);min-height:100
       </div>
 
       <div class="disclaimer">&#9888; Este relatório é gerado como suporte ao raciocínio clínico. Não substitui avaliação profissional. Toda decisão clínica é de responsabilidade do terapeuta.</div>
-      <div class="page-footer">&copy; 2026 Synapse Core &mdash; Criado por <strong>Erick Torritezi</strong></div>
+      <div class="page-footer">&copy; 2026 Synapse Core &mdash; <strong>Erick Torritezi</strong> &mdash; <span class="app-version">v1.9.3</span></div>
     </div>
   </div>
 
@@ -735,111 +735,106 @@ function confirmarRegerar() {
 
 // ── HISTÓRICO DE EVOLUÇÃO ──
 var DIM_LABELS = {D1:'Emocional',D2:'Cognitivo',D3:'Relacional',D4:'Existencial',D5:'Corporal',D6:'Comportamental',D7:'Psicossocial'};
+var scoreInicialGlobal = 0; // stored when report first renders
+
+function calcScoreFromDims(obj) {
+  if (!obj) return 0;
+  var keys = ['D1','D2','D3','D4','D5','D6','D7'];
+  var vals = keys.map(function(k){ return parseFloat(obj[k]||0); }).filter(function(v){ return v>0; });
+  return vals.length ? Math.round((vals.reduce(function(a,b){return a+b;},0)/vals.length)*10)/10 : 0;
+}
 
 function carregarHistoricoEvolucao() {
+  // Capture initial score right now (already rendered by renderReport)
+  var scoreEl = document.getElementById('repScore');
+  scoreInicialGlobal = parseFloat(scoreEl ? scoreEl.textContent : '0') || 0;
+
   api('/api/evolucao/' + PACIENTE_ID + '/historico')
     .then(function(snapshots) {
-      if (!snapshots.length) return;
+      if (!snapshots || !snapshots.length) return;
+
+      var latest = snapshots[snapshots.length - 1];
+
+      // Compute score from D1-D7 if score_global is null/0
+      var latestScore = parseFloat(latest.score_global) || calcScoreFromDims(latest.indices_json);
+      if (!latestScore) return;
 
       // ── Update score display ──
-      var latest = snapshots[snapshots.length - 1];
-      var scoreEl = document.getElementById('repScore');
-      var badgeEl = document.getElementById('scoreEvolBadge');
-      var hintEl  = document.getElementById('scoreInicialHint');
+      var badgeEl  = document.getElementById('scoreEvolBadge');
+      var hintEl   = document.getElementById('scoreInicialHint');
       var scoreLbl = document.getElementById('scoreLbl');
 
-      var scoreAtual = parseFloat(scoreEl.textContent) || 0;
-      var latestScore = parseFloat(latest.score_global) || 0;
+      var delta = latestScore - scoreInicialGlobal;
+      scoreEl.textContent = latestScore.toFixed(1);
+      if (scoreLbl) scoreLbl.textContent = 'Bem-Estar Atual';
 
-      if (latestScore > 0 && latestScore !== scoreAtual) {
-        var delta = latestScore - scoreAtual;
-        scoreEl.textContent = latestScore.toFixed(1);
-        scoreLbl.textContent = 'Bem-Estar Atual';
-        badgeEl.textContent  = (delta >= 0 ? '▲ +' : '▼ ') + delta.toFixed(1) + ' pts evolução';
+      if (badgeEl) {
+        badgeEl.textContent = (delta >= 0 ? '▲ +' : '▼ ') + delta.toFixed(1) + ' pts desde início';
         badgeEl.style.background = delta >= 0 ? 'rgba(16,185,129,.12)' : 'rgba(239,68,68,.1)';
         badgeEl.style.color = delta >= 0 ? '#6ee7b7' : '#fca5a5';
         badgeEl.style.display = 'inline-block';
-        hintEl.textContent = 'Inicial: ' + scoreAtual.toFixed(1);
+      }
+      if (hintEl && scoreInicialGlobal) {
+        hintEl.textContent = 'Inicial: ' + scoreInicialGlobal.toFixed(1);
         hintEl.style.display = 'block';
+      }
 
-        // Update radar with latest evolution indices
-        if (latest.indices_json && typeof latest.indices_json === 'object') {
-          renderRadarComEvolucao(latest.indices_json);
-        }
+      // Update radar with latest evolution indices
+      if (latest.indices_json && typeof latest.indices_json === 'object') {
+        renderRadarComEvolucao(latest.indices_json);
       }
 
       // ── Render timeline ──
       var card = document.getElementById('timelineCard');
       var list = document.getElementById('timelineList');
+      if (!card || !list) return;
       card.style.display = 'block';
       list.innerHTML = '';
 
-      // Build initial entry from current mapping score
-      var initialScore = scoreAtual;
-      var allPoints = [{ label: 'Avaliação Inicial', score: initialScore, date: null, initial: true, dims: null }];
+      var allPoints = [{ label:'Avaliação Inicial', score: scoreInicialGlobal, date: null, dims: null }];
       snapshots.forEach(function(s, i) {
-        allPoints.push({
-          label: (i + 1) + 'ª Evolução',
-          score: parseFloat(s.score_global) || 0,
-          date: s.gerado_em,
-          initial: false,
-          dims: s.indices_json
-        });
+        var sc = parseFloat(s.score_global) || calcScoreFromDims(s.indices_json);
+        allPoints.push({ label:(i+1)+'ª Evolução', score:sc, date:s.gerado_em, dims:s.indices_json });
       });
 
       var wrap = document.createElement('div');
       wrap.className = 'tl-wrap';
 
       allPoints.forEach(function(pt, idx) {
-        var isCurrent = idx === allPoints.length - 1;
-        var prevScore = idx > 0 ? allPoints[idx - 1].score : null;
-        var delta = prevScore !== null ? pt.score - prevScore : null;
+        var isCurrent = (idx === allPoints.length - 1);
+        var prevScore = idx > 0 ? allPoints[idx-1].score : null;
+        var delta2    = prevScore !== null ? pt.score - prevScore : null;
 
-        var item = document.createElement('div');
-        item.className = 'tl-item';
+        var item = document.createElement('div'); item.className = 'tl-item';
+        var dot  = document.createElement('div'); dot.className = 'tl-dot' + (isCurrent ? ' current' : '');
+        var hdr  = document.createElement('div'); hdr.className = 'tl-header';
 
-        var dot = document.createElement('div');
-        dot.className = 'tl-dot' + (isCurrent ? ' current' : '');
+        var lbl = document.createElement('span'); lbl.className = 'tl-label';
+        lbl.textContent = pt.label + (isCurrent && idx > 0 ? ' · Atual' : '');
+        var sc2 = document.createElement('span'); sc2.className = 'tl-score';
+        sc2.textContent = pt.score ? pt.score.toFixed(1) : '--';
 
-        var hdr = document.createElement('div');
-        hdr.className = 'tl-header';
+        hdr.appendChild(lbl); hdr.appendChild(sc2);
 
-        var lbl = document.createElement('span');
-        lbl.className = 'tl-label';
-        lbl.textContent = pt.label + (isCurrent && !pt.initial ? ' · Atual' : '');
-
-        var sc = document.createElement('span');
-        sc.className = 'tl-score';
-        sc.textContent = pt.score.toFixed(1);
-
-        hdr.appendChild(lbl);
-        hdr.appendChild(sc);
-
-        if (delta !== null) {
+        if (delta2 !== null) {
           var dEl = document.createElement('span');
-          dEl.className = 'tl-delta ' + (delta >= 0 ? 'pos' : 'neg');
-          dEl.textContent = (delta >= 0 ? '+' : '') + delta.toFixed(1);
+          dEl.className = 'tl-delta ' + (delta2 >= 0 ? 'pos' : 'neg');
+          dEl.textContent = (delta2 >= 0 ? '+' : '') + delta2.toFixed(1);
           hdr.appendChild(dEl);
         }
-
         if (pt.date) {
-          var dateEl = document.createElement('span');
-          dateEl.className = 'tl-date';
+          var dateEl = document.createElement('span'); dateEl.className = 'tl-date';
           dateEl.textContent = new Date(pt.date).toLocaleDateString('pt-BR');
           hdr.appendChild(dateEl);
         }
 
-        item.appendChild(dot);
-        item.appendChild(hdr);
+        item.appendChild(dot); item.appendChild(hdr);
 
-        // Dimension badges for evolutions
-        if (pt.dims && !pt.initial) {
-          var dims = document.createElement('div');
-          dims.className = 'tl-dims';
+        if (pt.dims && idx > 0) {
+          var dims = document.createElement('div'); dims.className = 'tl-dims';
           ['D1','D2','D3','D4','D5','D6','D7'].forEach(function(k) {
             if (pt.dims[k] !== undefined) {
-              var d = document.createElement('span');
-              d.className = 'tl-dim';
+              var d = document.createElement('span'); d.className = 'tl-dim';
               d.textContent = DIM_LABELS[k] + ': ' + parseFloat(pt.dims[k]).toFixed(0);
               dims.appendChild(d);
             }
@@ -852,7 +847,7 @@ function carregarHistoricoEvolucao() {
 
       list.appendChild(wrap);
     })
-    .catch(function(){});
+    .catch(function(e){ console.error('historico:', e); });
 }
 
 // Update radar with evolved indices while keeping initial for reference

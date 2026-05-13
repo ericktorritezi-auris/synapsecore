@@ -389,6 +389,38 @@ async function runMigrations() {
       ALTER TABLE relatorio_tokens ADD COLUMN IF NOT EXISTS resumo_at TIMESTAMP
     `);
 
+    // ── CIDS DO PACIENTE ──
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS cids_paciente (
+        id                 SERIAL PRIMARY KEY,
+        paciente_id        INTEGER REFERENCES pacientes(id) ON DELETE CASCADE,
+        mapeamento_id      INTEGER REFERENCES mapeamentos(id),
+        cid_codigo         VARCHAR(10)  NOT NULL,
+        cid_nome           VARCHAR(255) NOT NULL,
+        relato_paciente    TEXT,
+        significado_medico TEXT,
+        confirmado         BOOLEAN DEFAULT false,
+        gerado_por_ia      BOOLEAN DEFAULT true,
+        created_at         TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    // ── DOCUMENTOS ──
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS documentos (
+        id              SERIAL PRIMARY KEY,
+        paciente_id     INTEGER REFERENCES pacientes(id) ON DELETE CASCADE,
+        sessao_id       INTEGER REFERENCES sessoes(id) ON DELETE SET NULL,
+        tipo            VARCHAR(50) NOT NULL,
+        titulo          VARCHAR(255),
+        conteudo_json   JSONB NOT NULL,
+        token           UUID UNIQUE NOT NULL DEFAULT gen_random_uuid(),
+        periodo_inicio  DATE,
+        periodo_fim     DATE,
+        created_at      TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
     console.log('✅ Banco de dados pronto');
   } catch (err) {
     console.error('❌ Erro nas migrations:', err.message);

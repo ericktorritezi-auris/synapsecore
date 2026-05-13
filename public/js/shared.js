@@ -150,6 +150,18 @@ const PERFIL_CONFIG = {
   atleta:        { label:'Atleta',        color:'#f97316', bg:'rgba(249,115,22,0.12)',  icon:'⚡' }
 };
 
+// ── TOPBAR PADDING FIX (mobile/PWA cross-platform) ──
+// env(safe-area-inset-top) is unreliable on Android — dynamic measurement is safer
+function fixTopPadding() {
+  var tb = document.getElementById('topbar') || document.querySelector('.topbar');
+  var main = document.querySelector('.main');
+  if (!tb || !main) return;
+  var h = tb.getBoundingClientRect().height;
+  if (h > 0) main.style.paddingTop = (h + 24) + 'px';
+}
+window.addEventListener('load', fixTopPadding);
+window.addEventListener('resize', fixTopPadding);
+
 // Inject animation styles once
 const _s = document.createElement('style');
 _s.textContent = `

@@ -288,71 +288,126 @@ body{font-family:var(--fb);background:var(--bg);color:var(--tx);min-height:100vh
     </div>
     <div id="manualBody" style="display:none">
       <div style="font-size:12.5px;color:var(--mu);margin-bottom:16px;line-height:1.6">
-        Guia completo do Synapse Core — Plataforma de Inteligência Clínica Integrativa.
+        Guia completo do Synapse Core v2.0 — Plataforma de Inteligência Clínica Integrativa. Toque em qualquer tópico para expandir.
       </div>
 
       <div class="manual-topic" onclick="toggleTopic(this)">
-        <div class="manual-topic-hdr">🧑‍💼 Como cadastrar um paciente</div>
+        <div class="manual-topic-hdr">🧑‍💼 1. Como cadastrar um paciente</div>
         <div class="manual-topic-body">
-          No menu lateral, acesse <strong>Pacientes → Nova Avaliação</strong>. Preencha nome, tipo de perfil (adulto, casal, adolescente, neurodivergente ou atleta), email e telefone. Após salvar, um <strong>link de formulário</strong> com validade de 7 dias será gerado — copie e envie ao paciente pelo WhatsApp ou email. O paciente preenche o formulário no próprio celular, sem precisar criar conta.
+          No menu lateral, acesse <strong>Nova Avaliação</strong>. Preencha o nome completo, tipo de perfil — <em>adulto, casal, adolescente, neurodivergente ou atleta</em> — email e telefone. Após salvar, o sistema gera automaticamente um <strong>link de formulário válido por 7 dias</strong>. Copie e envie ao paciente via WhatsApp ou email. O paciente preenche no próprio celular, sem login. Você pode gerar um novo link a qualquer momento enquanto o anterior não tiver sido preenchido.
         </div>
       </div>
 
       <div class="manual-topic" onclick="toggleTopic(this)">
-        <div class="manual-topic-hdr">📋 Formulário de anamnese</div>
+        <div class="manual-topic-hdr">📋 2. Formulário de anamnese</div>
         <div class="manual-topic-body">
-          O formulário contém <strong>94 questões</strong> distribuídas em 7 dimensões clínicas (emocional, cognitivo, relacional, existencial, corporal, comportamental e psicossocial) mais 8 sentinelas de risco invisíveis ao paciente. O sistema classifica automaticamente o nível de risco em Verde, Amarelo ou Vermelho. Você recebe uma notificação push assim que o paciente concluir.
+          O formulário tem <strong>94 questões</strong> divididas em 7 dimensões clínicas: emocional, cognitivo, relacional, existencial, corporal, comportamental e psicossocial. Há também <strong>8 sentinelas de risco invisíveis</strong> ao paciente que detectam padrões críticos. O sistema classifica o nível de risco automaticamente em <strong>Verde</strong> (estável), <strong>Amarelo</strong> (atenção) ou <strong>Vermelho</strong> (prioridade). Assim que o paciente conclui, você recebe uma notificação push no celular com o nome dele.
         </div>
       </div>
 
       <div class="manual-topic" onclick="toggleTopic(this)">
-        <div class="manual-topic-hdr">🧠 Mapeamento clínico com IA</div>
+        <div class="manual-topic-hdr">🧠 3. Mapeamento clínico com IA</div>
         <div class="manual-topic-body">
-          Após o formulário ser preenchido, acesse o paciente em <strong>Pacientes</strong> e clique em <strong>Gerar Mapeamento</strong>. A IA processa as 7 dimensões, calcula 10 índices, detecta até 14 flags clínicas e gera um relatório completo em 9 seções. O sistema também sugere automaticamente os <strong>CIDs F-code</strong> compatíveis — você confirma ou rejeita cada um. As seções 7, 8 e 9 do relatório são editáveis diretamente na tela.
+          Após o formulário ser preenchido, acesse <strong>Pacientes</strong> e clique em <strong>Gerar Mapeamento</strong>. A IA processa as 7 dimensões, calcula <strong>10 índices clínicos</strong>, detecta até <strong>14 flags</strong> e gera um relatório em 9 seções. As seções 7, 8 e 9 são editáveis diretamente na tela — clique no texto para ajustar. Use o botão <strong>↻ Regerar</strong> na barra inferior para criar uma nova versão do mapeamento a qualquer momento; a versão anterior fica salva no histórico. Ao gerar, o sistema também sugere automaticamente os <strong>CIDs F-code</strong> compatíveis — eles aparecem alguns segundos após o mapeamento ser concluído.
         </div>
       </div>
 
       <div class="manual-topic" onclick="toggleTopic(this)">
-        <div class="manual-topic-hdr">📅 Registro de sessões</div>
+        <div class="manual-topic-hdr">🏥 4. CIDs e classificação clínica</div>
         <div class="manual-topic-body">
-          Acesse <strong>Sessões</strong> pelo card do paciente. Registre cada sessão com data, número, duração, valor cobrado e observações clínicas. Após salvar a sessão, a IA gera automaticamente um <strong>resumo clínico</strong> integrando suas observações com o protocolo terapêutico do mapeamento. O resumo é regenerável a qualquer momento.
+          Após gerar um mapeamento, a IA sugere os <strong>CIDs F-code (ICD-10)</strong> compatíveis com o perfil do paciente. A seção <em>CIDs Identificados pela IA</em> exibe cada código com o relato do paciente e a descrição médica. <strong>Confirme</strong> os pertinentes e <strong>Rejeite</strong> os que não se aplicam. Você também pode adicionar CIDs manualmente em <strong>Documentos</strong>. Os CIDs confirmados são incluídos automaticamente em todos os documentos clínicos e alimentam o <strong>Radar Clínico</strong> com sua distribuição por categoria.
         </div>
       </div>
 
       <div class="manual-topic" onclick="toggleTopic(this)">
-        <div class="manual-topic-hdr">📈 Relatório de evolução</div>
+        <div class="manual-topic-hdr">📅 5. Registro de sessões</div>
         <div class="manual-topic-body">
-          No mapeamento do paciente, acesse o card <strong>Relatório de Evolução</strong>. A IA compara o estado inicial com o progresso nas sessões e gera um relatório visual com radar comparativo, conquistas, objetivos e narrativa motivadora. O link é válido por <strong>7 dias</strong> — após esse período o link expira, mas os dados de evolução ficam registrados permanentemente no sistema. Você pode gerar um novo relatório quando atualizar o resumo clínico. A <strong>Linha do Tempo</strong> no mapeamento mostra toda a progressão do paciente.
+          Acesse <strong>Sessões</strong> pelo card do paciente. Registre cada sessão com data, número, duração, valor cobrado, forma de pagamento e observações clínicas. Após salvar, a IA gera automaticamente um <strong>resumo clínico</strong> integrando suas observações com o protocolo do mapeamento. O resumo pode ser regerado a qualquer momento. A barra de progresso no topo mostra o avanço no programa terapêutico. Sessões com risco elevado entram na <strong>Zona de Atenção</strong> destacada em vermelho.
         </div>
       </div>
 
       <div class="manual-topic" onclick="toggleTopic(this)">
-        <div class="manual-topic-hdr">📄 Documentos clínicos</div>
+        <div class="manual-topic-hdr">📈 6. Relatório de evolução e Linha do Tempo</div>
         <div class="manual-topic-body">
-          Acesse <strong>Docs</strong> no card do paciente. Você pode gerar 5 tipos de documento: <strong>Recibo de Sessão</strong> (individual), <strong>Recibo para IR</strong> (consolidado por período, para dedução fiscal), <strong>Declaração de Comparecimento</strong> (para empregador ou escola), <strong>Laudo Terapêutico</strong> (gerado pela IA, editável antes de imprimir) e <strong>Relatório de Alta</strong> (encerramento do processo). Todos incluem seus dados, logo, assinatura e carimbo cadastrados no perfil. O botão PDF abre o modo de impressão do navegador.
+          No mapeamento do paciente, acesse o card <strong>Relatório de Evolução</strong>. A IA compara o estado inicial com o progresso nas sessões e gera um relatório visual com radar comparativo, conquistas, objetivos e narrativa motivadora para o paciente. O link é válido por <strong>7 dias</strong> — ao expirar, os dados de evolução ficam registrados permanentemente. Um novo relatório pode ser gerado após atualizar o resumo clínico.<br><br>
+          A <strong>Linha do Tempo da Evolução</strong> — visível no mapeamento logo após gerar o primeiro relatório — mostra toda a progressão do paciente: pontuação inicial, cada evolução gerada com data e delta por dimensão, e o score atual. O score global e o radar no cabeçalho do mapeamento são atualizados automaticamente com os valores da última evolução.
         </div>
       </div>
 
       <div class="manual-topic" onclick="toggleTopic(this)">
-        <div class="manual-topic-hdr">🏥 CIDs e classificação</div>
+        <div class="manual-topic-hdr">📄 7. Documentos clínicos</div>
         <div class="manual-topic-body">
-          Após gerar um mapeamento, a IA sugere automaticamente os CIDs F-code (ICD-10) compatíveis com o perfil clínico do paciente. No mapeamento, você verá a seção <strong>CIDs Identificados pela IA</strong> — clique em cada um para ver o relato do paciente e o significado médico. Confirme os pertinentes e rejeite os que não se aplicam. Você também pode adicionar CIDs manualmente em <strong>Documentos</strong>. Os CIDs confirmados aparecem automaticamente em todos os documentos clínicos.
+          Acesse <strong>📄 Docs</strong> no card do paciente. Cinco tipos disponíveis:<br><br>
+          <strong>Recibo de Sessão</strong> — individual, com dados completos da sessão.<br>
+          <strong>Recibo para IR</strong> — consolidado por período para dedução fiscal, inclui CPF do paciente.<br>
+          <strong>Declaração de Comparecimento</strong> — para empregador, escola ou convênio.<br>
+          <strong>Laudo Terapêutico</strong> — gerado pela IA, editável antes de imprimir, linguagem técnica.<br>
+          <strong>Relatório de Alta</strong> — encerramento formal do processo com evolução completa.<br><br>
+          Todos os documentos incluem automaticamente sua logo, assinatura, carimbo e registros profissionais cadastrados no perfil. O botão <strong>PDF</strong> abre o modo de impressão do navegador. Documentos de laudo e alta podem ser editados na tela antes de imprimir.
         </div>
       </div>
 
       <div class="manual-topic" onclick="toggleTopic(this)">
-        <div class="manual-topic-hdr">🔔 Notificações push</div>
+        <div class="manual-topic-hdr">📡 8. Radar Clínico</div>
         <div class="manual-topic-body">
-          Com o PWA instalado no celular (Android ou iOS 16.4+), você recebe uma notificação em tempo real sempre que um paciente preencher o formulário. Para ativar: acesse <strong>Notificações Push</strong> nesta tela, toque em <strong>Ativar Notificações</strong> e aceite a permissão do navegador. Use <strong>↻ Reconectar Push</strong> se parar de receber notificações — isso reinicia a assinatura e envia um push de teste para confirmar.
+          Acesse <strong>📡 Radar Clínico</strong> no menu lateral. O painel mostra seus números clínicos em tempo real:<br><br>
+          <strong>Resumo</strong> — total de pacientes, em acompanhamento, sessões realizadas e score médio de bem-estar.<br>
+          <strong>CIDs Confirmados</strong> — distribuição percentual das classificações mais frequentes no seu consultório.<br>
+          <strong>Flags Clínicas</strong> — prevalência das principais flags detectadas pela IA nos mapeamentos.<br>
+          <strong>Perfis Atendidos</strong> — distribuição por tipo de paciente.<br>
+          <strong>Evolução Mensal</strong> — gráfico de linha dos últimos 12 meses.<br><br>
+          Clique em <strong>⊳ Gerar</strong> na seção de <em>Insight da IA</em> para receber uma análise personalizada dos seus dados — com frase de impacto pronta para usar em podcasts, entrevistas e palestras.<br><br>
+          Clique em <strong>⊳ Buscar</strong> na seção <em>Tendências Brasil & Mundo</em> para obter notícias em tempo real (via busca web) e comparar seus números com estatísticas globais de ansiedade, burnout, depressão e estresse da OMS, APA, Gallup e Lancet.
         </div>
       </div>
 
       <div class="manual-topic" onclick="toggleTopic(this)">
-        <div class="manual-topic-hdr">⚙️ Perfil e configurações</div>
+        <div class="manual-topic-hdr">🔔 9. Notificações push (PWA)</div>
         <div class="manual-topic-body">
-          Nesta tela você gerencia: <strong>Identidade Visual</strong> (foto e logo usados nos documentos e relatórios), <strong>Dados Pessoais</strong> (nome, email, telefone, especialidades e bio), <strong>Registros Profissionais</strong> (ABRAPH, ATH e outros — aparecem nos documentos), <strong>Assinatura e Carimbo</strong> (imagens PNG inseridas automaticamente nos documentos clínicos) e <strong>Segurança</strong> (troca de senha). Recomendamos completar o perfil antes de gerar os primeiros documentos.
+          Com o Synapse Core instalado como PWA no celular (Android ou iOS 16.4+), você recebe notificações em tempo real quando um paciente preencher o formulário. Para ativar: acesse <strong>Notificações Push</strong> nesta tela e toque em <strong>🔔 Ativar Notificações</strong>.<br><br>
+          Se parar de receber notificações, use <strong>↻ Reconectar Push</strong> — isso cancela a assinatura atual, cria uma nova e envia um push de teste para confirmar. Se a permissão estiver bloqueada: no <strong>Android</strong>, acesse os 3 pontos do Chrome → Configurações do site → Notificações → Permitir. No <strong>iOS</strong>, acesse Ajustes → Safari → Configurações de Sites → Notificações → Permitir.
         </div>
       </div>
+
+      <div class="manual-topic" onclick="toggleTopic(this)">
+        <div class="manual-topic-hdr">⚙️ 10. Perfil e configurações</div>
+        <div class="manual-topic-body">
+          Nesta tela você gerencia todas as suas configurações:<br><br>
+          <strong>Identidade Visual</strong> — foto de perfil (aparece no relatório de evolução) e logo da clínica (aparece nos documentos). Formatos: PNG ou JPG, até 1MB.<br>
+          <strong>Dados Pessoais</strong> — nome, email, telefone, especialidades e bio profissional.<br>
+          <strong>Registros Profissionais</strong> — ABRAPH, ATH e outros. Aparecem no cabeçalho de todos os documentos clínicos. Adicione quantos quiser.<br>
+          <strong>Documentos Clínicos</strong> — assinatura (PNG transparente) e carimbo, inseridos automaticamente em todos os documentos.<br>
+          <strong>Segurança</strong> — troca de senha com validação da senha atual.<br><br>
+          <em>Recomendamos completar o perfil antes de gerar os primeiros documentos.</em>
+        </div>
+      </div>
+
+      <div class="manual-topic" onclick="toggleTopic(this)">
+        <div class="manual-topic-hdr">📱 11. PWA — Instalação no celular</div>
+        <div class="manual-topic-body">
+          O Synapse Core funciona como um aplicativo instalado no celular — sem precisar de App Store ou Play Store.<br><br>
+          <strong>Android (Chrome):</strong> acesse o site, toque nos 3 pontos → <em>Adicionar à tela inicial</em>.<br>
+          <strong>iOS (Safari):</strong> acesse o site, toque no botão de compartilhar (quadrado com seta) → <em>Adicionar à Tela de Início</em>.<br><br>
+          Com o PWA instalado: navegação sem barra do browser, tela cheia, ícone na home, notificações push e experiência idêntica a um app nativo. O sistema funciona com a mesma URL — não há versão separada para mobile.
+        </div>
+      </div>
+
+      <div class="manual-topic" onclick="toggleTopic(this)">
+        <div class="manual-topic-hdr">🔄 12. Fluxo completo do atendimento</div>
+        <div class="manual-topic-body">
+          O fluxo recomendado de uso do sistema:<br><br>
+          <strong>1.</strong> Cadastrar paciente → gerar link do formulário → enviar ao paciente<br>
+          <strong>2.</strong> Paciente preenche → você recebe push → gerar mapeamento<br>
+          <strong>3.</strong> Revisar CIDs sugeridos pela IA → confirmar os pertinentes<br>
+          <strong>4.</strong> Registrar sessões conforme o processo avança<br>
+          <strong>5.</strong> Gerar relatório de evolução após acúmulo de sessões → enviar ao paciente<br>
+          <strong>6.</strong> Acompanhar a Linha do Tempo no mapeamento para ver a evolução acumulada<br>
+          <strong>7.</strong> Gerar documentos conforme necessidade (recibos, laudos, declarações)<br>
+          <strong>8.</strong> Ao encerrar o processo → gerar Relatório de Alta<br>
+          <strong>9.</strong> Consultar o Radar Clínico periodicamente para insights sobre o consultório
+        </div>
+      </div>
+
     </div>
   </div>
 

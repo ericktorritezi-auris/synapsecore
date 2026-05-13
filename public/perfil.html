@@ -349,7 +349,22 @@ body{font-family:var(--fb);background:var(--bg);color:var(--tx);min-height:100vh
       </div>
 
       <div class="manual-topic" onclick="toggleTopic(this)">
-        <div class="manual-topic-hdr">📡 8. Radar Clínico</div>
+        <div class="manual-topic-hdr">📋 8. Programas terapêuticos</div>
+        <div class="manual-topic-body">
+          Acesse <strong>📋 Programas</strong> no menu lateral. Esta tela centraliza a gestão de todos os seus programas terapêuticos — os que a IA usa para recomendar no mapeamento de cada paciente.<br><br>
+          Cada programa tem: <strong>nome</strong>, <strong>público-alvo</strong> (adulto, casal, adolescente, neurodivergente ou atleta), <strong>descrição clínica</strong> (lida pela IA na sugestão), <strong>quantidade de sessões</strong>, <strong>valores</strong> (à vista e parcelado) e um <strong>plano sessão a sessão</strong> com título e descrição de cada encontro.<br><br>
+          <strong>Ações disponíveis:</strong><br>
+          — <em>Criar</em>: botão "+ Novo Programa" — preencha os campos e adicione o plano de sessões com o botão "+ Sessão".<br>
+          — <em>Editar</em>: abre o mesmo formulário com os dados preenchidos.<br>
+          — <em>Inativar/Ativar</em>: remove da seleção da IA sem perder o histórico.<br>
+          — <em>Excluir</em>: disponível apenas se o programa nunca foi recomendado.<br><br>
+          <strong>Como a IA usa os programas no mapeamento:</strong> ao gerar um mapeamento, a IA lê o nome, a descrição e o plano de sessões de cada programa ativo e compara com o perfil clínico do paciente (dimensões, flags, score global). Retorna o programa mais adequado com % de compatibilidade e justificativa clínica detalhada.<br><br>
+          Se a API de IA estiver indisponível no momento da geração, o sistema usa uma lógica local simplificada e exibe um aviso amarelo no card do programa: <em>"Sugestão gerada pelo modo local"</em>. Use o botão <strong>↻ Regerar sugestão com IA</strong> quando a API estiver disponível para obter a análise completa.
+        </div>
+      </div>
+
+      <div class="manual-topic" onclick="toggleTopic(this)">
+        <div class="manual-topic-hdr">📡 9. Radar Clínico</div>
         <div class="manual-topic-body">
           Acesse <strong>📡 Radar Clínico</strong> no menu lateral. O painel mostra seus números clínicos em tempo real:<br><br>
           <strong>Resumo</strong> — total de pacientes, em acompanhamento, sessões realizadas e score médio de bem-estar.<br>
@@ -363,7 +378,7 @@ body{font-family:var(--fb);background:var(--bg);color:var(--tx);min-height:100vh
       </div>
 
       <div class="manual-topic" onclick="toggleTopic(this)">
-        <div class="manual-topic-hdr">🔔 9. Notificações push (PWA)</div>
+        <div class="manual-topic-hdr">🔔 10. Notificações push (PWA)</div>
         <div class="manual-topic-body">
           Com o Synapse Core instalado como PWA no celular (Android ou iOS 16.4+), você recebe notificações em tempo real quando um paciente preencher o formulário. Para ativar: acesse <strong>Notificações Push</strong> nesta tela e toque em <strong>🔔 Ativar Notificações</strong>.<br><br>
           Se parar de receber notificações, use <strong>↻ Reconectar Push</strong> — isso cancela a assinatura atual, cria uma nova e envia um push de teste para confirmar. Se a permissão estiver bloqueada: no <strong>Android</strong>, acesse os 3 pontos do Chrome → Configurações do site → Notificações → Permitir. No <strong>iOS</strong>, acesse Ajustes → Safari → Configurações de Sites → Notificações → Permitir.
@@ -371,7 +386,7 @@ body{font-family:var(--fb);background:var(--bg);color:var(--tx);min-height:100vh
       </div>
 
       <div class="manual-topic" onclick="toggleTopic(this)">
-        <div class="manual-topic-hdr">⚙️ 10. Perfil e configurações</div>
+        <div class="manual-topic-hdr">⚙️ 11. Perfil e configurações</div>
         <div class="manual-topic-body">
           Nesta tela você gerencia todas as suas configurações:<br><br>
           <strong>Identidade Visual</strong> — foto de perfil (aparece no relatório de evolução) e logo da clínica (aparece nos documentos). Formatos: PNG ou JPG, até 1MB.<br>
@@ -384,7 +399,7 @@ body{font-family:var(--fb);background:var(--bg);color:var(--tx);min-height:100vh
       </div>
 
       <div class="manual-topic" onclick="toggleTopic(this)">
-        <div class="manual-topic-hdr">📱 11. PWA — Instalação no celular</div>
+        <div class="manual-topic-hdr">📱 12. PWA — Instalação no celular</div>
         <div class="manual-topic-body">
           O Synapse Core funciona como um aplicativo instalado no celular — sem precisar de App Store ou Play Store.<br><br>
           <strong>Android (Chrome):</strong> acesse o site, toque nos 3 pontos → <em>Adicionar à tela inicial</em>.<br>
@@ -394,12 +409,13 @@ body{font-family:var(--fb);background:var(--bg);color:var(--tx);min-height:100vh
       </div>
 
       <div class="manual-topic" onclick="toggleTopic(this)">
-        <div class="manual-topic-hdr">🔄 12. Fluxo completo do atendimento</div>
+        <div class="manual-topic-hdr">🔄 13. Fluxo completo do atendimento</div>
         <div class="manual-topic-body">
           O fluxo recomendado de uso do sistema:<br><br>
           <strong>1.</strong> Cadastrar paciente → gerar link do formulário → enviar ao paciente<br>
           <strong>2.</strong> Paciente preenche → você recebe push → gerar mapeamento<br>
           <strong>3.</strong> Revisar CIDs sugeridos pela IA → confirmar os pertinentes<br>
+          <strong>3b.</strong> Verificar programa recomendado — se IA usou fallback, clique em <em>Regerar sugestão com IA</em><br>
           <strong>4.</strong> Registrar sessões conforme o processo avança<br>
           <strong>5.</strong> Gerar relatório de evolução após acúmulo de sessões → enviar ao paciente<br>
           <strong>6.</strong> Acompanhar a Linha do Tempo no mapeamento para ver a evolução acumulada<br>

@@ -150,7 +150,69 @@ const PERFIL_CONFIG = {
   atleta:        { label:'Atleta',        color:'#f97316', bg:'rgba(249,115,22,0.12)',  icon:'⚡' }
 };
 
-// ── TOPBAR PADDING FIX (mobile/PWA cross-platform) ──
+// ── PUSH NOTIFICATIONS ──
+function urlBase64ToUint8Array(base64String) {
+  var padding = '='.repeat((4 - base64String.length % 4) % 4);
+  var base64  = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  var rawData = window.atob(base64);
+  var output  = new Uint8Array(rawData.length);
+  for (var i = 0; i < rawData.length; i++) output[i] = rawData.charCodeAt(i);
+  return output;
+}
+
+function initPush() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+  var token = localStorage.getItem('sc_token');
+  if (!token) return;
+
+  navigator.serviceWorker.register('/sw.js').then(function(reg) {
+    // Check if already subscribed
+    reg.pushManager.getSubscription().then(function(existing) {
+      if (existing) {
+        // Sync with server silently
+        fetch('/api/push/subscribe', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ subscription: existing })
+        }).catch(function(){});
+        return;
+      }
+      // Not subscribed — fetch VAPID key and subscribe
+      fetch('/api/push/vapid-key')
+        .then(function(r){ return r.json(); })
+        .then(function(d) {
+          if (!d.publicKey) return;
+          return reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(d.publicKey)
+          });
+        })
+        .then(function(sub) {
+          if (!sub) return;
+          return fetch('/api/push/subscribe', {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ subscription: sub })
+          });
+        })
+        .catch(function(){});
+    });
+  }).catch(function(){});
+}
+
+// Auto-init push on authenticated pages (silently, no UI interruption)
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', function() {
+    if (localStorage.getItem('sc_token')) setTimeout(initPush, 2000);
+  });
+} else {
+  if (localStorage.getItem('sc_token')) setTimeout(initPush, 2000);
+}
+
+// Expose for perfil page
+window.scInitPush = initPush;
+
+
 // env(safe-area-inset-top) is unreliable on Android — dynamic measurement is safer
 function fixTopPadding() {
   var tb = document.getElementById('topbar') || document.querySelector('.topbar');

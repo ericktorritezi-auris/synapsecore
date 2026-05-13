@@ -122,10 +122,6 @@ function formatDate(dateStr) {
   }
   return new Date(dateStr).toLocaleDateString('pt-BR');
 }
-  if (!dateStr) return '—';
-  const d = new Date(dateStr);
-  return d.toLocaleDateString('pt-BR');
-}
 function formatPhone(tel) {
   if (!tel) return '';
   return tel.replace(/\D/g,'').replace(/^(\d{2})(\d{5})(\d{4})$/, '($1) $2-$3');
@@ -222,18 +218,6 @@ if (document.readyState === 'loading') {
 // Expose for perfil page
 window.scInitPush = initPush;
 
-
-// ── VERSION FOOTER — update all .app-version spans from API ──
-(function() {
-  function updateVersionFooters(v) {
-    document.querySelectorAll('.app-version').forEach(function(el){ el.textContent = 'v'+v; });
-  }
-  function fetchVersion() {
-    fetch('/api/health').then(function(r){return r.json();}).then(function(d){ if(d.version) updateVersionFooters(d.version); }).catch(function(){});
-  }
-  if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', fetchVersion); }
-  else { fetchVersion(); }
-})();
 
 // env(safe-area-inset-top) is unreliable on Android — dynamic measurement is safer
 function fixTopPadding() {

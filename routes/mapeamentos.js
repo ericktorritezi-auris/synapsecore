@@ -1,7 +1,7 @@
 const express = require('express');
 const db      = require('../db');
 const { verifyToken } = require('../middleware/auth');
-const { calcularIndices, detectarFlags, gerarMapeamento, sugerirCIDs } = require('../services/ai');
+const { calcularIndices, detectarFlags, gerarMapeamento, sugerirPrograma, sugerirProgramaLocal, sugerirCIDs } = require('../services/ai');
 const router  = express.Router();
 
 // ── POST /api/mapeamentos/:paciente_id/gerar ──
@@ -26,16 +26,21 @@ router.post('/:paciente_id/gerar', verifyToken, async (req, res) => {
     const respostas = respRow.respostas_json;
     const riscoNivel = respRow.risco_nivel || 'verde';
 
-    // Load active packages
+    // Load active packages WITH sessoes_json for AI
     const pacotesRes = await db.query('SELECT * FROM pacotes WHERE ativo = true ORDER BY id');
-    const pacotes = pacotesRes.rows;
+    const pacotes = pacotesRes.rows.map(p => ({
+      ...p, sessoes_json: p.sessoes_json || []
+    }));
 
     // Calculate indices and flags
     const indices = calcularIndices(respostas);
     const flags   = detectarFlags(respostas, indices);
 
+    // Suggest program via AI (with fallback)
+    const prog = await sugerirPrograma(paciente.perfil_tipo, indices, flags, pacotes);
+
     // Generate mapping via AI
-    const { relatorio, programa } = await gerarMapeamento({
+    const { relatorio } = await gerarMapeamento({
       paciente, respostas, indices, flags, pacotes, riscoNivel
     });
 
@@ -46,12 +51,12 @@ router.post('/:paciente_id/gerar', verifyToken, async (req, res) => {
     );
     const versao = versaoRes.rows[0].proxima;
 
-    // Save mapping
+    // Save mapping with programa_modo
     const saved = await db.query(
       `INSERT INTO mapeamentos
          (paciente_id, versao, resumo_ia, dimensoes_json, indices_json, flags_json,
-          protocolo_json, pacote_recomendado_id, compatibilidade_pct, risco_nivel)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+          protocolo_json, pacote_recomendado_id, compatibilidade_pct, risco_nivel, programa_modo)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
        RETURNING id`,
       [
         paciente_id, versao,
@@ -59,12 +64,15 @@ router.post('/:paciente_id/gerar', verifyToken, async (req, res) => {
         JSON.stringify(indices.dimensoes),
         JSON.stringify(indices),
         JSON.stringify(flags),
-        JSON.stringify(relatorio),
-        programa.id || null,
-        programa.compat,
-        riscoNivel
+        JSON.stringify({ ...relatorio, programa_justificativa: prog.justificativa, programa_aderencia: prog.aderencia_sessoes }),
+        prog.id || null,
+        prog.compat,
+        riscoNivel,
+        prog.modo || 'fallback'
       ]
     );
+
+    const programa = prog;
 
     res.json({
       mapeamento_id: saved.rows[0].id,
@@ -160,6 +168,82 @@ router.get('/:paciente_id/historico', verifyToken, async (req, res) => {
     res.json(r.rows);
   } catch (err) {
     res.status(500).json({ message: 'Erro ao buscar histórico.' });
+  }
+});
+
+// ── POST /api/mapeamentos/:mapeamento_id/regerar-programa ──
+// Regenerates program suggestion using AI (called when fallback was used)
+router.post('/:mapeamento_id/regerar-programa', verifyToken, async (req, res) => {
+  try {
+    const mapRes = await db.query(
+      `SELECT m.*, p.perfil_tipo, p.nome_completo
+       FROM mapeamentos m JOIN pacientes p ON p.id = m.paciente_id
+       WHERE m.id = $1`, [req.params.mapeamento_id]
+    );
+    if (!mapRes.rows.length) return res.status(404).json({ message: 'Mapeamento não encontrado.' });
+    const map = mapRes.rows[0];
+
+    const pacotesRes = await db.query('SELECT * FROM pacotes WHERE ativo = true ORDER BY id');
+    const pacotes = pacotesRes.rows.map(p => ({ ...p, sessoes_json: p.sessoes_json || [] }));
+
+    const indices = map.indices_json || {};
+    const flags   = map.flags_json   || [];
+
+    // Force AI (no fallback here — user explicitly requested)
+    let prog, modo;
+    try {
+      const { sugerirProgramaLocal: _, ...aiMod } = require('../services/ai');
+      const { sugerirProgramaLocal: localFn } = require('../services/ai');
+      // Use the internal AI function directly
+      const aiResult = await (async () => {
+        const { sugerirPrograma } = require('../services/ai');
+        // Call sugerirPrograma which tries AI first
+        return await sugerirPrograma(map.perfil_tipo, indices, flags, pacotes);
+      })();
+      prog = aiResult;
+      modo = aiResult.modo;
+    } catch(e) {
+      return res.status(503).json({
+        message: 'API de IA indisponível. Tente novamente em instantes.',
+        api_erro: e.message
+      });
+    }
+
+    if (modo === 'fallback') {
+      return res.status(503).json({
+        message: 'API de IA indisponível no momento. Tente novamente em instantes.',
+        api_erro: prog.api_erro
+      });
+    }
+
+    // Update mapeamento with new suggestion
+    const proto = map.protocolo_json || {};
+    await db.query(
+      `UPDATE mapeamentos SET
+         pacote_recomendado_id = $1,
+         compatibilidade_pct   = $2,
+         programa_modo         = 'ia',
+         protocolo_json        = $3
+       WHERE id = $4`,
+      [
+        prog.id || null,
+        prog.compat,
+        JSON.stringify({ ...proto, programa_justificativa: prog.justificativa, programa_aderencia: prog.aderencia_sessoes }),
+        req.params.mapeamento_id
+      ]
+    );
+
+    res.json({
+      programa_id:   prog.id,
+      programa_nome: prog.nome,
+      compat:        prog.compat,
+      justificativa: prog.justificativa,
+      aderencia:     prog.aderencia_sessoes,
+      modo:          'ia'
+    });
+  } catch (err) {
+    console.error('regerar-programa:', err.message);
+    res.status(500).json({ message: err.message });
   }
 });
 

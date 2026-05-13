@@ -109,6 +109,22 @@ body{font-family:var(--fb);background:var(--bg);color:var(--text);min-height:100
 .compat-num{font-family:var(--fd);font-size:22px;font-weight:900;color:#c4b5fd}
 /* Disclaimer */
 .disclaimer{background:rgba(245,158,11,.05);border:1px solid rgba(245,158,11,.2);border-radius:9px;padding:12px 14px;font-size:11.5px;color:rgba(252,211,77,.7);line-height:1.65;margin-bottom:14px}
+/* Timeline */
+.tl-wrap{position:relative;padding-left:22px}
+.tl-wrap::before{content:'';position:absolute;left:7px;top:6px;bottom:6px;width:2px;background:var(--border);border-radius:2px}
+.tl-item{position:relative;margin-bottom:14px}
+.tl-item:last-child{margin-bottom:0}
+.tl-dot{position:absolute;left:-22px;top:4px;width:14px;height:14px;border-radius:50%;border:2px solid var(--accent);background:var(--bg);flex-shrink:0}
+.tl-dot.current{background:var(--accent)}
+.tl-header{display:flex;align-items:center;gap:8px;margin-bottom:3px}
+.tl-label{font-family:var(--fd);font-size:12px;font-weight:700;color:var(--text)}
+.tl-score{font-family:var(--fd);font-size:15px;font-weight:900;color:var(--accent)}
+.tl-delta{font-size:11px;padding:1px 7px;border-radius:10px;font-weight:600}
+.tl-delta.pos{background:rgba(16,185,129,.12);color:#6ee7b7}
+.tl-delta.neg{background:rgba(239,68,68,.1);color:#fca5a5}
+.tl-date{font-size:11px;color:var(--dim);margin-left:auto}
+.tl-dims{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px}
+.tl-dim{font-size:10px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:5px;padding:2px 7px;color:var(--dim)}
 /* Alert (vermelho) */
 .alert-crise{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);border-radius:var(--r);padding:16px;margin-bottom:14px}
 .alert-title{font-family:var(--fd);font-size:14px;font-weight:700;color:#fca5a5;margin-bottom:6px}
@@ -204,7 +220,9 @@ body{font-family:var(--fb);background:var(--bg);color:var(--text);min-height:100
       </div>
       <div class="global-score">
         <div class="score-num" id="repScore">--</div>
-        <div class="score-lbl">Bem-Estar</div>
+        <div class="score-lbl" id="scoreLbl">Bem-Estar</div>
+        <div id="scoreEvolBadge" style="display:none;font-size:10px;margin-top:3px;padding:2px 8px;border-radius:10px;background:rgba(16,185,129,.12);color:#6ee7b7;font-weight:600;font-family:var(--fd)"></div>
+        <div id="scoreInicialHint" style="display:none;font-size:10px;color:var(--dim);margin-top:2px"></div>
       </div>
     </div>
 
@@ -245,6 +263,14 @@ body{font-family:var(--fb);background:var(--bg);color:var(--text);min-height:100
         <div style="font-size:12px;color:var(--dim);margin-bottom:12px">Sugestões para revisão do terapeuta. Confirme os pertinentes antes de gerar documentos.</div>
         <div id="cidsListMap"></div>
         <div style="font-size:11px;color:var(--dim);margin-top:8px;line-height:1.5">CIDs confirmados aparecem automaticamente em todos os documentos clínicos do paciente.</div>
+      </div>
+
+      <!-- LINHA DO TEMPO DA EVOLUÇÃO -->
+      <div class="section-card" id="timelineCard" style="display:none">
+        <div class="sec-title">
+          <span><span class="sec-icon">&#128200;</span> Linha do Tempo da Evolução</span>
+        </div>
+        <div id="timelineList"></div>
       </div>
 
       <!-- EVOLUÇÃO DO PACIENTE — card logo abaixo do programa -->
@@ -614,6 +640,7 @@ function renderReport(data) {
   carregarStatusEvolucao();
   carregarCIDs(regeandoMapeamento);
   regeandoMapeamento = false;
+  carregarHistoricoEvolucao();
 }
 
 // ── RADAR SVG ──
@@ -662,7 +689,7 @@ function renderRadar(dims) {
   var svg = '<svg width="280" height="280" viewBox="0 0 280 280" xmlns="http://www.w3.org/2000/svg">'
     + '<defs><linearGradient id="rg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#D4AF7F;stop-opacity:0.4"/><stop offset="100%" style="stop-color:#b8924e;stop-opacity:0.15"/></linearGradient></defs>'
     + gridLines + axes
-    + '<polygon points="'+polyPts+'" fill="url(#rg)" stroke="#D4AF7F" stroke-width="1.5"/>'
+    + '<polygon class="radar-shape" points="'+polyPts+'" fill="url(#rg)" stroke="#D4AF7F" stroke-width="1.5"/>'
     + dots + lbls
     + '</svg>';
 
@@ -706,7 +733,160 @@ function confirmarRegerar() {
   gerarMapeamento();
 }
 
-// ── CIDs ──
+// ── HISTÓRICO DE EVOLUÇÃO ──
+var DIM_LABELS = {D1:'Emocional',D2:'Cognitivo',D3:'Relacional',D4:'Existencial',D5:'Corporal',D6:'Comportamental',D7:'Psicossocial'};
+
+function carregarHistoricoEvolucao() {
+  api('/api/evolucao/' + PACIENTE_ID + '/historico')
+    .then(function(snapshots) {
+      if (!snapshots.length) return;
+
+      // ── Update score display ──
+      var latest = snapshots[snapshots.length - 1];
+      var scoreEl = document.getElementById('repScore');
+      var badgeEl = document.getElementById('scoreEvolBadge');
+      var hintEl  = document.getElementById('scoreInicialHint');
+      var scoreLbl = document.getElementById('scoreLbl');
+
+      var scoreAtual = parseFloat(scoreEl.textContent) || 0;
+      var latestScore = parseFloat(latest.score_global) || 0;
+
+      if (latestScore > 0 && latestScore !== scoreAtual) {
+        var delta = latestScore - scoreAtual;
+        scoreEl.textContent = latestScore.toFixed(1);
+        scoreLbl.textContent = 'Bem-Estar Atual';
+        badgeEl.textContent  = (delta >= 0 ? '▲ +' : '▼ ') + delta.toFixed(1) + ' pts evolução';
+        badgeEl.style.background = delta >= 0 ? 'rgba(16,185,129,.12)' : 'rgba(239,68,68,.1)';
+        badgeEl.style.color = delta >= 0 ? '#6ee7b7' : '#fca5a5';
+        badgeEl.style.display = 'inline-block';
+        hintEl.textContent = 'Inicial: ' + scoreAtual.toFixed(1);
+        hintEl.style.display = 'block';
+
+        // Update radar with latest evolution indices
+        if (latest.indices_json && typeof latest.indices_json === 'object') {
+          renderRadarComEvolucao(latest.indices_json);
+        }
+      }
+
+      // ── Render timeline ──
+      var card = document.getElementById('timelineCard');
+      var list = document.getElementById('timelineList');
+      card.style.display = 'block';
+      list.innerHTML = '';
+
+      // Build initial entry from current mapping score
+      var initialScore = scoreAtual;
+      var allPoints = [{ label: 'Avaliação Inicial', score: initialScore, date: null, initial: true, dims: null }];
+      snapshots.forEach(function(s, i) {
+        allPoints.push({
+          label: (i + 1) + 'ª Evolução',
+          score: parseFloat(s.score_global) || 0,
+          date: s.gerado_em,
+          initial: false,
+          dims: s.indices_json
+        });
+      });
+
+      var wrap = document.createElement('div');
+      wrap.className = 'tl-wrap';
+
+      allPoints.forEach(function(pt, idx) {
+        var isCurrent = idx === allPoints.length - 1;
+        var prevScore = idx > 0 ? allPoints[idx - 1].score : null;
+        var delta = prevScore !== null ? pt.score - prevScore : null;
+
+        var item = document.createElement('div');
+        item.className = 'tl-item';
+
+        var dot = document.createElement('div');
+        dot.className = 'tl-dot' + (isCurrent ? ' current' : '');
+
+        var hdr = document.createElement('div');
+        hdr.className = 'tl-header';
+
+        var lbl = document.createElement('span');
+        lbl.className = 'tl-label';
+        lbl.textContent = pt.label + (isCurrent && !pt.initial ? ' · Atual' : '');
+
+        var sc = document.createElement('span');
+        sc.className = 'tl-score';
+        sc.textContent = pt.score.toFixed(1);
+
+        hdr.appendChild(lbl);
+        hdr.appendChild(sc);
+
+        if (delta !== null) {
+          var dEl = document.createElement('span');
+          dEl.className = 'tl-delta ' + (delta >= 0 ? 'pos' : 'neg');
+          dEl.textContent = (delta >= 0 ? '+' : '') + delta.toFixed(1);
+          hdr.appendChild(dEl);
+        }
+
+        if (pt.date) {
+          var dateEl = document.createElement('span');
+          dateEl.className = 'tl-date';
+          dateEl.textContent = new Date(pt.date).toLocaleDateString('pt-BR');
+          hdr.appendChild(dateEl);
+        }
+
+        item.appendChild(dot);
+        item.appendChild(hdr);
+
+        // Dimension badges for evolutions
+        if (pt.dims && !pt.initial) {
+          var dims = document.createElement('div');
+          dims.className = 'tl-dims';
+          ['D1','D2','D3','D4','D5','D6','D7'].forEach(function(k) {
+            if (pt.dims[k] !== undefined) {
+              var d = document.createElement('span');
+              d.className = 'tl-dim';
+              d.textContent = DIM_LABELS[k] + ': ' + parseFloat(pt.dims[k]).toFixed(0);
+              dims.appendChild(d);
+            }
+          });
+          item.appendChild(dims);
+        }
+
+        wrap.appendChild(item);
+      });
+
+      list.appendChild(wrap);
+    })
+    .catch(function(){});
+}
+
+// Update radar with evolved indices while keeping initial for reference
+function renderRadarComEvolucao(indicesAtuais) {
+  // Re-render radar with latest evolution values instead of initial values
+  var radarWrap = document.getElementById('radarWrap');
+  if (!radarWrap || !indicesAtuais) return;
+  try {
+    var dims = [
+      { k:'D1', l:'Emocional'      },
+      { k:'D2', l:'Cognitivo'      },
+      { k:'D3', l:'Relacional'     },
+      { k:'D4', l:'Existencial'    },
+      { k:'D5', l:'Corporal'       },
+      { k:'D6', l:'Comportamental' },
+      { k:'D7', l:'Psicossocial'   }
+    ];
+    var vals = dims.map(function(d){ return parseFloat(indicesAtuais[d.k]||indicesAtuais[d.k.toLowerCase()]||50); });
+    var cx=110,cy=110,r=85,n=vals.length;
+    var pts=vals.map(function(v,i){
+      var a=(Math.PI*2*i/n)-Math.PI/2;
+      var rv=(v/100)*r;
+      return [cx+rv*Math.cos(a), cy+rv*Math.sin(a)];
+    });
+    var poly=pts.map(function(p){return p[0]+','+p[1];}).join(' ');
+    var existing=radarWrap.querySelector('svg');
+    if (existing) {
+      var polyEl=existing.querySelector('.radar-shape');
+      if (polyEl) polyEl.setAttribute('points', poly);
+    }
+  } catch(e){}
+}
+
+
 var cidsPollTimer = null;
 
 function carregarCIDs(aguardando) {

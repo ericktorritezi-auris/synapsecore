@@ -1,7 +1,7 @@
 const express = require('express');
 const db      = require('../db');
 const { verifyToken } = require('../middleware/auth');
-const { calcularIndices, detectarFlags, gerarMapeamento } = require('../services/ai');
+const { calcularIndices, detectarFlags, gerarMapeamento, sugerirCIDs } = require('../services/ai');
 const router  = express.Router();
 
 // ── POST /api/mapeamentos/:paciente_id/gerar ──
@@ -75,6 +75,25 @@ router.post('/:paciente_id/gerar', verifyToken, async (req, res) => {
       programa,
       risco_nivel: riscoNivel
     });
+
+    // Generate CID suggestions in background (don't block response)
+    sugerirCIDs({ paciente, respostas, indices, flags })
+      .then(async function(cids) {
+        if (!cids.length) return;
+        // Remove old unconfirmed CIDs for this patient
+        await db.query(
+          'DELETE FROM cids_paciente WHERE paciente_id = $1 AND confirmado = false',
+          [paciente_id]
+        );
+        for (const c of cids) {
+          await db.query(
+            `INSERT INTO cids_paciente (paciente_id, mapeamento_id, cid_codigo, cid_nome, relato_paciente, significado_medico)
+             VALUES ($1,$2,$3,$4,$5,$6)`,
+            [paciente_id, saved.rows[0].id, c.cid_codigo, c.cid_nome, c.relato_paciente, c.significado_medico]
+          );
+        }
+      })
+      .catch(e => console.error('CID suggestion error:', e.message));
   } catch (err) {
     console.error('POST /mapeamentos/gerar:', err.message);
     res.status(500).json({ message: err.message || 'Erro ao gerar mapeamento.' });

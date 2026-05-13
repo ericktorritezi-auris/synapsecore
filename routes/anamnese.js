@@ -2,6 +2,7 @@ const express = require('express');
 const crypto  = require('crypto');
 const db      = require('../db');
 const router  = express.Router();
+const { sendPushToTerapeuta } = require('./push');
 
 // ── GET /api/anamnese/:token — valida token
 router.get('/:token', async (req, res) => {
@@ -74,10 +75,17 @@ router.post('/:token', async (req, res) => {
     // Marca token como usado
     await db.query('UPDATE form_tokens SET usado = true WHERE id = $1', [token_id]);
 
+    // Notifica terapeuta via push (em background)
+    const primeiroNome = (pac.rows[0]?.nome_completo || 'Paciente').split(' ')[0];
+    sendPushToTerapeuta(
+      1, // terapeuta_id fixo (single-tenant) — adaptar quando multi-terapeuta
+      'Formulário preenchido',
+      primeiroNome + ' acabou de responder o formulário de mapeamento.',
+      '/pacientes'
+    ).catch(function(){});
+
     // Notifica no banco que há resposta pendente de análise
-    await db.query(
-      'UPDATE pacientes SET updated_at = NOW() WHERE id = $1', [paciente_id]
-    );
+    await db.query('UPDATE pacientes SET updated_at = NOW() WHERE id = $1', [paciente_id]);
 
     res.json({ sucesso: true, risco_nivel: nivel });
   } catch (err) {

@@ -435,6 +435,19 @@ async function runMigrations() {
       )
     `);
 
+    // ── EVOLUÇÃO HISTÓRICO (persistente, independente do token 7 dias) ──
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS evolucao_historico (
+        id            SERIAL PRIMARY KEY,
+        paciente_id   INTEGER REFERENCES pacientes(id) ON DELETE CASCADE,
+        mapeamento_id INTEGER REFERENCES mapeamentos(id),
+        indices_json  JSONB NOT NULL,
+        score_global  NUMERIC(5,1),
+        sessoes_count INTEGER,
+        gerado_em     TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
     console.log('✅ Banco de dados pronto');
   } catch (err) {
     console.error('❌ Erro nas migrations:', err.message);

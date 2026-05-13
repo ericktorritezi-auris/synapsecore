@@ -7,7 +7,7 @@ const { runMigrations } = require('./db/migrations');
 
 const app     = express();
 const PORT    = process.env.PORT || 3000;
-const VERSION = '1.7.0';
+const VERSION = '1.8.0';
 
 // ── MIDDLEWARE ──
 app.use(cors());
@@ -25,6 +25,8 @@ app.use('/api/mapeamentos',require('./routes/mapeamentos'));
 app.use('/api/sessoes',    require('./routes/sessoes'));
 app.use('/api/evolucao',   require('./routes/evolucao'));
 app.use('/api/perfil',     require('./routes/perfil'));
+app.use('/api/cids',       require('./routes/cids'));
+app.use('/api/documentos', require('./routes/documentos'));
 
 // ── PAGES ──
 app.get('/',              (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
@@ -36,6 +38,8 @@ app.get('/mapeamento/:id',  (req, res) => res.sendFile(path.join(__dirname, 'pub
 app.get('/sessoes/:id',     (req, res) => res.sendFile(path.join(__dirname, 'public', 'sessoes.html')));
 app.get('/evolucao/:token', (req, res) => res.sendFile(path.join(__dirname, 'public', 'evolucao.html')));
 app.get('/perfil',         (req, res) => res.sendFile(path.join(__dirname, 'public', 'perfil.html')));
+app.get('/documentos/:id', (req, res) => res.sendFile(path.join(__dirname, 'public', 'documentos.html')));
+app.get('/doc/:token',     (req, res) => res.sendFile(path.join(__dirname, 'public', 'doc-viewer.html')));
 
 // ── HEALTH ──
 app.get('/health', async (req, res) => {

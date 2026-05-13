@@ -199,6 +199,7 @@ async function runMigrations() {
     await client.query(`ALTER TABLE pacientes ADD COLUMN IF NOT EXISTS responsavel_cpf VARCHAR(20)`);
     await client.query(`ALTER TABLE pacientes ADD COLUMN IF NOT EXISTS responsavel_email VARCHAR(255)`);
     await client.query(`ALTER TABLE pacientes ADD COLUMN IF NOT EXISTS responsavel_telefone VARCHAR(30)`);
+    await client.query(`ALTER TABLE mapeamentos ADD COLUMN IF NOT EXISTS programa_modo VARCHAR(20) DEFAULT 'fallback'`);
 
     console.log('✅ Tabelas verificadas/criadas');
 

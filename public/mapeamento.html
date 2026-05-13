@@ -316,7 +316,9 @@ body{font-family:var(--fb);background:var(--bg);color:var(--text);min-height:100
 <!-- ACTION BAR (only on report) -->
 <div class="action-bar" id="actionBar" style="display:none">
   <button class="btn btn-ghost btn-sm" onclick="history.back()">&#8592; Voltar</button>
-  <button class="btn btn-primary" id="btnEvolucao" onclick="gerarRelatorioEvolucao()" style="flex:1;justify-content:center;background:linear-gradient(135deg,#7c3aed,#3b82f6)">&#9651; Relatório de Evolução</button>  <button class="btn btn-ghost btn-sm" id="btnFinalizar" onclick="salvarObservacoes()">&#10003; Salvar</button>
+  <button class="btn btn-ghost btn-sm" onclick="confirmarRegerar()" title="Gerar nova versão do mapeamento">&#8635; Regerar</button>
+  <button class="btn btn-primary" id="btnEvolucao" onclick="gerarRelatorioEvolucao()" style="flex:1;justify-content:center;background:linear-gradient(135deg,#7c3aed,#3b82f6)">&#9651; Evolução</button>
+  <button class="btn btn-ghost btn-sm" id="btnFinalizar" onclick="salvarObservacoes()">&#10003; Salvar</button>
 </div>
 
 <!-- Modal: link de evolução -->
@@ -692,6 +694,20 @@ function toggleEdit(key) {
 }
 
 // ── SAVE ──
+// ── REGERAR MAPEAMENTO ──
+function confirmarRegerar() {
+  if (!confirm('Gerar nova versão do mapeamento?\n\nO mapeamento atual é mantido no histórico. Uma nova versão será criada com os dados mais recentes.')) return;
+  document.getElementById('scrReport').style.display = 'none';
+  document.getElementById('actionBar').style.display = 'none';
+  var sl = document.getElementById('scrLoading');
+  sl.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;gap:24px;text-align:center;padding:32px';
+  // Reset steps
+  ['step1','step2','step3','step4','step5','step6'].forEach(function(s){
+    var el=document.getElementById(s); if(el){el.classList.remove('done','active');}
+  });
+  gerarMapeamento();
+}
+
 // ── CIDs ──
 function carregarCIDs() {
   document.getElementById('linkDocumentos').href = '/documentos/' + PACIENTE_ID;

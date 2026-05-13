@@ -1,17 +1,22 @@
 {
   "name": "synapse-core",
-  "version": "1.8.5",
-  "description": "Synapse Core — Plataforma de Inteligência Clínica Integrativa",
+  "version": "1.9.0",
+  "description": "Synapse Core \u2014 Plataforma de Intelig\u00eancia Cl\u00ednica Integrativa",
   "main": "server.js",
-  "scripts": { "start": "node server.js" },
-  "dependencies": {
-    "express":     "^4.18.2",
-    "pg":          "^8.11.3",
-    "bcryptjs":    "^2.4.3",
-    "jsonwebtoken":"^9.0.2",
-    "dotenv":      "^16.3.1",
-    "cors":        "^2.8.5",
-    "uuid":        "^9.0.0"
+  "scripts": {
+    "start": "node server.js"
   },
-  "engines": { "node": ">=18.0.0" }
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.11.3",
+    "uuid": "^9.0.0",
+    "web-push": "^3.6.6"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
 }

@@ -617,7 +617,8 @@ function renderReport(data) {
   window.scrollTo({ top: 0, behavior: 'instant' });
   carregarResumoClinico();
   carregarStatusEvolucao();
-  carregarCIDs();
+  carregarCIDs(regeandoMapeamento);
+  regeandoMapeamento = false;
 }
 
 // ── RADAR SVG ──
@@ -695,13 +696,15 @@ function toggleEdit(key) {
 
 // ── SAVE ──
 // ── REGERAR MAPEAMENTO ──
+var regeandoMapeamento = false;
+
 function confirmarRegerar() {
   if (!confirm('Gerar nova versão do mapeamento?\n\nO mapeamento atual é mantido no histórico. Uma nova versão será criada com os dados mais recentes.')) return;
+  regeandoMapeamento = true;
   document.getElementById('scrReport').style.display = 'none';
   document.getElementById('actionBar').style.display = 'none';
   var sl = document.getElementById('scrLoading');
   sl.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;gap:24px;text-align:center;padding:32px';
-  // Reset steps
   ['step1','step2','step3','step4','step5','step6'].forEach(function(s){
     var el=document.getElementById(s); if(el){el.classList.remove('done','active');}
   });
@@ -709,31 +712,63 @@ function confirmarRegerar() {
 }
 
 // ── CIDs ──
-function carregarCIDs() {
+var cidsPollTimer = null;
+
+function carregarCIDs(aguardando) {
   document.getElementById('linkDocumentos').href = '/documentos/' + PACIENTE_ID;
+
+  if (aguardando) {
+    // Show "waiting" state while AI generates CIDs in background
+    document.getElementById('cidsCard').style.display = 'block';
+    document.getElementById('cidsListMap').innerHTML =
+      '<div style="display:flex;align-items:center;gap:8px;color:var(--dim);font-size:12.5px;padding:8px 0">' +
+      '<div style="width:14px;height:14px;border:2px solid var(--adim);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0"></div>' +
+      'A IA está classificando os CIDs... aguarde alguns instantes.</div>';
+    // Poll every 8 seconds up to 5 times
+    var tentativas = 0;
+    cidsPollTimer = setInterval(function() {
+      tentativas++;
+      api('/api/cids/' + PACIENTE_ID)
+        .then(function(cids) {
+          var novos = cids.filter(function(c){ return !c.confirmado; });
+          if (novos.length > 0 || tentativas >= 5) {
+            clearInterval(cidsPollTimer);
+            renderCIDsMap(cids);
+          }
+        }).catch(function() { if (tentativas >= 5) clearInterval(cidsPollTimer); });
+    }, 8000);
+    return;
+  }
+
   api('/api/cids/' + PACIENTE_ID)
     .then(function(cids) {
       if (!cids.length) return;
-      document.getElementById('cidsCard').style.display = 'block';
-      var wrap = document.getElementById('cidsListMap');
-      wrap.innerHTML = '';
-      cids.forEach(function(c) {
-        var row = document.createElement('div');
-        row.style.cssText='display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)';
-        var code = document.createElement('span');
-        code.style.cssText='font-family:var(--f-d);font-size:12px;font-weight:700;color:var(--accent);min-width:52px';
-        code.textContent = c.cid_codigo;
-        var nome = document.createElement('span');
-        nome.style.cssText='font-size:12.5px;flex:1;color:var(--text)';
-        nome.textContent = c.cid_nome;
-        var badge = document.createElement('span');
-        badge.style.cssText='font-size:10px;padding:2px 8px;border-radius:20px;font-weight:600;white-space:nowrap;' + (c.confirmado ? 'background:rgba(16,185,129,.12);color:#6ee7b7' : 'background:rgba(245,158,11,.1);color:#fcd34d');
-        badge.textContent = c.confirmado ? '✓ Confirmado' : 'Aguardando';
-        row.appendChild(code); row.appendChild(nome); row.appendChild(badge);
-        wrap.appendChild(row);
-      });
+      renderCIDsMap(cids);
     })
     .catch(function(){});
+}
+
+function renderCIDsMap(cids) {
+  if (!cids || !cids.length) return;
+  document.getElementById('cidsCard').style.display = 'block';
+  var wrap = document.getElementById('cidsListMap');
+  wrap.innerHTML = '';
+  cids.forEach(function(c) {
+    var row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)';
+    var code = document.createElement('span');
+    code.style.cssText = 'font-family:var(--f-d);font-size:12px;font-weight:700;color:var(--accent);min-width:52px';
+    code.textContent = c.cid_codigo;
+    var nome = document.createElement('span');
+    nome.style.cssText = 'font-size:12.5px;flex:1;color:var(--text)';
+    nome.textContent = c.cid_nome;
+    var badge = document.createElement('span');
+    badge.style.cssText = 'font-size:10px;padding:2px 8px;border-radius:20px;font-weight:600;white-space:nowrap;' +
+      (c.confirmado ? 'background:rgba(16,185,129,.12);color:#6ee7b7' : 'background:rgba(245,158,11,.1);color:#fcd34d');
+    badge.textContent = c.confirmado ? '✓ Confirmado' : 'Aguardando';
+    row.appendChild(code); row.appendChild(nome); row.appendChild(badge);
+    wrap.appendChild(row);
+  });
 }
 
 

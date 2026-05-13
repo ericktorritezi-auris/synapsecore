@@ -241,7 +241,7 @@ footer strong { color: rgba(201,209,217,0.65); }
 </div>
 
 <footer>
-  © 2026 Synapse Core &mdash; <strong>Erick Torritezi</strong> &mdash; <span id="loginVersion" style="opacity:.5"></span>
+  © 2026 Synapse Core &mdash; <strong>Erick Torritezi</strong> &mdash; <span id="loginVersion">v1.9.8</span>
 </footer>
 
 <script>
@@ -249,7 +249,7 @@ footer strong { color: rgba(201,209,217,0.65); }
 fetch('/api/health').then(function(r){return r.json();}).then(function(d){
   var el = document.getElementById('loginVersion');
   if (el && d.version) el.textContent = 'v' + d.version;
-}).catch(function(){});
+}).catch(function(){/* keeps hardcoded fallback */});
 
 // Redirect se já logado
 (function() {

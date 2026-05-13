@@ -115,14 +115,9 @@ body{font-family:var(--fb);background:var(--bg);color:var(--tx);min-height:100vh
     <div class="nav-section">Principal</div>
     <a href="/dashboard" class="nav-item"><span class="ni">&#9672;</span> Dashboard</a>
     <a href="/pacientes" class="nav-item"><span class="ni">&#9675;</span> Pacientes</a>
-    <div class="nav-section">Ferramentas</div>
+    <div class="nav-section">Avaliação</div>
     <a href="/paciente-novo" class="nav-item"><span class="ni">&#9703;</span> Nova Avaliação</a>
-    <a href="#" class="nav-item"><span class="ni">&#9678;</span> Mapeamentos</a>
-    <div class="nav-section">Clínico</div>
-    <a href="#" class="nav-item"><span class="ni">&#9712;</span> Sessões</a>
-    <a href="#" class="nav-item"><span class="ni">&#8857;</span> Documentos</a>
     <div class="nav-section">Sistema</div>
-    <a href="#" class="nav-item"><span class="ni">&#9714;</span> Logs LGPD</a>
     <a href="/perfil" class="nav-item active"><span class="ni">&#9715;</span> Configurações</a>
   </nav>
   <div class="sb-footer">
@@ -276,7 +271,30 @@ body{font-family:var(--fb);background:var(--bg);color:var(--tx);min-height:100vh
     <button class="btn btn-primary btn-full" onclick="alterarSenha()" style="margin-top:14px">Alterar Senha</button>
   </div>
 
-  <div class="page-footer">&copy; 2026 Synapse Core &mdash; <strong>Erick Torritezi</strong> &mdash; v1.7.0</div>
+  <!-- ⑥ Notificações Push -->
+  <div class="sec">
+    <div class="sec-title"><span class="sec-icon">🔔</span> Notificações Push</div>
+    <div style="font-size:12.5px;color:var(--mu);margin-bottom:16px;line-height:1.6">
+      Receba uma notificação no celular sempre que um paciente preencher o formulário de mapeamento.
+      Funciona no Android e no iOS 16.4+ com o PWA instalado.
+    </div>
+    <div id="pushStatus" style="background:rgba(11,19,43,.4);border:1px solid var(--brd);border-radius:9px;padding:14px;margin-bottom:14px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+        <div id="pushDot" style="width:10px;height:10px;border-radius:50%;background:var(--dim);flex-shrink:0"></div>
+        <div id="pushLabel" style="font-family:var(--fd);font-size:13px;font-weight:700">Verificando...</div>
+      </div>
+      <div id="pushInfo" style="font-size:11.5px;color:var(--dim);margin-left:18px"></div>
+    </div>
+    <div id="pushActions" style="display:flex;flex-direction:column;gap:10px">
+      <button class="btn btn-primary btn-full" id="btnReconectar" onclick="reconectarPush()" style="display:none">↻ Reconectar Push</button>
+      <button class="btn btn-primary btn-full" id="btnAtivar" onclick="ativarPush()" style="display:none">🔔 Ativar Notificações</button>
+      <button class="btn btn-ghost btn-full" id="btnTestarPush" onclick="testarPush()" style="display:none">▷ Enviar Push de Teste</button>
+    </div>
+    <div id="pushPermDenied" style="display:none;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:9px;padding:12px 14px;font-size:12.5px;color:#fca5a5;line-height:1.65;margin-top:10px"></div>
+    <div id="msgPush" class="msg" style="margin-top:10px"></div>
+  </div>
+
+  <div class="page-footer">&copy; 2026 Synapse Core &mdash; <strong>Erick Torritezi</strong> &mdash; v1.9.0</div>
 </main>
 
 <script src="/js/shared.js"></script>
@@ -445,6 +463,112 @@ function showMsg(id, text, type) {
   el.style.display = 'block';
   setTimeout(function(){ el.style.display='none'; }, 4000);
 }
+
+// ── PUSH MANAGEMENT ──
+var currentSub = null;
+
+function urlB64(b) {
+  var p='='.repeat((4-b.length%4)%4), b2=(b+p).replace(/-/g,'+').replace(/_/g,'/');
+  var r=window.atob(b2),o=new Uint8Array(r.length);
+  for(var i=0;i<r.length;i++)o[i]=r.charCodeAt(i); return o;
+}
+
+function setPushUI(estado, info, criado) {
+  var dot=document.getElementById('pushDot'), lbl=document.getElementById('pushLabel'), inf=document.getElementById('pushInfo');
+  if (!dot) return;
+  if (estado==='ativo') {
+    dot.style.background='#10b981'; lbl.textContent='Ativo — dispositivo registrado';
+    inf.textContent=criado?'Registrado em '+new Date(criado).toLocaleDateString('pt-BR'):'';
+    document.getElementById('btnReconectar').style.display='';
+    document.getElementById('btnAtivar').style.display='none';
+    document.getElementById('btnTestarPush').style.display='';
+  } else if (estado==='inativo') {
+    dot.style.background='var(--dim)'; lbl.textContent='Inativo — sem dispositivo registrado';
+    inf.textContent=info||'';
+    document.getElementById('btnReconectar').style.display='none';
+    document.getElementById('btnAtivar').style.display='';
+    document.getElementById('btnTestarPush').style.display='none';
+  } else if (estado==='negado') {
+    dot.style.background='#ef4444'; lbl.textContent='Permissão negada';
+    inf.textContent='';
+    document.getElementById('btnReconectar').style.display='none';
+    document.getElementById('btnAtivar').style.display='none';
+    document.getElementById('btnTestarPush').style.display='none';
+    var ua=navigator.userAgent;
+    var msg=ua.match(/iPhone|iPad/)
+      ?'No iOS: Ajustes → Safari → Configurações de Sites → Notificações → Permitir'
+      :'No Android: 3 pontos do Chrome → Configurações do site → Notificações → Permitir';
+    var el=document.getElementById('pushPermDenied'); el.textContent='⚠️ Permissão bloqueada. '+msg; el.style.display='block';
+  }
+}
+
+function checkPushStatus() {
+  if (!('serviceWorker' in navigator)||!('PushManager' in window)) { setPushUI('inativo','Push não suportado neste browser.'); return; }
+  navigator.serviceWorker.register('/sw.js').then(function(reg) {
+    reg.pushManager.getSubscription().then(function(sub) {
+      currentSub=sub;
+      if (sub) {
+        fetch('/api/push/status?endpoint='+encodeURIComponent(sub.endpoint),{headers:{'Authorization':'Bearer '+localStorage.getItem('sc_token')}})
+          .then(function(r){return r.json();})
+          .then(function(d){ setPushUI('ativo','',d.created_at); })
+          .catch(function(){ setPushUI('ativo','',null); });
+      } else {
+        if (Notification.permission==='denied') { setPushUI('negado'); return; }
+        setPushUI('inativo','Notificações não ativadas neste dispositivo.');
+      }
+    });
+  }).catch(function(e){ setPushUI('inativo','Erro: '+e.message); });
+}
+
+function ativarPush() {
+  var btn=document.getElementById('btnAtivar'); btn.disabled=true; btn.textContent='Ativando...';
+  Notification.requestPermission().then(function(perm) {
+    if (perm!=='granted') { setPushUI('negado'); btn.disabled=false; btn.textContent='🔔 Ativar Notificações'; return; }
+    navigator.serviceWorker.register('/sw.js').then(function(reg) {
+      fetch('/api/push/vapid-key').then(function(r){return r.json();}).then(function(d) {
+        if (!d.publicKey) { showMsg('msgPush','Chaves VAPID não configuradas no Railway.','err'); btn.disabled=false; btn.textContent='🔔 Ativar Notificações'; return; }
+        reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlB64(d.publicKey)}).then(function(sub) {
+          api('/api/push/subscribe','POST',{subscription:sub}).then(function() {
+            currentSub=sub; setPushUI('ativo','',new Date().toISOString()); showMsg('msgPush','Notificações ativadas!','ok');
+          }).catch(function(e){ showMsg('msgPush',e.message,'err'); btn.disabled=false; btn.textContent='🔔 Ativar Notificações'; });
+        }).catch(function(e){ showMsg('msgPush','Erro: '+e.message,'err'); btn.disabled=false; btn.textContent='🔔 Ativar Notificações'; });
+      });
+    });
+  });
+}
+
+function reconectarPush() {
+  var btn=document.getElementById('btnReconectar'); btn.disabled=true; btn.textContent='Reconectando...';
+  var p = currentSub ? api('/api/push/unsubscribe','DELETE',{endpoint:currentSub.endpoint}) : Promise.resolve();
+  p.then(function() {
+    if (currentSub) { currentSub.unsubscribe().catch(function(){}); }
+    return navigator.serviceWorker.register('/sw.js');
+  }).then(function(reg) {
+    return fetch('/api/push/vapid-key').then(function(r){return r.json();}).then(function(d) {
+      return reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlB64(d.publicKey)});
+    });
+  }).then(function(sub) {
+    currentSub=sub;
+    return api('/api/push/subscribe','POST',{subscription:sub}).then(function() {
+      return api('/api/push/test','POST',{endpoint:sub.endpoint});
+    });
+  }).then(function() {
+    setPushUI('ativo','',new Date().toISOString()); showMsg('msgPush','Push reconectado! Verifique a notificação de teste.','ok');
+    btn.disabled=false; btn.innerHTML='&#8635; Reconectar Push';
+  }).catch(function(e) {
+    showMsg('msgPush','Erro: '+e.message,'err'); btn.disabled=false; btn.innerHTML='&#8635; Reconectar Push';
+  });
+}
+
+function testarPush() {
+  var btn=document.getElementById('btnTestarPush'); btn.disabled=true; btn.textContent='Enviando...';
+  var payload=currentSub?{endpoint:currentSub.endpoint}:{};
+  api('/api/push/test','POST',payload)
+    .then(function(){ showMsg('msgPush','Push de teste enviado!','ok'); btn.disabled=false; btn.textContent='▷ Enviar Push de Teste'; })
+    .catch(function(e){ showMsg('msgPush',e.message||'Erro.','err'); btn.disabled=false; btn.textContent='▷ Enviar Push de Teste'; });
+}
+
+checkPushStatus();
 </script>
 </body>
 </html>

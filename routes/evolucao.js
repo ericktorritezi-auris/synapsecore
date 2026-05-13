@@ -188,12 +188,18 @@ router.post('/:paciente_id/gerar', verifyToken, async (req, res) => {
     );
 
     // ── Save permanent evolution snapshot (never expires) ──
-    const scoreGlobal = conteudo.indices_atuais?.global || null;
+    // Calculate global from D1-D7 average (AI doesn't return a 'global' key directly)
+    const indAtual = conteudo.indices_atuais || {};
+    const dimKeys  = ['D1','D2','D3','D4','D5','D6','D7'];
+    const dimVals  = dimKeys.map(k => parseFloat(indAtual[k]||0)).filter(v => v > 0);
+    const scoreGlobal = dimVals.length
+      ? Math.round((dimVals.reduce((a,b)=>a+b,0) / dimVals.length) * 10) / 10
+      : null;
+
     await db.query(
       `INSERT INTO evolucao_historico (paciente_id, mapeamento_id, indices_json, score_global, sessoes_count)
        VALUES ($1, $2, $3, $4, $5)`,
-      [paciente_id, mapeamento.id, JSON.stringify(conteudo.indices_atuais || {}),
-       scoreGlobal, sessoes.length]
+      [paciente_id, mapeamento.id, JSON.stringify(indAtual), scoreGlobal, sessoes.length]
     );
 
     res.json({

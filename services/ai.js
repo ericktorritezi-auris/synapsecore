@@ -157,7 +157,85 @@ function detectarFlags(r, indices) {
 }
 
 // ── SUGERE PROGRAMA ──
-function sugerirPrograma(perfilTipo, indices, flags, pacotes) {
+// ── SUGERIR PROGRAMA — usa IA com fallback local ──
+async function sugerirPrograma(perfilTipo, indices, flags, pacotes) {
+  // Try AI first
+  try {
+    const result = await sugerirProgramaIA(perfilTipo, indices, flags, pacotes);
+    return { ...result, modo: 'ia' };
+  } catch (e) {
+    console.warn('sugerirPrograma IA falhou, usando fallback local:', e.message);
+    const result = sugerirProgramaLocal(perfilTipo, indices, flags, pacotes);
+    return { ...result, modo: 'fallback', api_erro: e.message };
+  }
+}
+
+async function sugerirProgramaIA(perfilTipo, indices, flags, pacotes) {
+  const flagLabels = {
+    risco_depressivo:'Risco Depressivo', burnout_provavel:'Burnout Provável',
+    ansiedade_elevada:'Ansiedade Elevada', trauma_indicado:'Trauma Indicado',
+    isolamento_social:'Isolamento Social', instabilidade_emocional:'Instabilidade Emocional',
+    conflito_relacional:'Conflito Relacional', baixa_autoestima:'Baixa Autoestima',
+    neurodivergencia:'Neurodivergência', crise_existencial:'Crise Existencial'
+  };
+  const flagsDesc = flags.map(f => flagLabels[f] || f).join(', ') || 'Nenhuma';
+
+  const programasDesc = pacotes.map((p, i) =>
+    `${i+1}. ${p.nome} (${p.qtd_sessoes || 'sessões contínuas'} sessões | público: ${p.publico_alvo})\n` +
+    `   Descrição: ${p.descricao}\n` +
+    (p.sessoes_json && p.sessoes_json.length
+      ? `   Plano: ${p.sessoes_json.slice(0,4).map(s=>`S${s.numero} ${s.titulo}`).join(' · ')}${p.sessoes_json.length>4?' ...':''}`
+      : '')
+  ).join('\n\n');
+
+  const prompt = `Você é o assistente clínico do Synapse Core — Evolution Therapy.
+Terapeuta: Erick Torritezi — Psicanalista e Psicoterapeuta Estratégico Integrativo.
+
+PERFIL DO PACIENTE:
+- Tipo: ${perfilTipo}
+- Score global: ${indices.global || 'N/D'}
+- Regulação emocional: ${indices.regulacao_emocional || 'N/D'}
+- Padrão cognitivo: ${indices.padrao_cognitivo || 'N/D'}
+- Índice relacional: ${indices.indice_relacional || 'N/D'}
+- Flags clínicas: ${flagsDesc}
+
+PROGRAMAS DISPONÍVEIS:
+${programasDesc}
+
+Com base no perfil clínico do paciente, selecione o programa mais adequado.
+Retorne APENAS JSON válido:
+{
+  "programa_id": <número do programa na lista acima, 1-based>,
+  "compatibilidade": <número de 0 a 100>,
+  "justificativa": "<2-3 frases explicando por que este programa é mais adequado para este paciente>",
+  "aderencia_sessoes": "<breve descrição de como as primeiras sessões do programa se adequam ao perfil clínico>"
+}`;
+
+  const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type':'application/json', 'x-api-key': process.env.ANTHROPIC_API_KEY, 'anthropic-version':'2023-06-01' },
+    body: JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:600, messages:[{role:'user',content:prompt}] })
+  });
+  if (!resp.ok) throw new Error('Anthropic API error: ' + resp.status);
+  const data  = await resp.json();
+  const text  = data.content?.[0]?.text || '{}';
+  const clean = text.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
+  const json  = JSON.parse(clean.match(/\{[\s\S]*\}/)?.[0] || '{}');
+
+  const idx = (parseInt(json.programa_id) || 1) - 1;
+  const prog = pacotes[Math.min(Math.max(idx, 0), pacotes.length-1)];
+  if (!prog) throw new Error('Programa não encontrado na resposta da IA');
+
+  return {
+    id: prog.id,
+    nome: prog.nome,
+    compat: Math.min(100, Math.max(0, parseInt(json.compatibilidade) || 75)),
+    justificativa: json.justificativa || '',
+    aderencia_sessoes: json.aderencia_sessoes || ''
+  };
+}
+
+function sugerirProgramaLocal(perfilTipo, indices, flags, pacotes) {
   const mapa = {
     adulto:          p => p.publico_alvo === 'adulto' && p.qtd_sessoes !== 1,
     casal:           p => p.publico_alvo === 'casal',
@@ -169,14 +247,13 @@ function sugerirPrograma(perfilTipo, indices, flags, pacotes) {
   const candidatos = pacotes.filter(filtro);
   if (!candidatos.length) return { id: null, nome: 'Sessão Estratégica Individual', compat: 70, justificativa: 'Programa sugerido com base no perfil.' };
 
-  // Score de compatibilidade
   const melhor = candidatos.map(p => {
     let compat = 70;
-    if (flags.includes('risco_depressivo') && p.nome.includes('Destravamento')) compat += 15;
-    if (flags.includes('burnout_provavel') && p.nome.includes('Destravamento')) compat += 10;
-    if (flags.includes('ansiedade_funcional') && p.nome.includes('Destravamento')) compat += 8;
-    if (flags.includes('neurodivergencia_provavel') && p.nome.includes('Regulação')) compat += 20;
-    if (flags.includes('apego_ansioso') && p.nome.includes('Casal')) compat += 5;
+    if (flags.includes('risco_depressivo')    && p.nome.includes('Destravamento')) compat += 15;
+    if (flags.includes('burnout_provavel')    && p.nome.includes('Destravamento')) compat += 10;
+    if (flags.includes('ansiedade_elevada')   && p.nome.includes('Destravamento')) compat += 8;
+    if (flags.includes('neurodivergencia')    && p.nome.includes('Regulação'))     compat += 20;
+    if (flags.includes('conflito_relacional') && p.nome.includes('Casal'))         compat += 5;
     if (indices.global < 50) compat += 10;
     if (indices.global >= 70) compat -= 5;
     return { ...p, compat: Math.min(98, compat) };
@@ -300,7 +377,7 @@ NÃO diagnostique. Use linguagem de hipóteses ("sugere", "indica", "observa-se 
   return { relatorio, programa: prog };
 }
 
-module.exports = { calcularIndices, detectarFlags, gerarMapeamento, FLAG_LABELS, sugerirPrograma, gerarResumoClinico, gerarEvolucao, sugerirCIDs };
+module.exports = { calcularIndices, detectarFlags, gerarMapeamento, FLAG_LABELS, sugerirPrograma, sugerirProgramaLocal, gerarResumoClinico, gerarEvolucao, sugerirCIDs };
 
 // ── SUGERE CIDs (ICD-10) ──
 async function sugerirCIDs({ paciente, respostas, indices, flags }) {

@@ -213,6 +213,18 @@ if (document.readyState === 'loading') {
 window.scInitPush = initPush;
 
 
+// ── VERSION FOOTER — update all .app-version spans from API ──
+(function() {
+  function updateVersionFooters(v) {
+    document.querySelectorAll('.app-version').forEach(function(el){ el.textContent = 'v'+v; });
+  }
+  function fetchVersion() {
+    fetch('/api/health').then(function(r){return r.json();}).then(function(d){ if(d.version) updateVersionFooters(d.version); }).catch(function(){});
+  }
+  if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', fetchVersion); }
+  else { fetchVersion(); }
+})();
+
 // env(safe-area-inset-top) is unreliable on Android — dynamic measurement is safer
 function fixTopPadding() {
   var tb = document.getElementById('topbar') || document.querySelector('.topbar');

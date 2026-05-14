@@ -30,7 +30,8 @@ router.get('/', verifyToken, async (req, res) => {
              (SELECT COUNT(*) FROM sessoes s WHERE s.paciente_id = p.id AND s.status = 'realizada')::int AS sessoes_realizadas,
              (SELECT COUNT(*) FROM mapeamentos m WHERE m.paciente_id = p.id)::int AS total_mapeamentos,
              (SELECT COUNT(*) FROM form_tokens ft
-               WHERE ft.paciente_id = p.id AND ft.usado = false AND ft.expira_em > NOW())::int AS link_ativo
+               WHERE ft.paciente_id = p.id AND ft.usado = false AND ft.expira_em > NOW())::int AS link_ativo,
+             p.sessoes_anteriores
       FROM pacientes p
       LEFT JOIN pacotes pk ON pk.id = p.pacote_id
       ${where}

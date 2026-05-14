@@ -47,6 +47,27 @@ body{font-family:var(--fb);background:var(--bg);color:var(--text);min-height:100
 /* ── SECTION CARD ── */
 .card{background:var(--white);border:1px solid var(--brd);border-radius:var(--r);padding:20px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,.05)}
 .card-title{font-family:var(--fd);font-size:13px;font-weight:700;color:var(--navy);margin-bottom:14px;display:flex;align-items:center;gap:7px;text-transform:uppercase;letter-spacing:.8px;padding-bottom:10px;border-bottom:1px solid var(--brd)}
+/* Evolution global block */
+.evol-scores{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.evol-score-box{flex:1;text-align:center;background:rgba(11,19,43,.04);border:1px solid var(--brd);border-radius:10px;padding:14px 10px}
+.evol-score-box.atual{background:linear-gradient(135deg,rgba(196,150,90,.08),rgba(196,150,90,.03));border-color:rgba(196,150,90,.3)}
+.evol-score-lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px}
+.evol-score-num{font-family:var(--fd);font-size:32px;font-weight:900;line-height:1}
+.evol-score-num.ini{color:var(--muted)}
+.evol-score-num.atu{color:var(--gold)}
+.evol-arrow{font-size:22px;color:var(--gold);flex-shrink:0}
+.evol-delta{text-align:center;margin-bottom:16px}
+.evol-delta-num{font-family:var(--fd);font-size:15px;font-weight:700}
+.evol-delta-sub{font-size:12px;color:var(--muted);margin-top:2px}
+/* Progress comparison bars */
+.evol-bars{display:flex;flex-direction:column;gap:8px}
+.evol-bar-row{display:flex;align-items:center;gap:10px}
+.evol-bar-lbl{font-size:11px;color:var(--muted);width:38px;text-align:right;flex-shrink:0}
+.evol-bar-track{flex:1;height:10px;background:rgba(11,19,43,.08);border-radius:20px;overflow:hidden}
+.evol-bar-fill{height:100%;border-radius:20px;transition:width 1.2s cubic-bezier(.4,0,.2,1)}
+.evol-bar-fill.ini-fill{background:rgba(90,100,120,.4)}
+.evol-bar-fill.atu-fill{background:linear-gradient(90deg,var(--gold2),var(--gold))}
+.evol-bar-val{font-family:var(--fd);font-size:11px;font-weight:700;width:28px;flex-shrink:0}
 .card-title span{font-size:16px}
 /* ── RADAR ── */
 .radar-wrap{display:flex;justify-content:center;margin-bottom:12px}
@@ -162,6 +183,12 @@ body{font-family:var(--fb);background:var(--bg);color:var(--text);min-height:100
     </div>
   </div>
 
+  <!-- Evolução Global -->
+  <div class="card" id="evolGlobalCard" style="display:none">
+    <div class="card-title"><span>&#128200;</span> Evolução do Bem-Estar Global</div>
+    <div id="evolGlobalBody"></div>
+  </div>
+
   <!-- Radar + Dimensions -->
   <div class="card">
     <div class="card-title"><span>&#9672;</span> Evolução por Dimensão</div>
@@ -254,8 +281,12 @@ function renderReport(d, expiraEm) {
   var keys = ['D1','D2','D3','D4','D5','D6','D7'];
   var iniVals = keys.map(function(k){ return ini[k]||50; });
   var atuVals = keys.map(function(k){ return atu[k]||iniVals[keys.indexOf(k)]; });
+  var globalIni = Math.round(iniVals.reduce(function(a,b){return a+b;},0)/iniVals.length);
   var globalAtu = Math.round(atuVals.reduce(function(a,b){return a+b;},0)/atuVals.length);
   document.getElementById('heroScore').textContent = globalAtu;
+
+  // Render evolution global block
+  renderEvolucaoGlobal(globalIni, globalAtu);
 
   // Animate score ring
   setTimeout(function() {
@@ -410,7 +441,61 @@ function voltarPainel() {
   }
 }
 
-function exportarPDF() {
+function renderEvolucaoGlobal(ini, atu) {
+  var card = document.getElementById('evolGlobalCard');
+  var body = document.getElementById('evolGlobalBody');
+  if (!ini || !atu || ini === atu) return; // don't show if no change
+  card.style.display = 'block';
+
+  var delta    = atu - ini;
+  var deltaSign= delta >= 0 ? '+' : '';
+  var deltaPct = ini > 0 ? Math.round((delta / ini) * 100) : 0;
+  var isUp     = delta >= 0;
+
+  body.innerHTML =
+    // Score boxes
+    '<div class="evol-scores">'
+      +'<div class="evol-score-box">'
+        +'<div class="evol-score-lbl">Início</div>'
+        +'<div class="evol-score-num ini">'+ini+'</div>'
+      +'</div>'
+      +'<div class="evol-arrow">'+(isUp?'→':'→')+'</div>'
+      +'<div class="evol-score-box atual">'
+        +'<div class="evol-score-lbl">Hoje</div>'
+        +'<div class="evol-score-num atu">'+atu+'</div>'
+      +'</div>'
+    +'</div>'
+    // Delta
+    +'<div class="evol-delta">'
+      +'<div class="evol-delta-num" style="color:'+(isUp?'#2d6a4f':'#c1121f')+'">'
+        +deltaSign+delta+' pontos '+(isUp?'▲':'▼')
+      +'</div>'
+      +'<div class="evol-delta-sub">'+deltaSign+deltaPct+'% em relação ao início</div>'
+    +'</div>'
+    // Comparison bars
+    +'<div class="evol-bars">'
+      +'<div class="evol-bar-row">'
+        +'<span class="evol-bar-lbl">Início</span>'
+        +'<div class="evol-bar-track"><div class="evol-bar-fill ini-fill" id="barIni" style="width:0%"></div></div>'
+        +'<span class="evol-bar-val" style="color:var(--muted)">'+ini+'</span>'
+      +'</div>'
+      +'<div class="evol-bar-row">'
+        +'<span class="evol-bar-lbl">Hoje</span>'
+        +'<div class="evol-bar-track"><div class="evol-bar-fill atu-fill" id="barAtu" style="width:0%"></div></div>'
+        +'<span class="evol-bar-val" style="color:var(--gold)">'+atu+'</span>'
+      +'</div>'
+    +'</div>';
+
+  // Animate bars after render
+  setTimeout(function() {
+    var barIni = document.getElementById('barIni');
+    var barAtu = document.getElementById('barAtu');
+    if (barIni) barIni.style.width = ini + '%';
+    if (barAtu) barAtu.style.width = atu + '%';
+  }, 300);
+}
+
+
   document.title = 'Relatório de Evolução — Synapse Core';
   window.print();
 }

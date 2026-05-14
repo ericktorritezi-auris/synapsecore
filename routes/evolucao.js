@@ -160,12 +160,20 @@ router.post('/:paciente_id/gerar', verifyToken, async (req, res) => {
       delta[k] = atu - ini;
     });
 
+    // Session count and dates — combine anterior history with Synapse-registered sessions
+    const ant           = parseInt(paciente.sessoes_anteriores) || 0;
+    const sessoes_total = ant + sessoes.length;
+    const data_inicio   = ant > 0 && paciente.data_primeira_sessao
+      ? paciente.data_primeira_sessao
+      : sessoes[0].data_sessao;
+    const data_ultima   = sessoes[sessoes.length - 1].data_sessao;
+
     const conteudo = {
       paciente:     { nome: paciente.nome_completo, perfil_tipo: paciente.perfil_tipo },
       pacote:       pacote ? { nome: pacote.nome, qtd_sessoes: pacote.qtd_sessoes } : null,
-      sessoes_total: sessoes.length,
-      data_inicio:  sessoes[0]?.data_sessao,
-      data_ultima:  sessoes[sessoes.length - 1]?.data_sessao,
+      sessoes_total,
+      data_inicio,
+      data_ultima,
       indices_iniciais: indicesIniciais,
       indices_atuais:   evolucao.indices_atuais || {},
       delta,

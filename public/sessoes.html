@@ -319,6 +319,7 @@ window.addEventListener('DOMContentLoaded', function() {
 // ── RENDER PATIENT ──
 function renderPatient() {
   if (!paciente) return;
+  var ant = parseInt(paciente.sessoes_anteriores) || 0;
   var initials = paciente.nome_completo.split(' ').map(function(n){return n[0];}).slice(0,2).join('').toUpperCase();
   document.getElementById('phTitle').textContent = 'Sessões — ' + paciente.nome_completo.split(' ')[0];
   document.getElementById('phSub').textContent = (paciente.idade||'') + (paciente.idade?' anos · ':'') + (paciente.perfil_tipo||'') + (paciente.pacote_nome?' · '+paciente.pacote_nome:'');
@@ -332,10 +333,14 @@ function renderPatient() {
   // Program progress
   if (paciente.pacote_id && paciente.qtd_sessoes) {
     pacoteId = paciente.pacote_id;
-    var done = sessoes.filter(function(s){return s.status==='realizada';}).length;
+    var registradas = sessoes.filter(function(s){return s.status==='realizada';}).length;
+    var done  = ant + registradas;   // total feitas (anteriores + registradas)
     var total = paciente.qtd_sessoes;
     document.getElementById('progLabel').textContent = paciente.pacote_nome || 'Programa';
-    document.getElementById('progCount').textContent = done + '/' + total + ' sessões';
+    // Show: "5/8 sessões (3 registradas + 2 anteriores)" when has history
+    var countLabel = done + '/' + total + ' sessões';
+    if (ant > 0) countLabel += ' (' + registradas + ' registrada' + (registradas!==1?'s':'') + ' + ' + ant + ' anterior' + (ant!==1?'es':'') + ')';
+    document.getElementById('progCount').textContent = countLabel;
     var dots = document.getElementById('progDots');
     dots.innerHTML = '';
     for (var i=1; i<=total; i++) {
@@ -345,16 +350,11 @@ function renderPatient() {
       dots.appendChild(d);
     }
     document.getElementById('progWrap').style.display = 'block';
-
-    // Pre-fill form valor
-    if (paciente.pacote_nome) {
-      var valPerSessao = paciente.valor_avista ? Math.round(paciente.valor_avista / total) : null;
-      // We'll set from package data
-    }
   }
 
-  // Pre-fill next session number
-  var nextNum = sessoes.length > 0 ? Math.max.apply(null, sessoes.map(function(s){return s.sessao_numero||0;})) + 1 : 1;
+  // Pre-fill next session number (offset by sessoes_anteriores)
+  var maxReg = sessoes.length > 0 ? Math.max.apply(null, sessoes.map(function(s){return s.sessao_numero||0;})) : 0;
+  var nextNum = ant + maxReg + 1;
   document.getElementById('fNum').placeholder = nextNum;
 
   // Today's date
@@ -392,7 +392,8 @@ function renderSessoes() {
       body.classList.toggle('open');
     });
     var numEl = document.createElement('div'); numEl.className='sess-num';
-    numEl.textContent = 'Sessão ' + s.sessao_numero;
+    var ant = parseInt(paciente.sessoes_anteriores) || 0;
+    numEl.textContent = 'Sessão ' + (ant + s.sessao_numero);
     var info = document.createElement('div'); info.className='sess-info';
     var dateEl = document.createElement('div'); dateEl.className='sess-date';
     dateEl.textContent = formatDate(s.data_sessao);

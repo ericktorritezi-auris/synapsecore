@@ -34,6 +34,7 @@ router.post('/:paciente_id', verifyToken, async (req, res) => {
     if (!data_sessao) return res.status(400).json({ message: 'Data da sessão é obrigatória.' });
 
     // Auto-calculate session number if not provided
+    // sessao_numero in DB is always relative (1,2,3...) — sessoes_anteriores offset applied on display
     let numSessao = sessao_numero;
     if (!numSessao) {
       const cnt = await db.query(
@@ -225,13 +226,14 @@ async function gerarEAtualizarResumo(paciente_id) {
   const pacoteRes = await db.query('SELECT * FROM pacotes WHERE id = $1', [paciente.pacote_id || 0]);
   const pacote = pacoteRes.rows[0] || null;
 
-  const conteudo = await gerarResumoClinico({ paciente, sessoes, mapeamento, pacote });
-
+  // Calculate version first so we can pass isPrimeiro correctly
   const versaoRes = await db.query(
     'SELECT COALESCE(MAX(versao),0)+1 AS prox FROM resumos_clinicos WHERE paciente_id = $1',
     [paciente_id]
   );
   const versao = versaoRes.rows[0].prox;
+
+  const conteudo = await gerarResumoClinico({ paciente, sessoes, mapeamento, pacote, isPrimeiro: versao === 1 });
 
   const ids = sessoes.map(s => s.id);
   await db.query(

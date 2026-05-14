@@ -533,16 +533,49 @@ Regras: indices_atuais devem refletir a evolução observada nas sessões (podem
 }
 
 // ── GERA RESUMO CLÍNICO PÓS-SESSÃO ──
-async function gerarResumoClinico({ paciente, sessoes, mapeamento, pacote }) {
+async function gerarResumoClinico({ paciente, sessoes, mapeamento, pacote, isPrimeiro }) {
   const indicesStr = mapeamento ? JSON.stringify(mapeamento.indices_json || {}, null, 0) : 'Não disponível';
   const flagsStr   = mapeamento ? (mapeamento.flags_json || []).join(', ') || 'Nenhuma' : 'Não disponível';
 
-  // Extract therapist observations from mapping protocol
+  // PRIMEIRO RESUMO: usa apenas dados do formulário (linha de base clínica)
+  if (isPrimeiro) {
+    const prompt = `Você é um assistente de inteligência clínica do Synapse Core — Evolution Therapy.
+Terapeuta: Erick Torritezi — Psicanalista e Psicoterapeuta Estratégico Integrativo.
+
+PACIENTE: ${paciente.nome_completo} | Perfil: ${paciente.perfil_tipo || 'adulto'}
+PROGRAMA: ${pacote ? pacote.nome + ' (' + (pacote.qtd_sessoes || '?') + ' sessões)' : 'Não definido'}
+
+ÍNDICES DO MAPEAMENTO INICIAL (baseados no formulário preenchido pelo paciente):
+${indicesStr}
+
+FLAGS CLÍNICAS IDENTIFICADAS: ${flagsStr}
+
+Este é o PRIMEIRO resumo analítico do paciente — baseado exclusivamente nos dados do formulário de avaliação inicial. Não há sessões ou observações do terapeuta para considerar.
+
+Gere um resumo clínico de linha de base (3-4 parágrafos) descrevendo:
+1. O perfil clínico inicial do paciente com base nos índices e flags identificados
+2. As principais áreas de atenção clínica
+3. O potencial terapêutico e pontos de força identificados
+4. Uma direção inicial para o trabalho terapêutico
+
+Use linguagem técnica e clínica. Este resumo servirá como referência de ponto de partida para acompanhar a evolução do paciente.`;
+
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': process.env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1500, messages: [{ role: 'user', content: prompt }] })
+    });
+    if (!resp.ok) throw new Error('Anthropic error: ' + resp.status);
+    const d = await resp.json();
+    return d.content?.[0]?.text || 'Resumo inicial não gerado.';
+  }
+
+  // REGERAÇÃO: usa tudo — observações, sessões, protocolo
   const proto = mapeamento?.protocolo_json || {};
-  const obsText       = proto.obs_terapeuta     || '';
-  const objText       = proto.objetivos_iniciais || '';
-  const protocolText  = proto.protocolo_sugerido || '';
-  const sinteseText   = proto.sintese_caso       || '';
+  const obsText      = proto.obs_terapeuta     || '';
+  const objText      = proto.objetivos_iniciais || '';
+  const protocolText = proto.protocolo_sugerido || '';
+  const sinteseText  = proto.sintese_caso       || '';
 
   const obsBlock = [
     obsText      ? 'Observações do terapeuta: ' + obsText : '',

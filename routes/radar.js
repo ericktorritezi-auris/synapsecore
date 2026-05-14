@@ -11,7 +11,9 @@ router.get('/', verifyToken, async (req, res) => {
       SELECT
         COUNT(DISTINCT p.id)                                              AS total_pacientes,
         COUNT(DISTINCT CASE WHEN p.status='ativo' THEN p.id END)         AS em_acompanhamento,
-        COUNT(DISTINCT CASE WHEN s.status='realizada' THEN s.id END)     AS total_sessoes,
+        COUNT(DISTINCT CASE WHEN s.status='realizada' THEN s.id END)
+        + COALESCE((SELECT SUM(p2.sessoes_anteriores) FROM pacientes p2 WHERE p2.status != 'inativo' AND p2.sessoes_anteriores > 0), 0)
+                                                                          AS total_sessoes,
         ROUND(AVG(eh.score_global)::numeric, 1)                          AS score_medio_evolucao,
         ROUND(AVG((m.indices_json->>'global')::numeric)::numeric, 1)     AS score_medio_inicial
       FROM pacientes p

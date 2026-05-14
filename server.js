@@ -7,7 +7,7 @@ const { runMigrations } = require('./db/migrations');
 
 const app     = express();
 const PORT    = process.env.PORT || 3000;
-const VERSION = '2.1.3';
+const VERSION = '2.2.1';
 
 // ── MIDDLEWARE ──
 app.use(cors());
@@ -30,6 +30,7 @@ app.use('/api/documentos', require('./routes/documentos'));
 app.use('/api/push',       require('./routes/push'));
 app.use('/api/radar',      require('./routes/radar'));
 app.use('/api/programas',  require('./routes/programas'));
+app.use('/api/financeiro', require('./routes/financeiro'));
 
 // ── PAGES ──
 app.get('/',              (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
@@ -40,6 +41,7 @@ app.get('/anamnese/:token', (req, res) => res.sendFile(path.join(__dirname, 'pub
 app.get('/mapeamento/:id',  (req, res) => res.sendFile(path.join(__dirname, 'public', 'mapeamento.html')));
 app.get('/sessoes/:id',     (req, res) => res.sendFile(path.join(__dirname, 'public', 'sessoes.html')));
 app.get('/evolucao/:token', (req, res) => res.sendFile(path.join(__dirname, 'public', 'evolucao.html')));
+app.get('/financeiro',      (req, res) => res.sendFile(path.join(__dirname, 'public', 'financeiro.html')));
 app.get('/programas',       (req, res) => res.sendFile(path.join(__dirname, 'public', 'programas.html')));
 app.get('/radar',          (req, res) => res.sendFile(path.join(__dirname, 'public', 'radar.html')));
 app.get('/perfil',         (req, res) => res.sendFile(path.join(__dirname, 'public', 'perfil.html')));

@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Financeiro — Synapse Core</title>
+<meta name="theme-color" content="#0B132B">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<link rel="icon" href="/favicon.ico">
+<link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700,900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0B132B;--sf:#1C2541;--s2:rgba(28,37,65,.75);--ac:#D4AF7F;--adim:rgba(212,175,127,.1);--abrd:rgba(212,175,127,.25);--tx:#F5F7FA;--mu:#C9D1D9;--dim:rgba(201,209,217,.4);--brd:rgba(201,209,217,.1);--fd:'Satoshi',sans-serif;--fb:'Inter',sans-serif;--r:12px;--sw:260px;--th:60px}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--fb);background:var(--bg);color:var(--tx);min-height:100vh}
+.topbar{display:flex;align-items:center;justify-content:space-between;height:calc(var(--th) + env(safe-area-inset-top,0px));padding:env(safe-area-inset-top,0px) 16px 0;background:var(--sf);border-bottom:1px solid var(--brd);position:fixed;top:0;left:0;right:0;z-index:50}
+.topbar img{height:28px}
+.hamburger{background:none;border:none;color:var(--mu);cursor:pointer;padding:8px;border-radius:8px;font-size:20px}
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:40;backdrop-filter:blur(2px)}
+.overlay.open{display:block}
+.sidebar{width:var(--sw);background:var(--sf);border-right:1px solid var(--brd);position:fixed;top:0;left:0;bottom:0;z-index:45;display:flex;flex-direction:column;transform:translateX(-100%);transition:transform .3s cubic-bezier(.4,0,.2,1);overflow-y:auto}
+.sidebar.open{transform:translateX(0)}
+.sb-logo{padding:20px 20px 18px;border-bottom:1px solid var(--brd)}
+.sb-logo img{height:32px}
+.sb-nav{flex:1;padding:12px 10px;overflow-y:auto}
+.nav-section{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--dim);padding:14px 10px 6px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:9px;color:var(--mu);font-size:13.5px;text-decoration:none;transition:all .18s;margin-bottom:1px;border:1px solid transparent}
+.nav-item:hover{background:rgba(255,255,255,.04);color:var(--tx)}
+.nav-item.active{background:var(--adim);color:var(--ac);border-color:var(--abrd)}
+.nav-item .ni{font-size:16px;width:20px;text-align:center;flex-shrink:0}
+.sb-footer{padding:14px 12px;border-top:1px solid var(--brd)}
+.user-pill{display:flex;align-items:center;gap:10px;padding:10px;background:rgba(11,19,43,.5);border-radius:10px;border:1px solid var(--brd)}
+.user-av{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--ac),#b8924e);display:flex;align-items:center;justify-content:center;font-family:var(--fd);font-size:12px;font-weight:700;color:var(--bg);flex-shrink:0;overflow:hidden}
+.user-name{font-size:12.5px;font-weight:500}
+.user-role{font-size:10px;color:var(--dim)}
+.logout-btn{margin-left:auto;background:none;border:none;color:var(--dim);cursor:pointer;font-size:13px;padding:4px 6px}
+.main{padding:calc(var(--th)+28px+env(safe-area-inset-top,0px)) 16px 60px}
+/* Header */
+.ph{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px}
+.ph-title{font-family:var(--fd);font-size:22px;font-weight:700}
+.ph-sub{font-size:12px;color:var(--dim);margin-top:3px}
+/* Filter bar */
+.filter-bar{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.filter-bar select{background:var(--s2);border:1px solid var(--brd);border-radius:8px;color:var(--tx);font-family:var(--fb);font-size:13px;padding:8px 12px;outline:none;cursor:pointer;-webkit-appearance:none}
+.filter-bar select:focus{border-color:var(--abrd)}
+.filter-bar select option{background:#1C2541}
+/* Summary cards */
+.sum-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px}
+.sum-card{background:var(--s2);border:1px solid var(--brd);border-radius:var(--r);padding:14px}
+.sum-lbl{font-size:10.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.7px;margin-bottom:5px}
+.sum-val{font-family:var(--fd);font-size:20px;font-weight:900}
+.sum-val.verde{color:#6ee7b7}
+.sum-val.amarelo{color:#fcd34d}
+.sum-val.ouro{color:var(--ac)}
+.sum-val.azul{color:#93c5fd}
+.sum-sub{font-size:11px;color:var(--dim);margin-top:3px}
+/* Section */
+.sec{background:var(--s2);border:1px solid var(--brd);border-radius:var(--r);padding:18px;margin-bottom:14px}
+.sec::before{content:'';display:block;height:2px;border-radius:2px;margin-bottom:14px}
+.sec.aberto::before{background:linear-gradient(90deg,#fcd34d,transparent)}
+.sec.recebido::before{background:linear-gradient(90deg,#6ee7b7,transparent)}
+.sec-title{font-family:var(--fd);font-size:13px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+/* Patient rows */
+.pac-block{border:1px solid var(--brd);border-radius:9px;overflow:hidden;margin-bottom:10px}
+.pac-block:last-child{margin-bottom:0}
+.pac-block-hdr{display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;background:rgba(11,19,43,.3)}
+.pac-av{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--ac),#b8924e);display:flex;align-items:center;justify-content:center;font-family:var(--fd);font-size:12px;font-weight:700;color:var(--bg);flex-shrink:0;overflow:hidden}
+.pac-av img{width:100%;height:100%;object-fit:cover}
+.pac-nome{font-family:var(--fd);font-size:13px;font-weight:700;flex:1}
+.pac-total{font-family:var(--fd);font-size:14px;font-weight:900;color:var(--ac)}
+.pac-count{font-size:11px;color:var(--dim);white-space:nowrap}
+.pac-toggle{color:var(--dim);font-size:11px;transition:transform .2s}
+.pac-block.open .pac-toggle{transform:rotate(-180deg)}
+.pac-sessoes{display:none;border-top:1px solid var(--brd)}
+.pac-block.open .pac-sessoes{display:block}
+/* Session row */
+.sess-row{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--brd)}
+.sess-row:last-child{border-bottom:none}
+.sess-num{font-family:var(--fd);font-size:11px;font-weight:700;color:var(--dim);min-width:28px}
+.sess-info{flex:1;min-width:0}
+.sess-data{font-size:12.5px;font-weight:500}
+.sess-meta{font-size:11.5px;color:var(--dim);margin-top:1px}
+.sess-val{font-family:var(--fd);font-size:13px;font-weight:700;color:var(--ac);white-space:nowrap;margin-right:8px}
+/* Pay toggle button */
+.btn-pago{display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border-radius:20px;font-size:11.5px;font-weight:600;cursor:pointer;border:none;transition:all .2s;font-family:var(--fb);white-space:nowrap}
+.btn-pago.nao-pago{background:rgba(245,158,11,.1);color:#fcd34d;border:1px solid rgba(245,158,11,.25)}
+.btn-pago.nao-pago:hover{background:rgba(245,158,11,.2)}
+.btn-pago.pago{background:rgba(16,185,129,.1);color:#6ee7b7;border:1px solid rgba(16,185,129,.25)}
+.btn-pago.pago:hover{background:rgba(16,185,129,.2)}
+.btn-pago:disabled{opacity:.5;cursor:not-allowed}
+/* Empty */
+.empty-fin{text-align:center;padding:28px 16px;color:var(--dim)}
+.empty-fin .ico{font-size:28px;margin-bottom:8px;opacity:.5}
+.empty-fin .tit{font-family:var(--fd);font-size:13px;font-weight:700;margin-bottom:4px}
+.empty-fin .sub{font-size:12px}
+.page-footer{text-align:center;padding:20px 0 8px;font-size:10px;color:var(--dim)}
+.page-footer strong{color:rgba(201,209,217,.4)}
+@media(min-width:960px){
+  .topbar{display:none}.overlay{display:none!important}.sidebar{transform:translateX(0)}
+  .main{margin-left:var(--sw);padding:32px 32px 60px}
+  .sum-grid{grid-template-columns:repeat(4,1fr)}
+}
+@media(min-width:600px){.main{padding-left:24px;padding-right:24px}}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:2px}
+</style>
+</head>
+<body>
+<div class="topbar" id="topbar">
+  <img src="/img/logo-horizontal.png" alt="Synapse Core">
+  <button class="hamburger" onclick="toggleSidebar()">&#9776;</button>
+</div>
+<div class="overlay" id="overlay" onclick="closeSidebar()"></div>
+<aside class="sidebar" id="sidebar">
+  <div class="sb-logo"><img src="/img/logo-horizontal.png" alt="Synapse Core"></div>
+  <nav class="sb-nav">
+    <div class="nav-section">Principal</div>
+    <a href="/dashboard" class="nav-item"><span class="ni">&#9672;</span> Dashboard</a>
+    <a href="/pacientes" class="nav-item"><span class="ni">&#9675;</span> Pacientes</a>
+    <div class="nav-section">Avaliação</div>
+    <a href="/paciente-novo" class="nav-item"><span class="ni">&#9703;</span> Nova Avaliação</a>
+    <div class="nav-section">Clínico</div>
+    <a href="/radar" class="nav-item"><span class="ni">&#128225;</span> Radar Clínico</a>
+    <a href="/programas" class="nav-item"><span class="ni">&#128203;</span> Programas</a>
+    <div class="nav-section">Gestão</div>
+    <a href="/financeiro" class="nav-item active"><span class="ni">&#128176;</span> Financeiro</a>
+    <div class="nav-section">Sistema</div>
+    <a href="/perfil" class="nav-item"><span class="ni">&#9715;</span> Configurações</a>
+  </nav>
+  <div class="sb-footer">
+    <div class="user-pill">
+      <div class="user-av" id="userAvatar">ET</div>
+      <div style="overflow:hidden;flex:1"><div class="user-name" id="userName">--</div><div class="user-role">Evolution Therapy</div></div>
+      <button class="logout-btn" onclick="logout()">Sair</button>
+    </div>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="ph">
+    <div>
+      <div class="ph-title">&#128176; Financeiro</div>
+      <div class="ph-sub" id="phSub">Carregando...</div>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="filter-bar">
+    <select id="filtroAno" onchange="aplicarFiltro()">
+      <option value="">Todos os anos</option>
+    </select>
+    <select id="filtroMes" onchange="aplicarFiltro()">
+      <option value="">Todos os meses</option>
+      <option value="1">Janeiro</option><option value="2">Fevereiro</option>
+      <option value="3">Março</option><option value="4">Abril</option>
+      <option value="5">Maio</option><option value="6">Junho</option>
+      <option value="7">Julho</option><option value="8">Agosto</option>
+      <option value="9">Setembro</option><option value="10">Outubro</option>
+      <option value="11">Novembro</option><option value="12">Dezembro</option>
+    </select>
+  </div>
+
+  <!-- Summary cards -->
+  <div class="sum-grid">
+    <div class="sum-card">
+      <div class="sum-lbl">Sessões no período</div>
+      <div class="sum-val azul" id="sumSessoes">--</div>
+      <div class="sum-sub" id="sumSessoesSub">--</div>
+    </div>
+    <div class="sum-card">
+      <div class="sum-lbl">Total faturado</div>
+      <div class="sum-val ouro" id="sumTotal">--</div>
+      <div class="sum-sub">valor cobrado</div>
+    </div>
+    <div class="sum-card">
+      <div class="sum-lbl">Recebido</div>
+      <div class="sum-val verde" id="sumRecebido">--</div>
+      <div class="sum-sub" id="sumRecebidoSub">--</div>
+    </div>
+    <div class="sum-card">
+      <div class="sum-lbl">A receber</div>
+      <div class="sum-val amarelo" id="sumAberto">--</div>
+      <div class="sum-sub" id="sumAbertoSub">--</div>
+    </div>
+  </div>
+
+  <!-- Em aberto -->
+  <div class="sec aberto">
+    <div class="sec-title">&#9888; Em Aberto</div>
+    <div id="abertoList"><div class="empty-fin"><div class="ico">&#9203;</div><div class="tit">Carregando...</div></div></div>
+  </div>
+
+  <!-- Recebido -->
+  <div class="sec recebido">
+    <div class="sec-title">&#10003; Recebido</div>
+    <div id="recebidoList"><div class="empty-fin"><div class="ico">&#9203;</div><div class="tit">Carregando...</div></div></div>
+  </div>
+
+  <div class="page-footer">&copy; 2026 Synapse Core &mdash; <strong>Erick Torritezi</strong></div>
+</main>
+
+<script src="/js/shared.js"></script>
+<script>
+checkAuth();
+renderUserPill();
+
+var MESES = ['','Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+window.addEventListener('DOMContentLoaded', function() {
+  // Load available months for filter
+  api('/api/financeiro/meses-disponiveis')
+    .then(function(data) {
+      var anos = [...new Set(data.map(function(d){return d.ano;}))].sort(function(a,b){return b-a;});
+      var sel = document.getElementById('filtroAno');
+      anos.forEach(function(a){
+        var opt = document.createElement('option');
+        opt.value = a; opt.textContent = a; sel.appendChild(opt);
+      });
+      // Default to current month
+      var now = new Date();
+      sel.value = now.getFullYear();
+      document.getElementById('filtroMes').value = now.getMonth()+1;
+      aplicarFiltro();
+    })
+    .catch(function(){ aplicarFiltro(); });
+});
+
+function aplicarFiltro() {
+  var ano = document.getElementById('filtroAno').value;
+  var mes = document.getElementById('filtroMes').value;
+  var label = (mes ? MESES[parseInt(mes)]+' ' : '') + (ano || 'todos os períodos');
+  document.getElementById('phSub').textContent = 'Exibindo: ' + label;
+
+  carregarResumo(ano, mes);
+  carregarAberto();
+  carregarHistorico(ano, mes);
+}
+
+function fCur(v){ return 'R$ '+parseFloat(v||0).toFixed(2).replace('.',','); }
+function fDate(d){ return formatDate(d); }
+function escH(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function carregarResumo(ano, mes) {
+  var url = '/api/financeiro/resumo';
+  var params = [];
+  if (ano) params.push('ano='+ano);
+  if (mes) params.push('mes='+mes);
+  if (params.length) url += '?'+params.join('&');
+
+  api(url).then(function(d) {
+    document.getElementById('sumSessoes').textContent   = d.total_sessoes || 0;
+    document.getElementById('sumSessoesSub').textContent = d.sessoes_pagas+' pagas · '+d.sessoes_abertas+' em aberto';
+    document.getElementById('sumTotal').textContent     = fCur(d.total_valor);
+    document.getElementById('sumRecebido').textContent  = fCur(d.recebido);
+    document.getElementById('sumRecebidoSub').textContent = d.sessoes_pagas+' sessão(ões)';
+    document.getElementById('sumAberto').textContent    = fCur(d.a_receber);
+    document.getElementById('sumAbertoSub').textContent = d.sessoes_abertas+' sessão(ões)';
+  }).catch(function(){});
+}
+
+function carregarAberto() {
+  api('/api/financeiro/aberto').then(function(data) {
+    var wrap = document.getElementById('abertoList');
+    if (!data.length) {
+      wrap.innerHTML = '<div class="empty-fin"><div class="ico">&#10003;</div><div class="tit" style="color:#6ee7b7">Sem sessões em aberto</div><div class="sub">Tudo recebido!</div></div>';
+      return;
+    }
+    wrap.innerHTML = '';
+    data.forEach(function(pac){ wrap.appendChild(buildPacBlock(pac, false)); });
+  }).catch(function(){});
+}
+
+function carregarHistorico(ano, mes) {
+  var url = '/api/financeiro/historico';
+  var params = [];
+  if (ano) params.push('ano='+ano);
+  if (mes) params.push('mes='+mes);
+  if (params.length) url += '?'+params.join('&');
+
+  api(url).then(function(data) {
+    var wrap = document.getElementById('recebidoList');
+    if (!data.length) {
+      wrap.innerHTML = '<div class="empty-fin"><div class="ico">&#128176;</div><div class="tit">Nenhum recebimento no período</div></div>';
+      return;
+    }
+    wrap.innerHTML = '';
+    data.forEach(function(pac){ wrap.appendChild(buildPacBlock(pac, true)); });
+  }).catch(function(){});
+}
+
+function buildPacBlock(pac, isPago) {
+  var iniciais = (pac.nome_completo||'?').split(' ').map(function(n){return n[0];}).slice(0,2).join('').toUpperCase();
+  var block = document.createElement('div');
+  block.className = 'pac-block';
+  block.id = 'bloc_'+(isPago?'p':'a')+'_'+pac.paciente_id;
+
+  var hdr = document.createElement('div');
+  hdr.className = 'pac-block-hdr';
+  hdr.addEventListener('click', function(){ block.classList.toggle('open'); });
+
+  hdr.innerHTML =
+    '<div class="pac-av">'+(pac.foto_url?'<img src="'+pac.foto_url+'" alt="">':iniciais)+'</div>'
+    +'<div class="pac-nome">'+escH(pac.nome_completo)+'</div>'
+    +'<span class="pac-count">'+pac.sessoes.length+' sess.</span>'
+    +'<span class="pac-total">'+fCur(pac.total)+'</span>'
+    +'<span class="pac-toggle">▾</span>';
+
+  var sessoesWrap = document.createElement('div');
+  sessoesWrap.className = 'pac-sessoes';
+  pac.sessoes.forEach(function(s) {
+    var row = document.createElement('div'); row.className='sess-row';
+    row.innerHTML =
+      '<span class="sess-num">S'+s.sessao_numero+'</span>'
+      +'<div class="sess-info">'
+        +'<div class="sess-data">'+fDate(s.data_sessao)+'</div>'
+        +'<div class="sess-meta">'+(s.duracao_minutos||50)+'min'+(s.forma_pagamento?' · '+s.forma_pagamento:'')+'</div>'
+      +'</div>'
+      +'<span class="sess-val">'+fCur(s.valor_cobrado)+'</span>';
+
+    var btn = document.createElement('button');
+    btn.className = 'btn-pago ' + (isPago ? 'pago' : 'nao-pago');
+    btn.textContent = isPago ? '✓ Pago' : '○ Em aberto';
+    btn.dataset.id = s.id;
+    btn.addEventListener('click', function() {
+      var b = this; b.disabled = true;
+      api('/api/sessoes/'+b.dataset.id+'/pago', 'PUT', {})
+        .then(function(d) {
+          showToast(d.message, 'success');
+          aplicarFiltro(); // reload all sections
+        })
+        .catch(function(e){ showToast(e.message, 'error'); b.disabled=false; });
+    });
+    row.appendChild(btn);
+    sessoesWrap.appendChild(row);
+  });
+
+  block.appendChild(hdr);
+  block.appendChild(sessoesWrap);
+  return block;
+}
+</script>
+</body>
+</html>

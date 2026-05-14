@@ -1,11 +1,16 @@
 const express  = require('express');
-const webpush  = require('web-push');
 const db       = require('../db');
 const { verifyToken } = require('../middleware/auth');
 const router   = express.Router();
 
+// Lazy-load web-push (graceful degradation if not installed yet)
+let webpush = null;
+try { webpush = require('web-push'); } catch(e) {
+  console.warn('⚠️  web-push não instalado. Push notifications desativado. Execute: npm install web-push');
+}
+
 // Configure VAPID
-if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
+if (webpush && process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
   webpush.setVapidDetails(
     process.env.VAPID_EMAIL || 'mailto:contato@synapsecore.app.br',
     process.env.VAPID_PUBLIC_KEY,
@@ -78,6 +83,7 @@ router.delete('/unsubscribe', verifyToken, async (req, res) => {
 
 // ── POST /api/push/test ── (dispara push de teste)
 router.post('/test', verifyToken, async (req, res) => {
+  if (!webpush) return res.status(503).json({ message: 'web-push não instalado no servidor. Execute npm install.' });
   try {
     const { endpoint } = req.body;
     const where = endpoint
@@ -114,7 +120,7 @@ router.post('/test', verifyToken, async (req, res) => {
 
 // ── sendPushToTerapeuta (uso interno) ──
 async function sendPushToTerapeuta(terapeutaId, title, body, url) {
-  if (!process.env.VAPID_PUBLIC_KEY) return;
+  if (!webpush || !process.env.VAPID_PUBLIC_KEY) return;
   try {
     const subs = await db.query('SELECT * FROM push_subscriptions WHERE terapeuta_id=$1', [terapeutaId]);
     if (!subs.rows.length) return;

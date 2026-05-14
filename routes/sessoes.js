@@ -28,7 +28,7 @@ router.post('/:paciente_id', verifyToken, async (req, res) => {
     const {
       sessao_numero, pacote_id, data_sessao,
       duracao_minutos, valor_cobrado, forma_pagamento,
-      resumo_terapeuta, status, paciente_2_id
+      resumo_terapeuta, status, paciente_2_id, pago
     } = req.body;
 
     if (!data_sessao) return res.status(400).json({ message: 'Data da sessão é obrigatória.' });
@@ -46,8 +46,8 @@ router.post('/:paciente_id', verifyToken, async (req, res) => {
     const result = await db.query(`
       INSERT INTO sessoes
         (paciente_id, paciente_2_id, pacote_id, sessao_numero, data_sessao,
-         duracao_minutos, valor_cobrado, forma_pagamento, resumo_terapeuta, status)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+         duracao_minutos, valor_cobrado, forma_pagamento, resumo_terapeuta, status, pago)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
       RETURNING *
     `, [
       paciente_id, paciente_2_id || null, pacote_id || null,
@@ -56,7 +56,8 @@ router.post('/:paciente_id', verifyToken, async (req, res) => {
       valor_cobrado || null,
       forma_pagamento || null,
       resumo_terapeuta || null,
-      status || 'realizada'
+      status || 'realizada',
+      pago === true || pago === 'true' ? true : false
     ]);
 
     const sessao = result.rows[0];
@@ -84,7 +85,7 @@ router.post('/:paciente_id', verifyToken, async (req, res) => {
 // PUT /api/sessoes/:sessao_id
 router.put('/:sessao_id', verifyToken, async (req, res) => {
   try {
-    const fields = ['data_sessao','duracao_minutos','valor_cobrado','forma_pagamento','resumo_terapeuta','status','pacote_id'];
+    const fields = ['data_sessao','duracao_minutos','valor_cobrado','forma_pagamento','resumo_terapeuta','status','pacote_id','pago'];
     const updates = []; const values = [];
     fields.forEach(f => {
       if (req.body[f] !== undefined) { values.push(req.body[f]); updates.push(f + ' = $' + values.length); }
@@ -101,6 +102,19 @@ router.put('/:sessao_id', verifyToken, async (req, res) => {
     res.json({ message: 'Sessão atualizada.' });
   } catch (err) {
     res.status(500).json({ message: 'Erro ao atualizar sessão.' });
+  }
+});
+
+// PUT /api/sessoes/:sessao_id/pago — toggle pagamento
+router.put('/:sessao_id/pago', verifyToken, async (req, res) => {
+  try {
+    const r = await db.query('SELECT pago FROM sessoes WHERE id = $1', [req.params.sessao_id]);
+    if (!r.rows.length) return res.status(404).json({ message: 'Sessão não encontrada.' });
+    const novoPago = !r.rows[0].pago;
+    await db.query('UPDATE sessoes SET pago = $1, updated_at = NOW() WHERE id = $2', [novoPago, req.params.sessao_id]);
+    res.json({ pago: novoPago, message: novoPago ? 'Sessão marcada como paga.' : 'Sessão marcada como em aberto.' });
+  } catch (err) {
+    res.status(500).json({ message: 'Erro ao atualizar pagamento.' });
   }
 });
 

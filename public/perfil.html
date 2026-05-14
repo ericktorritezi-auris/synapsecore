@@ -127,6 +127,8 @@ body{font-family:var(--fb);background:var(--bg);color:var(--tx);min-height:100vh
     <div class="nav-section">Clínico</div>
     <a href="/radar" class="nav-item"><span class="ni">&#128225;</span> Radar Clínico</a>
     <a href="/programas" class="nav-item"><span class="ni">&#128203;</span> Programas</a>
+    <div class="nav-section">Gestão</div>
+    <a href="/financeiro" class="nav-item"><span class="ni">&#128176;</span> Financeiro</a>
     <div class="nav-section">Sistema</div>
     <a href="/perfil" class="nav-item active"><span class="ni">&#9715;</span> Configurações</a>
   </nav>
@@ -365,7 +367,24 @@ body{font-family:var(--fb);background:var(--bg);color:var(--tx);min-height:100vh
       </div>
 
       <div class="manual-topic" onclick="toggleTopic(this)">
-        <div class="manual-topic-hdr">📡 9. Radar Clínico</div>
+        <div class="manual-topic-hdr">💰 9. Financeiro</div>
+        <div class="manual-topic-body">
+          Acesse <strong>💰 Financeiro</strong> no menu lateral. Painel completo de controle financeiro do consultório.<br><br>
+          <strong>Filtros:</strong> selecione ano e mês para visualizar o período desejado. Sem filtro, mostra todos os períodos.<br><br>
+          <strong>Cards de resumo:</strong><br>
+          — <em>Sessões no período</em>: total de sessões realizadas com contagem de pagas vs. em aberto.<br>
+          — <em>Total faturado</em>: soma de todos os valores cobrados no período.<br>
+          — <em>Recebido</em>: soma das sessões marcadas como pagas.<br>
+          — <em>A receber</em>: soma das sessões ainda não pagas.<br><br>
+          <strong>Em Aberto:</strong> lista todos os pacientes com sessões não pagas, agrupados por paciente. Clique no card do paciente para expandir as sessões. Cada sessão tem um botão <em>"○ Em aberto"</em> — clique para marcar como paga.<br><br>
+          <strong>Recebido:</strong> lista as sessões pagas no período filtrado.<br><br>
+          <strong>Marcar pagamento nas sessões:</strong> você também pode marcar diretamente na tela de <strong>Sessões</strong> do paciente — cada sessão com valor cobrado exibe um badge clicável (<em>✓ Pago</em> ou <em>○ Em aberto</em>) que alterna o status instantaneamente.<br><br>
+          <strong>No formulário de nova sessão:</strong> um checkbox <em>"Sessão paga"</em> permite registrar o pagamento já no momento do cadastro.
+        </div>
+      </div>
+
+      <div class="manual-topic" onclick="toggleTopic(this)">
+        <div class="manual-topic-hdr">📡 10. Radar Clínico</div>
         <div class="manual-topic-body">
           Acesse <strong>📡 Radar Clínico</strong> no menu lateral. O painel mostra seus números clínicos em tempo real:<br><br>
           <strong>Resumo</strong> — total de pacientes, em acompanhamento, sessões realizadas e score médio de bem-estar.<br>
@@ -379,7 +398,7 @@ body{font-family:var(--fb);background:var(--bg);color:var(--tx);min-height:100vh
       </div>
 
       <div class="manual-topic" onclick="toggleTopic(this)">
-        <div class="manual-topic-hdr">🔔 10. Notificações push (PWA)</div>
+        <div class="manual-topic-hdr">🔔 11. Notificações push (PWA)</div>
         <div class="manual-topic-body">
           Com o Synapse Core instalado como PWA no celular (Android ou iOS 16.4+), você recebe notificações em tempo real quando um paciente preencher o formulário. Para ativar: acesse <strong>Notificações Push</strong> nesta tela e toque em <strong>🔔 Ativar Notificações</strong>.<br><br>
           Se parar de receber notificações, use <strong>↻ Reconectar Push</strong> — isso cancela a assinatura atual, cria uma nova e envia um push de teste para confirmar. Se a permissão estiver bloqueada: no <strong>Android</strong>, acesse os 3 pontos do Chrome → Configurações do site → Notificações → Permitir. No <strong>iOS</strong>, acesse Ajustes → Safari → Configurações de Sites → Notificações → Permitir.
@@ -387,7 +406,7 @@ body{font-family:var(--fb);background:var(--bg);color:var(--tx);min-height:100vh
       </div>
 
       <div class="manual-topic" onclick="toggleTopic(this)">
-        <div class="manual-topic-hdr">⚙️ 11. Perfil e configurações</div>
+        <div class="manual-topic-hdr">⚙️ 12. Perfil e configurações</div>
         <div class="manual-topic-body">
           Nesta tela você gerencia todas as suas configurações:<br><br>
           <strong>Identidade Visual</strong> — foto de perfil (aparece no relatório de evolução) e logo da clínica (aparece nos documentos). Formatos: PNG ou JPG, até 1MB.<br>
@@ -400,7 +419,7 @@ body{font-family:var(--fb);background:var(--bg);color:var(--tx);min-height:100vh
       </div>
 
       <div class="manual-topic" onclick="toggleTopic(this)">
-        <div class="manual-topic-hdr">📱 12. PWA — Instalação no celular</div>
+        <div class="manual-topic-hdr">📱 13. PWA — Instalação no celular</div>
         <div class="manual-topic-body">
           O Synapse Core funciona como um aplicativo instalado no celular — sem precisar de App Store ou Play Store.<br><br>
           <strong>Android (Chrome):</strong> acesse o site, toque nos 3 pontos → <em>Adicionar à tela inicial</em>.<br>
@@ -410,7 +429,7 @@ body{font-family:var(--fb);background:var(--bg);color:var(--tx);min-height:100vh
       </div>
 
       <div class="manual-topic" onclick="toggleTopic(this)">
-        <div class="manual-topic-hdr">🔄 13. Fluxo completo do atendimento</div>
+        <div class="manual-topic-hdr">🔄 14. Fluxo completo do atendimento</div>
         <div class="manual-topic-body">
           O fluxo recomendado de uso do sistema:<br><br>
           <strong>1.</strong> Cadastrar paciente → gerar link do formulário → enviar ao paciente<br>
@@ -422,7 +441,8 @@ body{font-family:var(--fb);background:var(--bg);color:var(--tx);min-height:100vh
           <strong>6.</strong> Acompanhar a Linha do Tempo no mapeamento para ver a evolução acumulada<br>
           <strong>7.</strong> Gerar documentos conforme necessidade (recibos, laudos, declarações)<br>
           <strong>8.</strong> Ao encerrar o processo → gerar Relatório de Alta<br>
-          <strong>9.</strong> Consultar o Radar Clínico periodicamente para insights sobre o consultório
+          <strong>9.</strong> Consultar o Radar Clínico periodicamente para insights sobre o consultório<br>
+          <strong>10.</strong> Acompanhar o Financeiro mensalmente para controle de pagamentos e recebimentos
         </div>
       </div>
 

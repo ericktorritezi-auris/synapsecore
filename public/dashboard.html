@@ -278,17 +278,18 @@ body {
 
 /* ── EMPTY STATE ── */
 .empty-state {
-.pac-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)}
+.pac-row{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s;border-radius:6px;margin:0 -4px;padding-left:4px;padding-right:4px}
 .pac-row:last-child{border-bottom:none}
-.pac-av{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--gold),#b8924e);display:flex;align-items:center;justify-content:center;font-family:var(--f-display);font-size:13px;font-weight:700;color:var(--bg);flex-shrink:0;overflow:hidden}
+.pac-row:hover{background:rgba(255,255,255,.03)}
+.pac-av{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#b8924e);display:flex;align-items:center;justify-content:center;font-family:var(--f-display);font-size:12px;font-weight:700;color:var(--bg);flex-shrink:0;overflow:hidden}
 .pac-av img{width:100%;height:100%;object-fit:cover}
 .pac-info{flex:1;min-width:0}
-.pac-nome{font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pac-nome{font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)}
 .pac-meta{font-size:11.5px;color:var(--muted);margin-top:2px}
-.pac-status{font-size:11px;padding:2px 8px;border-radius:20px;font-weight:600;white-space:nowrap;flex-shrink:0}
-.pac-status.aguardando{background:rgba(245,158,11,.1);color:#fcd34d}
-.pac-status.mapeado{background:rgba(16,185,129,.1);color:#6ee7b7}
-.pac-status.ativo{background:rgba(59,130,246,.1);color:#93c5fd}
+.pac-status{font-size:11px;padding:3px 9px;border-radius:20px;font-weight:600;white-space:nowrap;flex-shrink:0;border:1px solid transparent}
+.pac-status.aguardando{background:rgba(245,158,11,.1);color:#fcd34d;border-color:rgba(245,158,11,.2)}
+.pac-status.mapeado{background:rgba(16,185,129,.1);color:#6ee7b7;border-color:rgba(16,185,129,.2)}
+.pac-status.ativo{background:rgba(59,130,246,.1);color:#93c5fd;border-color:rgba(59,130,246,.2)}
   text-align: center;
   padding: 32px 16px;
 }
@@ -394,6 +395,8 @@ body {
     <div class="nav-section">Clínico</div>
     <a href="/radar" class="nav-item"><span class="ni">&#128225;</span> Radar Clínico</a>
     <a href="/programas" class="nav-item"><span class="ni">&#128203;</span> Programas</a>
+    <div class="nav-section">Gestão</div>
+    <a href="/financeiro" class="nav-item"><span class="ni">&#128176;</span> Financeiro</a>
     <div class="nav-section">Sistema</div>
     <a href="/perfil" class="nav-item"><span class="ni">&#9715;</span> Configurações</a>
   </nav>
@@ -597,20 +600,18 @@ async function loadPendingForms() {
   var wrap = document.getElementById('pendingFormsList');
   try {
     var token = localStorage.getItem('sc_token');
-    var res = await fetch('/api/pacientes?link_ativo=1', {
+    var res = await fetch('/api/pacientes', {
       headers: { 'Authorization': 'Bearer ' + token }
     });
     var data = await res.json();
-
-    // Filter only those with active link (link_ativo = 1)
     var pending = data.filter(function(p){ return parseInt(p.link_ativo) === 1; });
 
     if (!pending.length) {
       wrap.innerHTML =
-        '<div class="empty-state">'
-        +'<div class="empty-icon" style="font-size:28px">✓</div>'
-        +'<div class="empty-title" style="color:#6ee7b7">Nenhum formulário pendente</div>'
-        +'<div class="empty-sub">Todos os pacientes estão em dia.</div>'
+        '<div style="display:flex;align-items:center;gap:12px;padding:14px 0">'
+        +'<div style="width:36px;height:36px;border-radius:50%;background:rgba(16,185,129,.12);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">✓</div>'
+        +'<div><div style="font-size:13px;font-weight:600;color:#6ee7b7">Tudo em dia</div>'
+        +'<div style="font-size:12px;color:var(--dim);margin-top:2px">Nenhum formulário aguardando resposta</div></div>'
         +'</div>';
       return;
     }
@@ -620,19 +621,18 @@ async function loadPendingForms() {
       var iniciais = (p.nome_completo||'?').split(' ').map(function(n){return n[0];}).slice(0,2).join('').toUpperCase();
       var row = document.createElement('div');
       row.className = 'pac-row';
-      row.style.cursor = 'pointer';
       row.onclick = function(){ window.location.href = '/sessoes/'+p.id; };
       row.innerHTML =
-        '<div class="pac-av">'+(p.foto_url ? '<img src="'+p.foto_url+'" alt="">' : iniciais)+'</div>'
+        '<div class="pac-av">'+(p.foto_url?'<img src="'+p.foto_url+'" alt="">':iniciais)+'</div>'
         +'<div class="pac-info">'
           +'<div class="pac-nome">'+escH(p.nome_completo)+'</div>'
-          +'<div class="pac-meta">'+escH(p.perfil_tipo||'adulto')+'</div>'
+          +'<div class="pac-meta">'+escH((p.perfil_tipo||'adulto').charAt(0).toUpperCase()+(p.perfil_tipo||'adulto').slice(1))+' · Link ativo</div>'
         +'</div>'
         +'<span class="pac-status aguardando">Pendente</span>';
       wrap.appendChild(row);
     });
   } catch(e) {
-    wrap.innerHTML = '<div class="empty-state"><div class="empty-title">Erro ao carregar</div></div>';
+    wrap.innerHTML = '<div style="padding:12px 0;font-size:13px;color:var(--muted)">Erro ao carregar pacientes.</div>';
   }
 }
 

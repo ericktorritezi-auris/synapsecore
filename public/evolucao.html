@@ -254,7 +254,13 @@ window.addEventListener('DOMContentLoaded', function() {
         return;
       }
       document.getElementById('scrLoad').style.display='none';
-      renderReport(d.conteudo_json, d.expira_em);
+      try {
+        renderReport(d.conteudo_json, d.expira_em);
+      } catch(err) {
+        console.error('renderReport error:', err);
+        document.getElementById('scrError').style.display='flex';
+        document.getElementById('errMsg').textContent = 'Erro ao renderizar o relatório.';
+      }
     })
     .catch(function() {
       document.getElementById('scrLoad').style.display='none';
@@ -266,9 +272,9 @@ function renderReport(d, expiraEm) {
   document.getElementById('scrReport').style.display='block';
 
   // Hero
-  document.getElementById('heroNome').textContent = d.paciente?.nome || '--';
+  document.getElementById('heroNome').textContent = (d.paciente && d.paciente.nome ? d.paciente.nome : '--');
   var parts = [];
-  if (d.pacote?.nome) parts.push(d.pacote.nome);
+  if (d.pacote && d.pacote.nome) parts.push(d.pacote.nome);
   if (d.sessoes_total) parts.push(d.sessoes_total + ' sessões realizadas');
   if (d.data_inicio && d.data_ultima) {
     parts.push(formatDate(d.data_inicio) + ' a ' + formatDate(d.data_ultima));

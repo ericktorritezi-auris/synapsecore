@@ -8,6 +8,69 @@ function baseUrl() {
   return (process.env.BASE_URL || 'https://www.synapsecore.app.br').replace(/\/+$/, '');
 }
 
+// ── POST /api/evolucao/:paciente_id/patch-conteudo ──
+// Patches sessoes_total, data_inicio, data_ultima in existing active token
+// without generating a new one — preserves the patient's link
+router.post('/:paciente_id/patch-conteudo', verifyToken, async (req, res) => {
+  try {
+    const paciente_id = req.params.paciente_id;
+
+    // Get active token
+    const tokRes = await db.query(
+      `SELECT id, conteudo_json FROM relatorio_tokens
+       WHERE paciente_id = $1
+       ORDER BY criado_em DESC LIMIT 1`,
+      [paciente_id]
+    );
+    if (!tokRes.rows.length) return res.status(404).json({ message: 'Nenhum relatório encontrado.' });
+
+    const tok     = tokRes.rows[0];
+    const conteudo = tok.conteudo_json;
+
+    // Load fresh patient and sessions data
+    const pacRes  = await db.query('SELECT * FROM pacientes WHERE id = $1', [paciente_id]);
+    const sessRes = await db.query(
+      'SELECT * FROM sessoes WHERE paciente_id = $1 AND status = $2 ORDER BY sessao_numero ASC',
+      [paciente_id, 'realizada']
+    );
+    const paciente = pacRes.rows[0];
+    const sessoes  = sessRes.rows;
+
+    // Recalculate with correct logic
+    const ant           = parseInt(paciente.sessoes_anteriores) || 0;
+    const sessoes_total = ant + sessoes.length;
+    const data_inicio   = ant > 0 && paciente.data_primeira_sessao
+      ? paciente.data_primeira_sessao
+      : (sessoes[0] ? sessoes[0].data_sessao : conteudo.data_inicio);
+    const data_ultima   = sessoes.length > 0
+      ? sessoes[sessoes.length - 1].data_sessao
+      : conteudo.data_ultima;
+
+    // Patch conteudo_json
+    const patched = {
+      ...conteudo,
+      sessoes_total,
+      data_inicio,
+      data_ultima
+    };
+
+    await db.query(
+      'UPDATE relatorio_tokens SET conteudo_json = $1 WHERE id = $2',
+      [JSON.stringify(patched), tok.id]
+    );
+
+    res.json({
+      message: 'Relatório atualizado com sucesso. O link existente já reflete os novos dados.',
+      sessoes_total,
+      data_inicio,
+      data_ultima
+    });
+  } catch (err) {
+    console.error('patch-conteudo:', err.message);
+    res.status(500).json({ message: err.message });
+  }
+});
+
 // ── GET /api/evolucao/:paciente_id/historico (terapeuta) ──
 router.get('/:paciente_id/historico', verifyToken, async (req, res) => {
   try {

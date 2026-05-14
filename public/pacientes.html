@@ -475,6 +475,45 @@ function renderList(patients) {
     btnEdit.addEventListener('click', function(){ abrirEdicao(this.dataset.id); });
     actions.appendChild(btnEdit);
 
+    // AURIS button — invite patient to AURIS platform via WhatsApp
+    if (p.telefone) {
+      var btnAuris = document.createElement('a');
+      btnAuris.className = 'btn btn-ghost btn-sm';
+      btnAuris.style.cssText = 'padding:6px 10px;font-size:12px;background:rgba(212,175,127,.06);border-color:rgba(212,175,127,.2);color:var(--accent)';
+      btnAuris.innerHTML = '&#127775; AURIS';
+      btnAuris.target = '_blank';
+      var primeiroNome = (p.nome_completo||'').split(' ')[0];
+      var msg = 'Olá, ' + primeiroNome + '! 👋\n\n'
+        + 'Quero compartilhar algo especial com você.\n\n'
+        + 'O *AURIS* é uma plataforma de autoconhecimento e desenvolvimento pessoal que pode te apoiar nos momentos entre nossas sessões — quando precisar de reflexão, escuta ou um direcionamento gentil. 🌿\n\n'
+        + '✨ Acesse agora: https://www.auris.app.br\n\n'
+        + 'Estou aqui com você nessa jornada. 💛\n'
+        + '— Erick Torritezi';
+      var tel = p.telefone.replace(/\D/g,'');
+      if (!tel.startsWith('55')) tel = '55' + tel;
+      btnAuris.href = 'https://wa.me/' + tel + '?text=' + encodeURIComponent(msg);
+      actions.appendChild(btnAuris);
+    }
+
+    // AGENDA button — send Belle Planner scheduling link via WhatsApp
+    if (p.telefone) {
+      var btnAgenda = document.createElement('a');
+      btnAgenda.className = 'btn btn-ghost btn-sm';
+      btnAgenda.style.cssText = 'padding:6px 10px;font-size:12px;background:rgba(59,130,246,.06);border-color:rgba(59,130,246,.2);color:#93c5fd';
+      btnAgenda.innerHTML = '&#128197; Agenda';
+      btnAgenda.target = '_blank';
+      var primeiroNomeAg = (p.nome_completo||'').split(' ')[0];
+      var msgAgenda = 'Olá, ' + primeiroNomeAg + '! 😊\n\n'
+        + 'Segue o link da minha agenda para você agendar sua próxima sessão com toda praticidade:\n\n'
+        + '📅 https://terapiaevolutiva.belleplanner.com.br\n\n'
+        + 'Escolha o melhor dia e horário para você. Qualquer dúvida, estou à disposição! 💛\n'
+        + '— Erick Torritezi';
+      var telAg = p.telefone.replace(/\D/g,'');
+      if (!telAg.startsWith('55')) telAg = '55' + telAg;
+      btnAgenda.href = 'https://wa.me/' + telAg + '?text=' + encodeURIComponent(msgAgenda);
+      actions.appendChild(btnAgenda);
+    }
+
     card.appendChild(actions);
     list.appendChild(card);
   });

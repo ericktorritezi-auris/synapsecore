@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Belle Planner — Agenda profissional online para estética. Seus clientes agendam sozinhos. Você controla tudo.">
+<meta property="og:title" content="Belle Planner — Transforme seu negócio">
+<meta property="og:description" content="A agenda que fez Ana Paula aumentar 30% seus agendamentos. Automatize, profissionalize e cresça.">
+<title>Belle Planner — Sua Agenda Profissional</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:        #080408;
+  --bg2:       #0f080c;
+  --rose:      #c8758e;
+  --rose-deep: #8b3d54;
+  --rose-glow: rgba(200,117,142,.15);
+  --gold:      #d4a843;
+  --gold-l:    rgba(212,168,67,.12);
+  --white:     #f8f0f3;
+  --dim:       #8a7078;
+  --border:    rgba(200,117,142,.18);
+  --r:         16px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0 }
+html { scroll-behavior: smooth; font-size: 16px }
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--white);
+  overflow-x: hidden;
+  line-height: 1.65;
+}
+
+/* ── NOISE OVERLAY ── */
+body::before {
+  content: '';
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+  background-size: 200px;
+  opacity: .4;
+}
+
+/* ── NAV ── */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 20px;
+  background: rgba(8,4,8,.82);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+  transition: padding .3s;
+}
+.nav-brand {
+  font-family: 'Playfair Display', serif;
+  font-size: 20px; font-weight: 700;
+  color: var(--white);
+  letter-spacing: -.01em;
+}
+.nav-brand span { color: var(--gold); font-style: italic }
+.nav-cta {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: linear-gradient(135deg, var(--rose), var(--rose-deep));
+  color: #fff; border: none; border-radius: 50px;
+  padding: 10px 20px; font-size: 13px; font-weight: 700;
+  cursor: pointer; font-family: 'DM Sans', sans-serif;
+  text-decoration: none; white-space: nowrap;
+  box-shadow: 0 4px 24px rgba(200,117,142,.35);
+  transition: transform .2s, box-shadow .2s;
+}
+.nav-cta:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(200,117,142,.5) }
+.nav-cta:active { transform: scale(.97) }
+
+/* ── HERO ── */
+.hero {
+  position: relative;
+  min-height: 100svh;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 100px 20px 60px;
+  overflow: hidden;
+  text-align: center;
+}
+.hero-bg {
+  position: absolute; inset: 0; z-index: 0;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 0%, rgba(139,61,84,.28) 0%, transparent 70%),
+    radial-gradient(ellipse 60% 40% at 80% 80%, rgba(212,168,67,.08) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 50% at 20% 60%, rgba(200,117,142,.06) 0%, transparent 60%),
+    linear-gradient(180deg, #0d0509 0%, #080408 100%);
+}
+.hero-lines {
+  position: absolute; inset: 0; z-index: 0; overflow: hidden;
+}
+.hero-lines::before, .hero-lines::after {
+  content: '';
+  position: absolute;
+  width: 1px; height: 100%;
+  background: linear-gradient(180deg, transparent, var(--rose), transparent);
+  opacity: .15;
+  animation: lineFade 4s ease-in-out infinite alternate;
+}
+.hero-lines::before { left: 20%; animation-delay: 0s }
+.hero-lines::after  { right: 20%; animation-delay: 1.5s }
+@keyframes lineFade { from{opacity:.05} to{opacity:.2} }
+
+.hero-content { position: relative; z-index: 1; max-width: 680px }
+.hero-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--gold-l);
+  border: 1px solid rgba(212,168,67,.3);
+  border-radius: 50px;
+  padding: 6px 16px; font-size: 12px; font-weight: 600;
+  color: var(--gold); margin-bottom: 28px;
+  animation: fadeUp .8s ease both;
+}
+.hero-badge::before { content: '★'; font-size: 11px }
+.hero-title {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(38px, 10vw, 72px);
+  font-weight: 900; line-height: 1.05;
+  letter-spacing: -.02em;
+  margin-bottom: 22px;
+  animation: fadeUp .8s .1s ease both;
+}
+.hero-title em {
+  font-style: italic; color: var(--rose);
+  display: block;
+}
+.hero-title .line2 { color: var(--gold) }
+.hero-sub {
+  font-size: clamp(15px, 3vw, 18px); font-weight: 300;
+  color: rgba(248,240,243,.65); max-width: 520px;
+  margin: 0 auto 36px;
+  animation: fadeUp .8s .2s ease both;
+}
+.hero-actions {
+  display: flex; flex-direction: column;
+  align-items: center; gap: 14px;
+  animation: fadeUp .8s .3s ease both;
+}
+.btn-primary {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: linear-gradient(135deg, var(--rose), var(--rose-deep));
+  color: #fff; border: none; border-radius: 50px;
+  padding: 16px 32px; font-size: 15px; font-weight: 700;
+  cursor: pointer; font-family: 'DM Sans', sans-serif;
+  text-decoration: none;
+  box-shadow: 0 8px 40px rgba(200,117,142,.4);
+  transition: transform .2s, box-shadow .2s;
+  width: 100%;
+  justify-content: center;
+}
+.btn-primary:hover { transform: translateY(-3px); box-shadow: 0 12px 48px rgba(200,117,142,.55) }
+.btn-ghost {
+  color: var(--dim); font-size: 13px; font-weight: 500;
+  text-decoration: underline; text-underline-offset: 4px;
+  cursor: pointer; background: none; border: none;
+  font-family: 'DM Sans', sans-serif;
+}
+.hero-proof {
+  margin-top: 60px;
+  display: flex; align-items: center; justify-content: center;
+  gap: 6px; font-size: 12px; color: var(--dim);
+  animation: fadeUp .8s .4s ease both;
+}
+.hero-proof .avatars { display: flex }
+.avatar {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--rose-deep), var(--rose));
+  border: 2px solid var(--bg);
+  margin-left: -6px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px;
+}
+.avatar:first-child { margin-left: 0 }
+.hero-stat {
+  position: absolute;
+  background: rgba(15,8,12,.9);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 12px 16px;
+  font-size: 11px; color: var(--dim);
+  backdrop-filter: blur(10px);
+  display: none;
+}
+.hero-stat strong { display: block; font-size: 22px; font-weight: 800; color: var(--white); line-height: 1 }
+.hero-stat.stat-1 { bottom: 18%; right: 4%; animation: float 3s ease-in-out infinite }
+.hero-stat.stat-2 { bottom: 28%; left: 4%; animation: float 3s 1.5s ease-in-out infinite }
+@keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+@media(min-width:600px){
+  .hero-stat { display: block }
+  .hero-actions { flex-direction: row }
+  .btn-primary { width: auto }
+}
+
+/* ── DEPOIMENTO DESTAQUE ── */
+.testimonial-banner {
+  position: relative; z-index: 1;
+  background: linear-gradient(135deg, rgba(139,61,84,.25) 0%, rgba(212,168,67,.08) 100%);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  padding: 40px 20px;
+  text-align: center;
+  overflow: hidden;
+}
+.testimonial-banner::before {
+  content: '"';
+  position: absolute; top: -20px; left: 50%; transform: translateX(-50%);
+  font-family: 'Playfair Display', serif;
+  font-size: 180px; color: rgba(200,117,142,.06);
+  line-height: 1; pointer-events: none;
+}
+.testimonial-banner blockquote {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(18px, 4vw, 26px);
+  font-weight: 400; font-style: italic;
+  max-width: 660px; margin: 0 auto 20px;
+  line-height: 1.45;
+}
+.testimonial-banner blockquote strong { color: var(--rose); font-style: normal }
+.testimonial-author {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  font-size: 13px; color: var(--dim);
+}
+.testimonial-author .dot { color: var(--gold) }
+
+/* ── SEÇÕES GERAIS ── */
+section { position: relative; z-index: 1; padding: 72px 20px }
+.section-tag {
+  display: inline-block;
+  font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .2em;
+  color: var(--gold); margin-bottom: 14px;
+}
+.section-title {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(28px, 6vw, 48px);
+  font-weight: 800; line-height: 1.1;
+  letter-spacing: -.02em; margin-bottom: 16px;
+}
+.section-title em { font-style: italic; color: var(--rose) }
+.section-sub { font-size: 15px; color: rgba(248,240,243,.55); max-width: 520px; line-height: 1.7 }
+.centered { text-align: center }
+.centered .section-sub { margin: 0 auto }
+
+/* ── NÚMERO IMPACTO ── */
+.impact-banner {
+  padding: 48px 20px;
+  display: flex; flex-direction: column;
+  align-items: center; gap: 32px;
+}
+.impact-item { text-align: center }
+.impact-num {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(44px, 12vw, 80px);
+  font-weight: 900; line-height: 1;
+  background: linear-gradient(135deg, var(--rose), var(--gold));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.impact-label { font-size: 13px; color: var(--dim); margin-top: 6px; font-weight: 400 }
+.impact-divider {
+  width: 1px; height: 40px;
+  background: var(--border);
+  display: none;
+}
+@media(min-width:600px){
+  .impact-banner { flex-direction: row; justify-content: center; gap: 0 }
+  .impact-item { padding: 0 40px }
+  .impact-divider { display: block }
+}
+
+/* ── FEATURES GRID ── */
+.features-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2px;
+  max-width: 800px; margin: 0 auto;
+}
+.feat-card {
+  background: rgba(255,255,255,.02);
+  border: 1px solid var(--border);
+  border-radius: 0;
+  padding: 28px 24px;
+  transition: background .3s, border-color .3s;
+  position: relative; overflow: hidden;
+}
+.feat-card:first-child { border-radius: var(--r) var(--r) 0 0 }
+.feat-card:last-child  { border-radius: 0 0 var(--r) var(--r) }
+.feat-card::before {
+  content: '';
+  position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+  background: linear-gradient(180deg, var(--rose), var(--rose-deep));
+  opacity: 0; transition: opacity .3s;
+}
+.feat-card:hover { background: rgba(200,117,142,.06); border-color: rgba(200,117,142,.35) }
+.feat-card:hover::before { opacity: 1 }
+.feat-icon { font-size: 26px; margin-bottom: 12px; display: block }
+.feat-title { font-weight: 700; font-size: 16px; margin-bottom: 8px }
+.feat-desc { font-size: 13px; color: var(--dim); line-height: 1.65 }
+@media(min-width:600px){
+  .features-grid { grid-template-columns: 1fr 1fr }
+  .feat-card:first-child { border-radius: var(--r) 0 0 0 }
+  .feat-card:nth-child(2) { border-radius: 0 var(--r) 0 0 }
+  .feat-card:nth-last-child(2) { border-radius: 0 0 0 var(--r) }
+  .feat-card:last-child { border-radius: 0 0 var(--r) 0 }
+}
+
+/* ── MÓDULOS (AGENDA / FINANCEIRO / MARKETING) ── */
+.modules-grid {
+  display: grid; gap: 16px;
+  grid-template-columns: 1fr;
+}
+.module-card {
+  background: linear-gradient(135deg, rgba(15,8,12,1) 0%, rgba(22,10,16,.8) 100%);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 28px 24px;
+  transition: transform .3s, border-color .3s, box-shadow .3s;
+}
+.module-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--rose);
+  box-shadow: 0 16px 40px var(--rose-glow);
+}
+.module-head { display: flex; align-items: center; gap: 12px; margin-bottom: 18px }
+.module-emoji {
+  width: 44px; height: 44px; border-radius: 12px;
+  background: var(--rose-glow);
+  border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; flex-shrink: 0;
+}
+.module-name { font-weight: 700; font-size: 16px }
+.module-tag { font-size: 10px; color: var(--dim); text-transform: uppercase; letter-spacing: .12em }
+.module-list {
+  list-style: none; display: flex; flex-direction: column; gap: 8px;
+}
+.module-list li {
+  display: flex; align-items: flex-start; gap: 8px;
+  font-size: 13px; color: rgba(248,240,243,.7);
+}
+.module-list li::before {
+  content: '→'; color: var(--rose); font-size: 11px;
+  margin-top: 3px; flex-shrink: 0;
+}
+@media(min-width:600px){ .modules-grid { grid-template-columns: 1fr 1fr } }
+@media(min-width:960px){ .modules-grid { grid-template-columns: 1fr 1fr 1fr } }
+
+/* ── PRICING ── */
+.pricing-wrap {
+  max-width: 480px; margin: 0 auto;
+}
+.pricing-card {
+  background: linear-gradient(160deg, rgba(139,61,84,.15) 0%, rgba(8,4,8,.9) 100%);
+  border: 1px solid rgba(200,117,142,.4);
+  border-radius: 24px;
+  padding: 40px 28px;
+  text-align: center;
+  position: relative; overflow: hidden;
+  box-shadow: 0 0 80px rgba(200,117,142,.12);
+}
+.pricing-card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, transparent, var(--rose), var(--gold), var(--rose), transparent);
+}
+.pricing-badge {
+  display: inline-block;
+  background: linear-gradient(135deg, var(--rose), var(--gold));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: 800; font-size: 11px; letter-spacing: .2em;
+  text-transform: uppercase; margin-bottom: 24px;
+}
+.pricing-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 28px; font-weight: 800; margin-bottom: 6px;
+}
+.pricing-sub { font-size: 13px; color: var(--dim); margin-bottom: 32px }
+.pricing-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 0; border-bottom: 1px solid var(--border);
+}
+.pricing-row:last-of-type { border-bottom: none }
+.pricing-row-label { font-size: 13px; color: var(--dim); text-align: left }
+.pricing-row-val {
+  font-family: 'Playfair Display', serif;
+  font-size: 20px; font-weight: 700; color: var(--white);
+}
+.pricing-row-val small { font-family: 'DM Sans'; font-size: 11px; color: var(--dim); display: block; text-align: right }
+.pricing-cta {
+  margin-top: 28px; width: 100%;
+  background: linear-gradient(135deg, var(--rose), var(--rose-deep));
+  color: #fff; border: none; border-radius: 50px;
+  padding: 16px; font-size: 15px; font-weight: 700;
+  cursor: pointer; font-family: 'DM Sans', sans-serif;
+  text-decoration: none; display: block; text-align: center;
+  box-shadow: 0 8px 32px rgba(200,117,142,.35);
+  transition: transform .2s, box-shadow .2s;
+}
+.pricing-cta:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(200,117,142,.5) }
+.pricing-note { margin-top: 14px; font-size: 12px; color: var(--dim) }
+
+/* ── FAQ ── */
+.faq-list { max-width: 640px; margin: 0 auto }
+.faq-item {
+  border-bottom: 1px solid var(--border);
+  padding: 20px 0;
+}
+.faq-q {
+  display: flex; justify-content: space-between; align-items: center;
+  cursor: pointer; font-weight: 600; font-size: 15px; gap: 12px;
+}
+.faq-icon {
+  width: 24px; height: 24px; border-radius: 50%;
+  background: var(--rose-glow);
+  border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; flex-shrink: 0; transition: transform .3s;
+  color: var(--rose);
+}
+.faq-a {
+  max-height: 0; overflow: hidden;
+  transition: max-height .4s ease;
+  font-size: 14px; color: var(--dim); line-height: 1.7;
+}
+.faq-item.open .faq-icon { transform: rotate(45deg) }
+.faq-item.open .faq-a { max-height: 200px; padding-top: 12px }
+
+/* ── CTA FINAL ── */
+.cta-final {
+  text-align: center; padding: 80px 20px 100px;
+  background: radial-gradient(ellipse 60% 50% at 50% 50%, rgba(139,61,84,.15) 0%, transparent 70%);
+}
+.cta-final .section-title { max-width: 560px; margin: 0 auto 16px }
+.cta-final .section-sub { margin: 0 auto 36px }
+
+/* ── FOOTER ── */
+footer {
+  border-top: 1px solid var(--border);
+  padding: 24px 20px;
+  text-align: center;
+  font-size: 12px; color: var(--dim);
+}
+footer span { color: var(--rose) }
+
+/* ── ANIMATIONS ── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(24px) }
+  to   { opacity: 1; transform: translateY(0) }
+}
+.reveal {
+  opacity: 0; transform: translateY(32px);
+  transition: opacity .7s ease, transform .7s ease;
+}
+.reveal.visible { opacity: 1; transform: translateY(0) }
+
+/* ── DIVIDER ── */
+.divider {
+  width: 48px; height: 2px;
+  background: linear-gradient(90deg, var(--rose), var(--gold));
+  border-radius: 2px; margin: 20px auto;
+}
+.divider.left { margin-left: 0 }
+
+/* ── LABEL TAG ── */
+.tag {
+  display: inline-block;
+  background: var(--rose-glow);
+  border: 1px solid rgba(200,117,142,.3);
+  border-radius: 50px;
+  padding: 4px 12px; font-size: 11px; color: var(--rose);
+  font-weight: 600; margin-bottom: 14px;
+}
+
+/* ── GRID CONTAINER ── */
+.container { max-width: 900px; margin: 0 auto }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-brand">Belle <span>Planner</span></div>
+  <a href="https://wa.me/5511949851250?text=Olá,%20quero%20saber%20mais%20sobre%20o%20Belle%20Planner" class="nav-cta" target="_blank">
+    📲 Falar agora
+  </a>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-lines"></div>
+  <div class="hero-content">
+    <div class="hero-badge">Mais de 30% de crescimento comprovado</div>
+    <h1 class="hero-title">
+      Sua agenda,
+      <em>sua liberdade.</em>
+      <span class="line2">Seu crescimento.</span>
+    </h1>
+    <p class="hero-sub">
+      Clientes agendando sozinhos, 24 horas por dia. Financeiro organizado. Negócio crescendo. Tudo em um único lugar.
+    </p>
+    <div class="hero-actions">
+      <a href="https://wa.me/5511949851250?text=Olá,%20quero%20experimentar%20o%20Belle%20Planner" class="btn-primary" target="_blank">
+        ✨ Quero transformar meu negócio
+      </a>
+      <button class="btn-ghost" onclick="document.querySelector('.testimonial-banner').scrollIntoView({behavior:'smooth'})">
+        Ver depoimento real ↓
+      </button>
+    </div>
+    <div class="hero-proof">
+      <div class="avatars">
+        <div class="avatar">👩</div>
+        <div class="avatar">💅</div>
+        <div class="avatar">✨</div>
+      </div>
+      &nbsp; Profissionais que transformaram seus negócios
+    </div>
+  </div>
+  <div class="hero-stat stat-1">
+    <strong>+30%</strong>
+    mais agendamentos
+  </div>
+  <div class="hero-stat stat-2">
+    <strong>24h</strong>
+    agenda disponível
+  </div>
+</section>
+
+<!-- DEPOIMENTO DESTAQUE -->
+<div class="testimonial-banner reveal">
+  <blockquote>
+    "Desde que implantei o Belle Planner, meus agendamentos aumentaram <strong>mais de 30%</strong>. 
+    Os clientes agendam sozinhos, eu não preciso ficar respondendo mensagem o dia todo. 
+    Finalmente tenho tempo para focar no que importa."
+  </blockquote>
+  <div class="testimonial-author">
+    <span>💅</span>
+    <strong>Ana Paula Silva</strong>
+    <span class="dot">·</span>
+    Esteticista · São Sebastião da Amoreira, PR
+  </div>
+</div>
+
+<!-- IMPACTO -->
+<div class="impact-banner">
+  <div class="impact-item reveal">
+    <div class="impact-num">24h</div>
+    <div class="impact-label">Agenda disponível por dia</div>
+  </div>
+  <div class="impact-divider"></div>
+  <div class="impact-item reveal">
+    <div class="impact-num">+30%</div>
+    <div class="impact-label">Aumento médio em agendamentos</div>
+  </div>
+  <div class="impact-divider"></div>
+  <div class="impact-item reveal">
+    <div class="impact-num">R$0</div>
+    <div class="impact-label">Taxa por agendamento</div>
+  </div>
+</div>
+
+<!-- O PROBLEMA -->
+<section>
+  <div class="container">
+    <div class="tag">O problema que resolvemos</div>
+    <h2 class="section-title">Você ainda <em>perde tempo</em> assim?</h2>
+    <div class="divider left"></div>
+    <div class="features-grid" style="margin-top:32px">
+      <div class="feat-card reveal">
+        <span class="feat-icon">📱</span>
+        <div class="feat-title">Respondendo mensagens o dia todo</div>
+        <div class="feat-desc">Horário disponível? Qual procedimento? Quanto custa? Repete isso dezenas de vezes por dia enquanto atende outras clientes.</div>
+      </div>
+      <div class="feat-card reveal">
+        <span class="feat-icon">📋</span>
+        <div class="feat-title">Agenda no papel ou em bloco de notas</div>
+        <div class="feat-desc">Conflitos de horário, esquecimentos, dificuldade de visualizar o dia. Sem controle real do que entra e o que sai.</div>
+      </div>
+      <div class="feat-card reveal">
+        <span class="feat-icon">💸</span>
+        <div class="feat-title">Sem controle financeiro real</div>
+        <div class="feat-desc">Sabe quanto faturou? Quanto pagou de despesas? Qual é o lucro real do mês? Se a resposta for não, isso é problema.</div>
+      </div>
+      <div class="feat-card reveal">
+        <span class="feat-icon">🚫</span>
+        <div class="feat-title">Perdendo clientes por falta de resposta</div>
+        <div class="feat-desc">A cliente quis agendar às 23h enquanto você dormia. Sem resposta, ela foi na concorrência. Isso acontece mais do que você imagina.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- A SOLUÇÃO: MÓDULOS -->
+<section style="background: linear-gradient(180deg, var(--bg2) 0%, var(--bg) 100%)">
+  <div class="container centered">
+    <div class="tag">A plataforma completa</div>
+    <h2 class="section-title">Tudo que seu negócio <em>precisa</em></h2>
+    <div class="divider"></div>
+    <p class="section-sub">Não é só uma agenda. É um sistema completo de gestão para profissionais de estética crescerem com organização.</p>
+  </div>
+  <div class="container" style="margin-top:40px">
+    <div class="modules-grid">
+      <div class="module-card reveal">
+        <div class="module-head">
+          <div class="module-emoji">📅</div>
+          <div>
+            <div class="module-name">Agenda Online</div>
+            <div class="module-tag">Automação</div>
+          </div>
+        </div>
+        <ul class="module-list">
+          <li>Clientes agendam sozinhos, 24h</li>
+          <li>Confirmação automática por push</li>
+          <li>Bloqueio e liberação de datas</li>
+          <li>Agenda manual pelo profissional</li>
+          <li>Lembrete 30 min antes do horário</li>
+          <li>Compartilhamento por WhatsApp</li>
+        </ul>
+      </div>
+      <div class="module-card reveal">
+        <div class="module-head">
+          <div class="module-emoji">💰</div>
+          <div>
+            <div class="module-name">Financeiro Completo</div>
+            <div class="module-tag">Controle Total</div>
+          </div>
+        </div>
+        <ul class="module-list">
+          <li>Receita por dia, semana e mês</li>
+          <li>Cockpit com análise mensal profunda</li>
+          <li>Contas a receber com status de pago</li>
+          <li>Contas a pagar por categoria</li>
+          <li>Lucro real do mês calculado</li>
+          <li>Resumo mensal por e-mail automático</li>
+        </ul>
+      </div>
+      <div class="module-card reveal">
+        <div class="module-head">
+          <div class="module-emoji">📣</div>
+          <div>
+            <div class="module-name">Marketing & Relacionamento</div>
+            <div class="module-tag">Crescimento</div>
+          </div>
+        </div>
+        <ul class="module-list">
+          <li>Promoções por procedimento e cidade</li>
+          <li>Datas comemorativas com popup especial</li>
+          <li>Web Push para todas as clientes</li>
+          <li>NPS — satisfação das clientes</li>
+          <li>Agenda diária por e-mail às 6h30</li>
+          <li>Página personalizada por profissional</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- COCKPIT INSIGHT -->
+<section>
+  <div class="container">
+    <div style="display:grid; gap:40px; align-items:center">
+      <div class="reveal">
+        <div class="tag">Inteligência de negócio</div>
+        <h2 class="section-title">Saiba exatamente <em>como seu negócio</em> se comporta</h2>
+        <div class="divider left"></div>
+        <p class="section-sub" style="margin-bottom:24px">O Cockpit Financeiro te mostra o que nenhum bloco de notas mostra: qual cidade gera mais receita, qual dia da semana tem mais procura, qual cliente é destaque e qual procedimento lidera.</p>
+        <div style="display:flex; flex-direction:column; gap:12px">
+          <div style="display:flex;align-items:center;gap:12px;font-size:14px">
+            <span style="color:var(--rose);font-size:18px">📍</span>
+            <span><strong>Cidades</strong> — qual localidade gera mais resultado</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;font-size:14px">
+            <span style="color:var(--gold);font-size:18px">📆</span>
+            <span><strong>Melhores dias</strong> — concentre energia quando dá resultado</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;font-size:14px">
+            <span style="color:var(--rose);font-size:18px">👑</span>
+            <span><strong>Clientes destaque</strong> — cuide de quem mais te escolhe</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;font-size:14px">
+            <span style="color:var(--gold);font-size:18px">💡</span>
+            <span><strong>Lucro real</strong> — receita menos despesas, sem ilusão</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section style="background: linear-gradient(180deg, var(--bg2) 0%, var(--bg) 100%)">
+  <div class="container centered">
+    <div class="tag">Investimento</div>
+    <h2 class="section-title">Simples, <em>transparente</em>, justo</h2>
+    <div class="divider"></div>
+    <p class="section-sub" style="margin-bottom:40px">Sem surpresas. Sem taxas por agendamento. Você paga uma vez para começar e uma mensalidade fixa para continuar crescendo.</p>
+  </div>
+  <div class="pricing-wrap reveal">
+    <div class="pricing-card">
+      <div class="pricing-badge">✦ Plano Profissional Belle Planner ✦</div>
+      <div class="pricing-title">Tudo incluído</div>
+      <div class="pricing-sub">Agenda + Financeiro + Marketing + Suporte</div>
+      <div class="pricing-row">
+        <div class="pricing-row-label">
+          <strong style="font-size:14px;color:var(--white)">Implantação</strong><br>
+          <span style="font-size:11px">Configuração completa + treinamento</span>
+        </div>
+        <div class="pricing-row-val">
+          R$ 247
+          <small>pagamento único</small>
+        </div>
+      </div>
+      <div class="pricing-row">
+        <div class="pricing-row-label">
+          <strong style="font-size:14px;color:var(--white)">Mensalidade</strong><br>
+          <span style="font-size:11px">Acesso completo à plataforma</span>
+        </div>
+        <div class="pricing-row-val">
+          R$ 149
+          <small>por mês</small>
+        </div>
+      </div>
+      <a href="https://wa.me/5511949851250?text=Olá,%20quero%20contratar%20o%20Belle%20Planner" class="pricing-cta" target="_blank">
+        💬 Contratar agora via WhatsApp
+      </a>
+      <p class="pricing-note">⚡ Implantação em até 48h após a confirmação · Suporte via WhatsApp incluso</p>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section>
+  <div class="container centered">
+    <div class="tag">Dúvidas frequentes</div>
+    <h2 class="section-title">Respostas <em>diretas</em></h2>
+    <div class="divider"></div>
+  </div>
+  <div class="faq-list" style="margin-top:36px">
+    <div class="faq-item reveal">
+      <div class="faq-q" onclick="toggleFaq(this)">
+        <span>Quanto tempo leva para minha agenda estar no ar?</span>
+        <div class="faq-icon">+</div>
+      </div>
+      <div class="faq-a">Em até 48 horas após o pagamento da implantação, sua agenda personalizada já estará online com suas cores, seu logotipo, seus procedimentos e seus horários configurados. Cuidamos de tudo para você.</div>
+    </div>
+    <div class="faq-item reveal">
+      <div class="faq-q" onclick="toggleFaq(this)">
+        <span>Minha cliente precisa baixar algum aplicativo?</span>
+        <div class="faq-icon">+</div>
+      </div>
+      <div class="faq-a">Não. A agenda funciona pelo navegador de qualquer celular ou computador. Basta acessar o link e agendar. Zero atrito para sua cliente, zero instalação necessária.</div>
+    </div>
+    <div class="faq-item reveal">
+      <div class="faq-q" onclick="toggleFaq(this)">
+        <span>Posso ter mais de uma cidade de atendimento?</span>
+        <div class="faq-icon">+</div>
+      </div>
+      <div class="faq-a">Sim. Você configura quantas cidades quiser, com horários diferentes para cada uma. Inclusive pode liberar ou bloquear datas específicas por cidade, de forma independente.</div>
+    </div>
+    <div class="faq-item reveal">
+      <div class="faq-q" onclick="toggleFaq(this)">
+        <span>E se eu quiser cancelar?</span>
+        <div class="faq-icon">+</div>
+      </div>
+      <div class="faq-a">Sem fidelidade. Se não estiver satisfeita, é só avisar e cancelamos sem burocracia. Mas pela experiência das nossas profissionais, isso raramente acontece depois que a agenda começa a encher.</div>
+    </div>
+    <div class="faq-item reveal">
+      <div class="faq-q" onclick="toggleFaq(this)">
+        <span>Tem suporte se eu tiver dificuldade?</span>
+        <div class="faq-icon">+</div>
+      </div>
+      <div class="faq-a">Sim. Suporte direto pelo WhatsApp. Você também recebe manuais completos (para profissional e para cliente) logo na implantação.</div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA FINAL -->
+<div class="cta-final">
+  <div class="tag">Pronta para crescer?</div>
+  <h2 class="section-title reveal">Comece hoje. <em>Cresça amanhã.</em></h2>
+  <div class="divider"></div>
+  <p class="section-sub reveal" style="margin-bottom:36px">
+    Ana Paula aumentou 30% seus agendamentos. A próxima história de transformação pode ser a sua.
+  </p>
+  <a href="https://wa.me/5511949851250?text=Olá,%20quero%20contratar%20o%20Belle%20Planner" class="btn-primary reveal" target="_blank" style="display:inline-flex;width:auto">
+    ✨ Quero transformar meu negócio agora
+  </a>
+  <p style="margin-top:16px;font-size:12px;color:var(--dim)">WhatsApp · Resposta rápida · Sem compromisso</p>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <p><span>Belle Planner</span> · Agenda Profissional Online · pro.belleplanner.com.br</p>
+  <p style="margin-top:6px">© 2026 · Todos os direitos reservados</p>
+</footer>
+
+<script>
+// Reveal on scroll
+const reveals = document.querySelectorAll('.reveal');
+const observer = new IntersectionObserver(entries => {
+  entries.forEach((e, i) => {
+    if (e.isIntersecting) {
+      setTimeout(() => e.target.classList.add('visible'), i * 80);
+      observer.unobserve(e.target);
+    }
+  });
+}, { threshold: 0.12 });
+reveals.forEach(el => observer.observe(el));
+
+// FAQ toggle
+function toggleFaq(el) {
+  const item = el.closest('.faq-item');
+  document.querySelectorAll('.faq-item.open').forEach(o => { if(o !== item) o.classList.remove('open') });
+  item.classList.toggle('open');
+}
+
+// Counter animation
+function animateCounter(el, target, suffix) {
+  let start = 0;
+  const dur = 1800;
+  const step = timestamp => {
+    if (!start) start = timestamp;
+    const progress = Math.min((timestamp - start) / dur, 1);
+    const eased = 1 - Math.pow(1 - progress, 3);
+    el.textContent = (target === 30 ? '+' : '') + Math.round(eased * target) + suffix;
+    if (progress < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+const nums = document.querySelectorAll('.impact-num');
+const numObserver = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      const text = e.target.textContent;
+      if (text.includes('24')) animateCounter(e.target, 24, 'h');
+      else if (text.includes('30')) animateCounter(e.target, 30, '%');
+      else if (text.includes('0')) e.target.textContent = 'R$0';
+      numObserver.unobserve(e.target);
+    }
+  });
+}, { threshold: 0.5 });
+nums.forEach(n => numObserver.observe(n));
+</script>
+</body>
+</html>

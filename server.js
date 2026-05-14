@@ -7,7 +7,7 @@ const { runMigrations } = require('./db/migrations');
 
 const app     = express();
 const PORT    = process.env.PORT || 3000;
-const VERSION = '2.2.4';
+const VERSION = '2.2.6';
 
 // ── MIDDLEWARE ──
 app.use(cors());

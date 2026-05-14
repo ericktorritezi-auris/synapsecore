@@ -8,13 +8,18 @@ router.get('/stats', verifyToken, async (req, res) => {
   try {
     const pacientes   = await db.query(`SELECT COUNT(*) FROM pacientes WHERE status = 'ativo'`);
     const mapeamentos = await db.query(`SELECT COUNT(*) FROM mapeamentos`);
-    const sessoes     = await db.query(`SELECT COUNT(*) FROM sessoes WHERE status = 'realizada'`);
+    const sessoes = await db.query(`
+      SELECT
+        (SELECT COUNT(*) FROM sessoes WHERE status = 'realizada')
+        + COALESCE((SELECT SUM(sessoes_anteriores) FROM pacientes WHERE status != 'inativo' AND sessoes_anteriores > 0), 0)
+        AS total
+    `);
     const pacotes_ativos = await db.query(`SELECT COUNT(*) FROM pacotes WHERE ativo = true`);
 
     res.json({
       pacientes_ativos:  parseInt(pacientes.rows[0].count),
       mapeamentos_gerados: parseInt(mapeamentos.rows[0].count),
-      sessoes_realizadas: parseInt(sessoes.rows[0].count),
+      sessoes_realizadas: parseInt(sessoes.rows[0].total),
       pacotes_ativos:    parseInt(pacotes_ativos.rows[0].count)
     });
   } catch (err) {

@@ -333,29 +333,31 @@ function renderPatient() {
   // Program progress
   if (paciente.pacote_id && paciente.qtd_sessoes) {
     pacoteId = paciente.pacote_id;
+    // registradas = sessions in Synapse Core
     var registradas = sessoes.filter(function(s){return s.status==='realizada';}).length;
-    var done  = ant + registradas;   // total feitas (anteriores + registradas)
-    var total = paciente.qtd_sessoes;
+    // totalFeitas = all sessions the patient has done (before + in Synapse)
+    var totalFeitas = ant + registradas;
+    var totalPrograma = paciente.qtd_sessoes;
     document.getElementById('progLabel').textContent = paciente.pacote_nome || 'Programa';
-    // Show: "5/8 sessões (3 registradas + 2 anteriores)" when has history
-    var countLabel = done + '/' + total + ' sessões';
-    if (ant > 0) countLabel += ' (' + registradas + ' registrada' + (registradas!==1?'s':'') + ' + ' + ant + ' anterior' + (ant!==1?'es':'') + ')';
+    // Show: "1 de 18" (1 registered in Synapse, 18 total including anterior)
+    var countLabel = registradas + ' de ' + totalFeitas + ' sessão' + (totalFeitas!==1?'ões':'');
+    if (ant > 0) countLabel += ' (' + ant + ' anterior' + (ant!==1?'es':'') + ')';
     document.getElementById('progCount').textContent = countLabel;
     var dots = document.getElementById('progDots');
     dots.innerHTML = '';
-    for (var i=1; i<=total; i++) {
+    for (var i=1; i<=totalPrograma; i++) {
       var d = document.createElement('div');
-      d.className = 'prog-dot' + (i<=done?' done':(i===done+1?' current':''));
+      // Mark dots done based on totalFeitas vs program total
+      d.className = 'prog-dot' + (i<=totalFeitas?' done':(i===totalFeitas+1?' current':''));
       d.textContent = i;
       dots.appendChild(d);
     }
     document.getElementById('progWrap').style.display = 'block';
   }
 
-  // Pre-fill next session number (offset by sessoes_anteriores)
+  // Next session number = just sequential in Synapse (no offset)
   var maxReg = sessoes.length > 0 ? Math.max.apply(null, sessoes.map(function(s){return s.sessao_numero||0;})) : 0;
-  var nextNum = ant + maxReg + 1;
-  document.getElementById('fNum').placeholder = nextNum;
+  document.getElementById('fNum').placeholder = maxReg + 1;
 
   // Today's date
   document.getElementById('fData').value = new Date().toISOString().split('T')[0];
@@ -392,8 +394,7 @@ function renderSessoes() {
       body.classList.toggle('open');
     });
     var numEl = document.createElement('div'); numEl.className='sess-num';
-    var ant = parseInt(paciente.sessoes_anteriores) || 0;
-    numEl.textContent = 'Sessão ' + (ant + s.sessao_numero);
+    numEl.textContent = 'Sessão ' + s.sessao_numero;
     var info = document.createElement('div'); info.className='sess-info';
     var dateEl = document.createElement('div'); dateEl.className='sess-date';
     dateEl.textContent = formatDate(s.data_sessao);

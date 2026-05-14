@@ -48,4 +48,51 @@ router.get('/aniversariantes', verifyToken, async (req, res) => {
   }
 });
 
+// ── GET /api/dashboard/atividade ── últimas ações do sistema
+router.get('/atividade', verifyToken, async (req, res) => {
+  try {
+    // Formulários preenchidos
+    const forms = await db.query(`
+      SELECT 'formulario' AS tipo, p.nome_completo, p.id AS paciente_id,
+             r.criado_em AS data_acao
+      FROM respostas_formulario r
+      JOIN pacientes p ON p.id = r.paciente_id
+      ORDER BY r.criado_em DESC LIMIT 5
+    `);
+
+    // Mapeamentos gerados
+    const maps = await db.query(`
+      SELECT 'mapeamento' AS tipo, p.nome_completo, p.id AS paciente_id,
+             m.criado_em AS data_acao, m.versao
+      FROM mapeamentos m
+      JOIN pacientes p ON p.id = m.paciente_id
+      ORDER BY m.criado_em DESC LIMIT 5
+    `);
+
+    // Sessões registradas
+    const sess = await db.query(`
+      SELECT 'sessao' AS tipo, p.nome_completo, p.id AS paciente_id,
+             s.created_at AS data_acao, s.sessao_numero
+      FROM sessoes s
+      JOIN pacientes p ON p.id = s.paciente_id
+      WHERE s.status = 'realizada'
+      ORDER BY s.created_at DESC LIMIT 5
+    `);
+
+    // Merge and sort by date
+    const all = [
+      ...forms.rows.map(r => ({ ...r, data_acao: r.data_acao })),
+      ...maps.rows.map(r => ({ ...r, data_acao: r.data_acao })),
+      ...sess.rows.map(r => ({ ...r, data_acao: r.data_acao }))
+    ]
+    .sort((a,b) => new Date(b.data_acao) - new Date(a.data_acao))
+    .slice(0, 8);
+
+    res.json(all);
+  } catch (err) {
+    console.error('GET /dashboard/atividade:', err.message);
+    res.status(500).json({ message: err.message });
+  }
+});
+
 module.exports = router;

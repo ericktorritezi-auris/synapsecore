@@ -59,19 +59,19 @@ router.get('/atividade', verifyToken, async (req, res) => {
     // Formulários preenchidos
     const forms = await db.query(`
       SELECT 'formulario' AS tipo, p.nome_completo, p.id AS paciente_id,
-             r.criado_em AS data_acao
+             r.created_at AS data_acao
       FROM respostas_formulario r
       JOIN pacientes p ON p.id = r.paciente_id
-      ORDER BY r.criado_em DESC LIMIT 5
+      ORDER BY r.created_at DESC LIMIT 5
     `);
 
     // Mapeamentos gerados
     const maps = await db.query(`
       SELECT 'mapeamento' AS tipo, p.nome_completo, p.id AS paciente_id,
-             m.criado_em AS data_acao, m.versao
+             m.created_at AS data_acao, m.versao
       FROM mapeamentos m
       JOIN pacientes p ON p.id = m.paciente_id
-      ORDER BY m.criado_em DESC LIMIT 5
+      ORDER BY m.created_at DESC LIMIT 5
     `);
 
     // Sessões registradas

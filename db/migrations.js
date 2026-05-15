@@ -202,6 +202,88 @@ async function runMigrations() {
     await client.query(`ALTER TABLE mapeamentos ADD COLUMN IF NOT EXISTS programa_modo VARCHAR(20) DEFAULT 'fallback'`);
     await client.query(`ALTER TABLE sessoes ADD COLUMN IF NOT EXISTS pago BOOLEAN DEFAULT false`);
 
+    // ══════════════════════════════════════════════
+    // v3.0.0 — INTELIGÊNCIA CLÍNICA INTEGRATIVA
+    // ══════════════════════════════════════════════
+
+    // ── IA AUDITORIA ──
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS ia_auditoria (
+        id               SERIAL PRIMARY KEY,
+        paciente_id      INTEGER REFERENCES pacientes(id) ON DELETE SET NULL,
+        modulo           VARCHAR(60)  NOT NULL,
+        referencia_tipo  VARCHAR(40),
+        referencia_id    INTEGER,
+        prompt_resumo    TEXT,
+        input_hash       VARCHAR(64),
+        output_resumo    TEXT,
+        tokens_usados    INTEGER,
+        duracao_ms       INTEGER,
+        sucesso          BOOLEAN DEFAULT true,
+        erro_msg         TEXT,
+        modelo           VARCHAR(60),
+        modo             VARCHAR(20) DEFAULT 'ia',
+        created_at       TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    // ── BRIEFINGS ──
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS briefings (
+        id               SERIAL PRIMARY KEY,
+        paciente_id      INTEGER REFERENCES pacientes(id) ON DELETE CASCADE,
+        conteudo_json    JSONB NOT NULL,
+        conteudo_texto   TEXT,
+        sessoes_base     JSONB DEFAULT '[]',
+        feedbacks_base   JSONB DEFAULT '[]',
+        resumo_versao    INTEGER,
+        hash_contexto    VARCHAR(64),
+        modo             VARCHAR(20) DEFAULT 'ia',
+        erro_msg         TEXT,
+        gerado_em        TIMESTAMP DEFAULT NOW(),
+        atualizado_em    TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    // ── INTERVENÇÕES ──
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS intervencoes (
+        id               SERIAL PRIMARY KEY,
+        paciente_id      INTEGER REFERENCES pacientes(id) ON DELETE CASCADE,
+        mapeamento_id    INTEGER REFERENCES mapeamentos(id) ON DELETE SET NULL,
+        sessao_id        INTEGER REFERENCES sessoes(id) ON DELETE SET NULL,
+        tipo             VARCHAR(40),
+        categoria_clinica VARCHAR(60),
+        publico_alvo     VARCHAR(40),
+        titulo           VARCHAR(255) NOT NULL,
+        descricao        TEXT,
+        fundamentacao    TEXT,
+        status           VARCHAR(20) DEFAULT 'sugerida',
+        favorita         BOOLEAN DEFAULT false,
+        avaliacao        VARCHAR(20),
+        observacao       TEXT,
+        gerado_em        TIMESTAMP DEFAULT NOW(),
+        atualizado_em    TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    // ── MEMÓRIA TERAPÊUTICA ──
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS memoria_terapeutica (
+        id                SERIAL PRIMARY KEY,
+        paciente_id       INTEGER REFERENCES pacientes(id) ON DELETE CASCADE,
+        versao            INTEGER NOT NULL DEFAULT 1,
+        ativa             BOOLEAN DEFAULT true,
+        conteudo_json     JSONB NOT NULL,
+        conteudo_texto    TEXT,
+        sessoes_base      JSONB DEFAULT '[]',
+        feedbacks_base    JSONB DEFAULT '[]',
+        intervencoes_base JSONB DEFAULT '[]',
+        hash_contexto     VARCHAR(64),
+        gerado_em         TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
     // ── FEEDBACKS DO PACIENTE ──
     await client.query(`
       CREATE TABLE IF NOT EXISTS feedbacks_paciente (

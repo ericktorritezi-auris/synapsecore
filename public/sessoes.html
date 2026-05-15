@@ -188,6 +188,24 @@ body{font-family:var(--fb);background:var(--bg);color:var(--tx);min-height:100vh
   </div>
 
   <!-- Evolution link panel (inside sessoes) -->
+  <!-- ═══ BRIEFING PRÉ-SESSÃO ═══ -->
+  <div id="briefingBlock" style="display:none;background:linear-gradient(135deg,rgba(139,92,246,.1),rgba(28,37,65,.6));border:1px solid rgba(139,92,246,.3);border-radius:var(--r);padding:16px;margin-bottom:16px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0" onclick="toggleBriefingBlock()" style="cursor:pointer">
+      <div style="display:flex;align-items:center;gap:8px;cursor:pointer" onclick="toggleBriefingBlock()">
+        <span style="font-size:15px">&#128203;</span>
+        <span style="font-family:var(--f-display);font-size:13px;font-weight:700">Briefing da Próxima Sessão</span>
+        <span id="briefingSessNumBadge" style="font-size:11px;background:rgba(139,92,246,.2);color:#c4b5fd;padding:2px 8px;border-radius:10px;font-weight:600"></span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <button id="btnGerarBriefing" onclick="gerarBriefingSess(event)" class="btn btn-ghost btn-sm" style="font-size:11.5px;padding:5px 12px;background:rgba(139,92,246,.15);border-color:rgba(139,92,246,.3);color:#c4b5fd">&#8635; Gerar</button>
+        <span id="briefingArrow" style="color:var(--dim);font-size:12px;cursor:pointer;transition:transform .2s" onclick="toggleBriefingBlock()">▾</span>
+      </div>
+    </div>
+    <div id="briefingBodySess" style="display:none;margin-top:14px;border-top:1px solid rgba(139,92,246,.2);padding-top:14px">
+      <div style="font-size:13px;color:var(--muted)">Clique em <strong>↻ Gerar</strong> para gerar o briefing clínico desta sessão.</div>
+    </div>
+  </div>
+
   <div id="evolSessPanel" style="display:none;background:linear-gradient(135deg,rgba(139,92,246,0.08),rgba(28,37,65,.5));border:1px solid rgba(139,92,246,.25);border-radius:var(--r);padding:18px;margin-bottom:20px">
     <div style="font-family:var(--fd);font-size:13px;font-weight:700;color:var(--tx);margin-bottom:4px">&#9651; Relatório de Evolução</div>
     <div style="font-size:12px;color:var(--mu);margin-bottom:12px">Gera um link público (7 dias) com a evolução visual do paciente para você compartilhar.</div>
@@ -276,6 +294,35 @@ body{font-family:var(--fb);background:var(--bg);color:var(--tx);min-height:100vh
 
   <!-- Danger zone -->
   <div class="danger-zone" id="dangerZone" style="display:none">
+  <!-- ═══ INTERVENÇÕES CLÍNICAS ═══ -->
+  <div style="background:var(--s2);border:1px solid var(--border);border-radius:var(--r);padding:18px;margin-bottom:16px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <div style="font-family:var(--f-display);font-size:13px;font-weight:700;display:flex;align-items:center;gap:7px">
+        <span>&#9889;</span> Intervenções Clínicas
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="gerarIntervencoesSess()" id="btnGerarInterv" style="font-size:11.5px;background:rgba(16,185,129,.06);border-color:rgba(16,185,129,.2);color:#6ee7b7">&#9673; Gerar</button>
+    </div>
+    <div id="intervAlerta" style="display:none;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:8px;padding:12px 14px;margin-bottom:12px">
+      <div style="font-size:12.5px;font-weight:700;color:#fca5a5;margin-bottom:4px">&#9888; Alerta de Manejo Clínico</div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.6" id="intervAlertaTexto"></div>
+    </div>
+    <div id="intervList"><div style="font-size:12.5px;color:var(--dim);padding:4px 0">Nenhuma intervenção gerada ainda.</div></div>
+  </div>
+
+  <!-- ═══ MEMÓRIA TERAPÊUTICA ═══ -->
+  <div style="background:var(--s2);border:1px solid var(--border);border-radius:var(--r);padding:18px;margin-bottom:16px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <div style="font-family:var(--f-display);font-size:13px;font-weight:700;display:flex;align-items:center;gap:7px">
+        <span>&#129504;</span> Memória Terapêutica
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost btn-sm" onclick="gerarMemoriaSess()" id="btnGerarMemoria" style="font-size:11.5px">&#8635; Atualizar</button>
+        <a id="btnVerMemoriaCompleta" href="#" class="btn btn-ghost btn-sm" style="font-size:11.5px;display:none">Ver completa &#8599;</a>
+      </div>
+    </div>
+    <div id="memoriaResumo"><div style="font-size:12.5px;color:var(--dim);padding:4px 0">Nenhuma memória gerada ainda.</div></div>
+  </div>
+
   <!-- FEEDBACKS DO PACIENTE -->
   <div style="background:var(--s2);border:1px solid var(--border);border-radius:var(--r);padding:18px;margin-bottom:16px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
@@ -341,6 +388,10 @@ window.addEventListener('DOMContentLoaded', function() {
     renderSessoes();
     loadResumo();
     carregarFeedbacks();
+    // v3.0
+    document.getElementById('briefingBlock').style.display = 'block';
+    carregarIntervencoes();
+    carregarMemoria();
   }).catch(function(err) {
     showToast('Erro ao carregar dados.', 'error');
   });
@@ -609,7 +660,164 @@ function gerarResumo(force) {
       showToast(err.message||'Erro ao gerar resumo.','error');
     });
 }
-// ── FEEDBACKS ──
+// ══════════════════════════════════════
+// v3.0 — INTELIGÊNCIA CLÍNICA
+// ══════════════════════════════════════
+
+// ── BRIEFING ──
+function toggleBriefingBlock() {
+  var body  = document.getElementById('briefingBodySess');
+  var arrow = document.getElementById('briefingArrow');
+  var open  = body.style.display === 'block';
+  body.style.display  = open ? 'none' : 'block';
+  arrow.style.transform = open ? '' : 'rotate(-180deg)';
+}
+
+function gerarBriefingSess(e) {
+  if (e) e.stopPropagation();
+  var btn = document.getElementById('btnGerarBriefing');
+  btn.disabled = true; btn.textContent = 'Gerando...';
+  var body = document.getElementById('briefingBodySess');
+  body.style.display = 'block';
+  document.getElementById('briefingArrow').style.transform = 'rotate(-180deg)';
+  body.innerHTML = '<div style="display:flex;align-items:center;gap:8px;color:var(--muted);font-size:12.5px"><div style="width:14px;height:14px;border:2px solid rgba(139,92,246,.3);border-top-color:#c4b5fd;border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0"></div>Analisando histórico clínico...</div>';
+
+  api('/api/briefing/' + PACIENTE_ID + '/gerar', 'POST', {})
+    .then(function(d) {
+      btn.disabled = false; btn.textContent = '↻ Gerar';
+      renderBriefingSess(d);
+    })
+    .catch(function(e) {
+      btn.disabled = false; btn.textContent = '↻ Gerar';
+      body.innerHTML = '<div style="color:#fca5a5;font-size:12.5px">Erro: '+escH(e.message)+'</div>';
+    });
+}
+
+function renderBriefingSess(d) {
+  var j = d.conteudo_json || {};
+  var body = document.getElementById('briefingBodySess');
+  if (j.proxima_sessao_numero) document.getElementById('briefingSessNumBadge').textContent = 'Sessão ' + j.proxima_sessao_numero;
+  var html = '';
+  if (d.sem_mudancas) html += '<div style="background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.18);border-radius:7px;padding:7px 12px;font-size:11.5px;color:#fcd34d;margin-bottom:10px">&#9888; Sem alterações — exibindo último briefing gerado</div>';
+  if (j.risco_atual==='vermelho'||j.risco_atual==='alto') html += '<div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:7px;padding:8px 12px;font-size:12px;font-weight:600;color:#fca5a5;margin-bottom:10px">&#9888; RISCO ELEVADO — Cautela clínica nesta sessão</div>';
+  if (j.estado_atual) html += brfSec('Estado Atual', j.estado_atual);
+  if (j.ultima_sessao) {
+    var s = j.ultima_sessao;
+    var it = [s.tema&&'Tema: '+s.tema, s.emocao&&'Emoção: '+s.emocao, s.ponto_trabalhado&&'Trabalhado: '+s.ponto_trabalhado, s.resistencia&&s.resistencia!=='—'&&'Resistência: '+s.resistencia, s.tarefa&&s.tarefa!=='—'&&'Tarefa: '+s.tarefa].filter(Boolean);
+    if (it.length) html += brfSec('Última Sessão', it.join('\n'));
+  }
+  if (j.desde_ultima_sessao && j.desde_ultima_sessao !== 'Sem feedbacks recentes.') html += brfSec('Desde a Última Sessão', j.desde_ultima_sessao);
+  if (j.pontos_atencao && j.pontos_atencao.length) html += brfSec('Pontos de Atenção', j.pontos_atencao.map(function(p){return '⚑ '+p;}).join('\n'));
+  if (j.sugestoes_conducao && j.sugestoes_conducao.length) html += brfSec('Sugestões de Condução', j.sugestoes_conducao.map(function(s,i){return (i+1)+'. '+s;}).join('\n'));
+  body.innerHTML = html || '<div style="color:var(--dim);font-size:12.5px">Briefing gerado sem dados suficientes.</div>';
+}
+
+function brfSec(titulo, texto) {
+  return '<div style="margin-bottom:12px">'
+    +'<div style="font-size:10.5px;font-weight:700;color:#c4b5fd;text-transform:uppercase;letter-spacing:.7px;margin-bottom:3px">'+escH(titulo)+'</div>'
+    +'<div style="font-size:13px;color:var(--muted);line-height:1.65;white-space:pre-wrap">'+escH(String(texto||''))+'</div>'
+    +'</div>';
+}
+
+// ── INTERVENÇÕES ──
+function gerarIntervencoesSess() {
+  var btn = document.getElementById('btnGerarInterv');
+  btn.disabled=true; btn.textContent='Gerando...';
+  document.getElementById('intervList').innerHTML = '<div style="display:flex;align-items:center;gap:8px;color:var(--muted);font-size:12.5px;padding:8px 0"><div style="width:14px;height:14px;border:2px solid rgba(16,185,129,.2);border-top-color:#6ee7b7;border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0"></div>Analisando perfil clínico...</div>';
+  api('/api/intervencoes/' + PACIENTE_ID + '/gerar', 'POST', {})
+    .then(function(d) {
+      btn.disabled=false; btn.textContent='↺ Gerar';
+      carregarIntervencoes();
+      if (d.alerta) {
+        var al = document.getElementById('intervAlerta');
+        document.getElementById('intervAlertaTexto').textContent = d.intervencoes[0]?.descricao || '';
+        al.style.display = 'block';
+      }
+      showToast('Intervenções geradas!', 'success');
+    })
+    .catch(function(e){ btn.disabled=false; btn.textContent='⊳ Gerar'; showToast(e.message,'error'); });
+}
+
+function carregarIntervencoes() {
+  api('/api/intervencoes/' + PACIENTE_ID).then(function(data) {
+    var wrap = document.getElementById('intervList');
+    if (!data.length) { wrap.innerHTML='<div style="font-size:12.5px;color:var(--dim);padding:4px 0">Nenhuma intervenção gerada ainda.</div>'; return; }
+    wrap.innerHTML = '';
+    data.forEach(function(iv) {
+      var card = document.createElement('div');
+      card.style.cssText = 'background:rgba(11,19,43,.4);border:1px solid var(--border);border-radius:9px;padding:12px 14px;margin-bottom:8px';
+      var statusColor = iv.status==='utilizada'?'#6ee7b7':iv.status==='descartada'?'rgba(201,209,217,.3)':'#c4b5fd';
+      var avalColor = iv.avaliacao==='funcionou'?'#6ee7b7':iv.avaliacao==='parcial'?'#fcd34d':iv.avaliacao==='nao_funcionou'?'#fca5a5':'var(--dim)';
+      card.innerHTML =
+        '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px">'
+          +'<div style="font-family:var(--f-display);font-size:13px;font-weight:700;flex:1">'
+            +(iv.favorita?'&#9733; ':'')+escH(iv.titulo)
+          +'</div>'
+          +'<span style="font-size:10.5px;padding:2px 8px;border-radius:10px;font-weight:600;border:1px solid;color:'+statusColor+';border-color:'+statusColor+';background:rgba(255,255,255,.03);white-space:nowrap">'+escH(iv.status)+'</span>'
+        +'</div>'
+        +(iv.tipo?'<div style="font-size:10.5px;color:var(--dim);margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px">'+escH(iv.tipo.replace(/_/g,' '))+'</div>':'')
+        +'<div style="font-size:12.5px;color:var(--muted);line-height:1.6;margin-bottom:8px">'+escH(iv.descricao||'')+'</div>'
+        +(iv.fundamentacao?'<div style="font-size:11.5px;color:var(--dim);font-style:italic;margin-bottom:8px;line-height:1.5">'+escH(iv.fundamentacao)+'</div>':'')
+        +'<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">'
+          +['utilizada','descartada'].map(function(s){return '<button onclick="atualizarInterv('+iv.id+',{status:\''+s+'\'})" style="font-size:11px;padding:3px 8px;border-radius:6px;cursor:pointer;background:rgba(255,255,255,.04);border:1px solid var(--border);color:var(--muted)">'+(s==='utilizada'?'✓ Usar':'✕ Descartar')+'</button>';}).join('')
+          +['funcionou','parcial','nao_funcionou'].map(function(a){return '<button onclick="atualizarInterv('+iv.id+',{avaliacao:\''+a+'\'})" style="font-size:11px;padding:3px 8px;border-radius:6px;cursor:pointer;background:rgba(255,255,255,.04);border:1px solid var(--border);color:'+(iv.avaliacao===a?avalColor:'var(--muted)')+'">'+({funcionou:'✓ Funcionou',parcial:'~ Parcial',nao_funcionou:'✗ Não funcionou'}[a])+'</button>';}).join('')
+          +'<button onclick="atualizarInterv('+iv.id+',{favorita:'+(iv.favorita?'false':'true')+'})" style="font-size:11px;padding:3px 8px;border-radius:6px;cursor:pointer;background:rgba(255,255,255,.04);border:1px solid var(--border);color:'+(iv.favorita?'#fcd34d':'var(--dim)')+'">&#9733; Fav</button>'
+        +'</div>';
+      wrap.appendChild(card);
+    });
+  }).catch(function(){});
+}
+
+function atualizarInterv(id, payload) {
+  api('/api/intervencoes/'+id+'/status','PUT',payload).then(function(){carregarIntervencoes();}).catch(function(e){showToast(e.message,'error');});
+}
+
+// ── MEMÓRIA ──
+function gerarMemoriaSess() {
+  var btn = document.getElementById('btnGerarMemoria');
+  btn.disabled=true; btn.textContent='Gerando...';
+  api('/api/memoria/' + PACIENTE_ID + '/gerar', 'POST', {})
+    .then(function(d) {
+      btn.disabled=false; btn.textContent='↻ Atualizar';
+      if (d.sem_mudancas) { showToast('Memória sem alterações desde a última versão.','info'); return; }
+      renderMemoriaResumo(d);
+      showToast('Memória terapêutica atualizada!','success');
+    })
+    .catch(function(e){ btn.disabled=false; btn.textContent='↻ Atualizar'; showToast(e.message,'error'); });
+}
+
+function carregarMemoria() {
+  api('/api/memoria/' + PACIENTE_ID + '/atual').then(function(d) {
+    if (d) renderMemoriaResumo(d);
+  }).catch(function(){});
+}
+
+function renderMemoriaResumo(d) {
+  var j = d.conteudo_json || {};
+  var wrap = document.getElementById('memoriaResumo');
+  var lnk  = document.getElementById('btnVerMemoriaCompleta');
+  lnk.style.display = 'inline-flex';
+  lnk.href = '/sessoes/' + PACIENTE_ID + '#memoria-completa';
+
+  var html = '<div style="font-size:11px;color:var(--dim);margin-bottom:10px">v'+d.versao+' · '+new Date(d.gerado_em).toLocaleDateString('pt-BR')+(d.ativa?' · Ativa':'')+'</div>';
+  if (j.temas_recorrentes && j.temas_recorrentes.length) {
+    html += '<div style="margin-bottom:8px"><div style="font-size:10.5px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.7px;margin-bottom:4px">Temas Recorrentes</div>'
+      +'<div style="display:flex;flex-wrap:wrap;gap:5px">'
+      +j.temas_recorrentes.map(function(t){return '<span style="font-size:11.5px;background:rgba(212,175,127,.08);border:1px solid rgba(212,175,127,.2);border-radius:20px;padding:2px 9px;color:var(--accent)">'+escH(t)+'</span>';}).join('')
+      +'</div></div>';
+  }
+  if (j.pontos_de_atencao && j.pontos_de_atencao.length) {
+    html += '<div style="margin-bottom:8px"><div style="font-size:10.5px;font-weight:700;color:#fca5a5;text-transform:uppercase;letter-spacing:.7px;margin-bottom:4px">Pontos de Atenção</div>'
+      +j.pontos_de_atencao.map(function(p){return '<div style="font-size:12.5px;color:var(--muted)">⚑ '+escH(p)+'</div>';}).join('')+'</div>';
+  }
+  if (j.movimento_terapeutico) {
+    html += '<div><div style="font-size:10.5px;font-weight:700;color:#6ee7b7;text-transform:uppercase;letter-spacing:.7px;margin-bottom:4px">Movimento Terapêutico</div>'
+      +'<div style="font-size:12.5px;color:var(--muted);line-height:1.6">'+escH(j.movimento_terapeutico)+'</div></div>';
+  }
+  wrap.innerHTML = html;
+}
+
+// ── CALL ON INIT ──
 function toggleFeedbackForm() {
   var form = document.getElementById('feedbackForm');
   var isOpen = form.style.display === 'block';

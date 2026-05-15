@@ -377,7 +377,244 @@ NÃO diagnostique. Use linguagem de hipóteses ("sugere", "indica", "observa-se 
   return { relatorio, programa: prog };
 }
 
-module.exports = { calcularIndices, detectarFlags, gerarMapeamento, FLAG_LABELS, sugerirPrograma, sugerirProgramaLocal, gerarResumoClinico, gerarEvolucao, sugerirCIDs };
+module.exports = { calcularIndices, detectarFlags, gerarMapeamento, FLAG_LABELS, sugerirPrograma, sugerirProgramaLocal, gerarResumoClinico, gerarEvolucao, sugerirCIDs, registrarAuditoria, gerarBriefingSessao, gerarIntervencoes, atualizarMemoriaTerapeutica };
+
+// ══════════════════════════════════════════════
+// v3.0.0 — INTELIGÊNCIA CLÍNICA INTEGRATIVA
+// ══════════════════════════════════════════════
+
+const crypto = require('crypto');
+
+// ── HELPER: Registrar auditoria de chamada IA ──
+async function registrarAuditoria(db, { paciente_id, modulo, referencia_tipo, referencia_id, prompt_resumo, input_hash, output_resumo, tokens_usados, duracao_ms, sucesso, erro_msg, modelo, modo }) {
+  try {
+    await db.query(
+      `INSERT INTO ia_auditoria (paciente_id, modulo, referencia_tipo, referencia_id, prompt_resumo, input_hash, output_resumo, tokens_usados, duracao_ms, sucesso, erro_msg, modelo, modo)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
+      [paciente_id||null, modulo, referencia_tipo||null, referencia_id||null,
+       (prompt_resumo||'').substring(0,500), input_hash||null,
+       (output_resumo||'').substring(0,500), tokens_usados||null, duracao_ms||null,
+       sucesso !== false, erro_msg||null, modelo||'claude-sonnet-4-20250514', modo||'ia']
+    );
+  } catch(e) {
+    console.warn('ia_auditoria insert failed:', e.message);
+  }
+}
+
+// ── BRIEFING PRÉ-SESSÃO ──
+async function gerarBriefingSessao({ db, paciente, sessoes, feedbacks, mapeamento, resumoAtual, riscoNivel }) {
+  const inicio = Date.now();
+  const ant = parseInt(paciente.sessoes_anteriores) || 0;
+  const totalSessoes = ant + sessoes.length;
+  const ultimaSessao = sessoes[sessoes.length - 1] || null;
+  const flags = mapeamento ? (mapeamento.flags_json || []) : [];
+  const proto = mapeamento ? (mapeamento.protocolo_json || {}) : {};
+
+  const flagLabels = { risco_depressivo:'Risco Depressivo', burnout_provavel:'Burnout Provável', ansiedade_elevada:'Ansiedade Elevada', trauma_indicado:'Trauma Indicado', isolamento_social:'Isolamento Social', instabilidade_emocional:'Instabilidade Emocional', conflito_relacional:'Conflito Relacional', baixa_autoestima:'Baixa Autoestima', neurodivergencia:'Neurodivergência', crise_existencial:'Crise Existencial', ideacao_suicida:'Ideação Suicida' };
+
+  const ultimasSessoes = sessoes.slice(-3).map(s =>
+    `Sessão ${s.sessao_numero} (${new Date(s.data_sessao).toLocaleDateString('pt-BR')}): ${s.resumo_terapeuta || 'Sem resumo.'}`
+  ).join('\n');
+
+  const feedbacksRecentes = feedbacks.slice(-3).map(f =>
+    `${new Date(f.data_feedback).toLocaleDateString('pt-BR')}: ${f.conteudo}`
+  ).join('\n');
+
+  const prompt = `Você é o motor de inteligência clínica integrativa do Synapse Core — Evolution Therapy.
+Papel: apoiar o raciocínio clínico do terapeuta Erick Torritezi, sem diagnosticar e sem substituir julgamento profissional.
+
+PACIENTE: ${paciente.nome_completo} | ${paciente.perfil_tipo || 'adulto'} | ${paciente.idade ? paciente.idade + ' anos' : ''}
+SESSÃO ${totalSessoes + 1} será a próxima (${sessoes.length} registradas + ${ant} anteriores)
+RISCO ATUAL: ${riscoNivel || 'verde'}
+FLAGS CLÍNICAS: ${flags.map(f => flagLabels[f]||f).join(', ') || 'Nenhuma'}
+
+RESUMO CLÍNICO ATUAL:
+${resumoAtual || 'Não disponível'}
+
+ÚLTIMAS SESSÕES:
+${ultimasSessoes || 'Nenhuma sessão registrada ainda'}
+
+FEEDBACKS RECENTES DO PACIENTE:
+${feedbacksRecentes || 'Nenhum feedback registrado'}
+
+OBSERVAÇÕES DO TERAPEUTA: ${proto.obs_terapeuta || 'Não informado'}
+
+Gere um briefing clínico estratégico para preparar o terapeuta para a próxima sessão.
+Use linguagem de hipótese, nunca diagnóstico. Tom: clínico, objetivo, estratégico, humano.
+
+Retorne APENAS JSON válido:
+{
+  "estado_atual": "síntese do estado atual em 3-5 linhas",
+  "ultima_sessao": {
+    "tema": "tema predominante",
+    "emocao": "emoção predominante",
+    "ponto_trabalhado": "o que foi trabalhado",
+    "resistencia": "resistência observada se houver",
+    "tarefa": "tarefa ou combinado se houver"
+  },
+  "desde_ultima_sessao": "síntese dos feedbacks recentes",
+  "pontos_atencao": ["ponto 1", "ponto 2"],
+  "sugestoes_conducao": ["sugestão 1", "sugestão 2", "sugestão 3"],
+  "risco_atual": "${riscoNivel || 'verde'}",
+  "proxima_sessao_numero": ${totalSessoes + 1}
+}`;
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':process.env.ANTHROPIC_API_KEY,'anthropic-version':'2023-06-01'},
+      body:JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:1200, messages:[{role:'user',content:prompt}] })
+    });
+    const data = await resp.json();
+    const text = data.content?.[0]?.text || '{}';
+    const clean = text.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
+    const m = clean.match(/\{[\s\S]*\}/);
+    const json = m ? JSON.parse(m[0]) : {};
+    const duracao = Date.now() - inicio;
+    await registrarAuditoria(db, { paciente_id: paciente.id, modulo:'briefing', referencia_tipo:'paciente', referencia_id: paciente.id, prompt_resumo: prompt, input_hash: crypto.createHash('md5').update(prompt).digest('hex'), output_resumo: text, tokens_usados: data.usage?.output_tokens, duracao_ms: duracao, sucesso: true, modo:'ia' });
+    return { json, texto: text, modo: 'ia' };
+  } catch(e) {
+    await registrarAuditoria(db, { paciente_id: paciente.id, modulo:'briefing', sucesso: false, erro_msg: e.message, modo:'fallback' });
+    // Fallback local
+    const fb = {
+      estado_atual: `${paciente.nome_completo} está em acompanhamento com ${totalSessoes} sessões realizadas. ${flags.length ? 'Flags ativas: ' + flags.map(f=>flagLabels[f]||f).join(', ') + '.' : 'Sem flags críticas no momento.'}`,
+      ultima_sessao: { tema: 'Consultar registro da última sessão', emocao: '—', ponto_trabalhado: ultimaSessao?.resumo_terapeuta || '—', resistencia: '—', tarefa: '—' },
+      desde_ultima_sessao: feedbacks.length ? feedbacks.slice(-1)[0].conteudo.substring(0,150) : 'Sem feedbacks recentes.',
+      pontos_atencao: flags.slice(0,3).map(f=>flagLabels[f]||f),
+      sugestoes_conducao: ['Consultar resumo clínico atualizado', 'Verificar feedbacks recentes', 'Revisar última sessão registrada'],
+      risco_atual: riscoNivel || 'verde',
+      proxima_sessao_numero: totalSessoes + 1
+    };
+    return { json: fb, texto: JSON.stringify(fb), modo: 'fallback', api_erro: e.message };
+  }
+}
+
+// ── GERADOR DE INTERVENÇÕES ──
+async function gerarIntervencoes({ db, paciente, mapeamento, sessoes, resumoAtual, riscoNivel }) {
+  const inicio = Date.now();
+  const flags = mapeamento ? (mapeamento.flags_json || []) : [];
+  const indices = mapeamento ? (mapeamento.indices_json || {}) : {};
+  const flagLabels = { risco_depressivo:'Risco Depressivo', burnout_provavel:'Burnout Provável', ansiedade_elevada:'Ansiedade Elevada', trauma_indicado:'Trauma Indicado', isolamento_social:'Isolamento Social', instabilidade_emocional:'Instabilidade Emocional', conflito_relacional:'Conflito Relacional', baixa_autoestima:'Baixa Autoestima', neurodivergencia:'Neurodivergência', crise_existencial:'Crise Existencial', ideacao_suicida:'Ideação Suicida' };
+
+  // SEGURANÇA: risco alto/vermelho → alerta de manejo, sem intervenções comuns
+  if (riscoNivel === 'vermelho' || riscoNivel === 'alto') {
+    const alerta = [{
+      titulo: '⚠️ Alerta de Manejo Clínico',
+      descricao: 'Este paciente apresenta indicadores de risco elevado. Intervenções terapêuticas convencionais não são recomendadas neste momento.',
+      fundamentacao: 'A presença de risco alto exige cautela clínica, avaliação de segurança e possivelmente encaminhamento ou supervisão especializada antes de qualquer intervenção técnica.',
+      tipo: 'alerta_seguranca', categoria_clinica: 'segurança', status: 'alerta',
+      publico_alvo: paciente.perfil_tipo || 'adulto'
+    }];
+    await registrarAuditoria(db, { paciente_id: paciente.id, modulo:'intervencoes', sucesso: true, modo:'seguranca', output_resumo:'Bloqueado por risco alto' });
+    return { intervencoes: alerta, modo: 'alerta_seguranca' };
+  }
+
+  const prompt = `Você é o motor de inteligência clínica integrativa do Synapse Core — Evolution Therapy.
+Papel: apoiar o raciocínio clínico do terapeuta Erick Torritezi, sem diagnosticar e sem substituir julgamento profissional.
+
+PACIENTE: ${paciente.nome_completo} | ${paciente.perfil_tipo || 'adulto'}
+RISCO: ${riscoNivel || 'verde'}
+FLAGS: ${flags.map(f=>flagLabels[f]||f).join(', ') || 'Nenhuma'}
+ÍNDICE EMOCIONAL: ${indices.D1||'N/D'} | COGNITIVO: ${indices.D2||'N/D'} | RELACIONAL: ${indices.D3||'N/D'}
+
+RESUMO CLÍNICO ATUAL:
+${resumoAtual || 'Não disponível'}
+
+Gere 4 a 6 intervenções clínicas adequadas ao perfil deste paciente.
+Tipos disponíveis: hipnotica_ericksoniana, reestruturacao_cognitiva, regulacao_emocional, relacional, tarefa_entre_sessoes, pergunta_estrategica, corporal_somatica, metafora_terapeutica.
+Use linguagem de hipótese. Considere as abordagens de Erick: Psicanálise, PNL Terapêutica, Hipnose Ericksoniana, Logoterapia.
+
+Retorne APENAS JSON válido:
+{
+  "intervencoes": [
+    {
+      "tipo": "tipo_da_intervencao",
+      "categoria_clinica": "categoria ampla (ex: regulação emocional)",
+      "titulo": "nome curto da intervenção",
+      "descricao": "como aplicar — 2 a 4 frases",
+      "fundamentacao": "por que essa intervenção para este paciente específico"
+    }
+  ]
+}`;
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':process.env.ANTHROPIC_API_KEY,'anthropic-version':'2023-06-01'},
+      body:JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:2000, messages:[{role:'user',content:prompt}] })
+    });
+    const data = await resp.json();
+    const text = data.content?.[0]?.text || '{}';
+    const clean = text.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
+    const m = clean.match(/\{[\s\S]*\}/);
+    const json = m ? JSON.parse(m[0]) : { intervencoes: [] };
+    const duracao = Date.now() - inicio;
+    await registrarAuditoria(db, { paciente_id: paciente.id, modulo:'intervencoes', referencia_tipo:'mapeamento', referencia_id: mapeamento?.id, prompt_resumo: prompt, input_hash: crypto.createHash('md5').update(prompt).digest('hex'), output_resumo: text, tokens_usados: data.usage?.output_tokens, duracao_ms: duracao, sucesso: true, modo:'ia' });
+    return { intervencoes: (json.intervencoes||[]).map(i=>({...i, publico_alvo: paciente.perfil_tipo||'adulto'})), modo: 'ia' };
+  } catch(e) {
+    await registrarAuditoria(db, { paciente_id: paciente.id, modulo:'intervencoes', sucesso:false, erro_msg:e.message, modo:'fallback' });
+    return { intervencoes: [], modo:'fallback', api_erro: e.message };
+  }
+}
+
+// ── MEMÓRIA TERAPÊUTICA ──
+async function atualizarMemoriaTerapeutica({ db, paciente, sessoes, feedbacks, intervencoes, resumoAtual, memoriaAnterior }) {
+  const inicio = Date.now();
+  const ultimasSessoes = sessoes.slice(-5).map(s => `S${s.sessao_numero}: ${s.resumo_terapeuta||'sem resumo'}`).join('\n');
+  const feedbacksTexto = feedbacks.slice(-5).map(f => `${new Date(f.data_feedback).toLocaleDateString('pt-BR')}: ${f.conteudo}`).join('\n');
+  const intervTexto = intervencoes.filter(i=>i.avaliacao).slice(-5).map(i=>`${i.titulo} → ${i.avaliacao||''} ${i.observacao?'('+i.observacao+')':''}`).join('\n');
+
+  const prompt = `Você é o motor de inteligência clínica integrativa do Synapse Core — Evolution Therapy.
+Papel: consolidar memória terapêutica de processo, identificando padrões, temas e movimentos clínicos ao longo do tempo.
+
+PACIENTE: ${paciente.nome_completo} | ${paciente.perfil_tipo || 'adulto'}
+
+${memoriaAnterior ? 'MEMÓRIA ANTERIOR:\n' + memoriaAnterior + '\n\n' : ''}
+RESUMO CLÍNICO ATUAL:
+${resumoAtual || 'Não disponível'}
+
+ÚLTIMAS SESSÕES:
+${ultimasSessoes || 'Sem sessões'}
+
+FEEDBACKS DO PACIENTE:
+${feedbacksTexto || 'Sem feedbacks'}
+
+INTERVENÇÕES COM AVALIAÇÃO:
+${intervTexto || 'Sem avaliações'}
+
+Consolide a memória terapêutica identificando padrões estruturais do processo.
+Use linguagem de hipótese. Não diagnostique. Preserve o que estava na memória anterior e adicione o que é novo.
+
+Retorne APENAS JSON válido:
+{
+  "temas_recorrentes": ["tema 1", "tema 2"],
+  "padroes_identificados": ["padrão 1", "padrão 2"],
+  "pontos_de_atencao": ["ponto 1"],
+  "recursos_identificados": ["recurso 1", "recurso 2"],
+  "movimento_terapeutico": "descrição do arco de movimento atual",
+  "proximos_focos": ["foco 1", "foco 2"],
+  "resumo_processo": "síntese do processo terapêutico em 3-5 linhas"
+}`;
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':process.env.ANTHROPIC_API_KEY,'anthropic-version':'2023-06-01'},
+      body:JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:1500, messages:[{role:'user',content:prompt}] })
+    });
+    const data = await resp.json();
+    const text = data.content?.[0]?.text || '{}';
+    const clean = text.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
+    const m = clean.match(/\{[\s\S]*\}/);
+    const json = m ? JSON.parse(m[0]) : {};
+    const duracao = Date.now() - inicio;
+    await registrarAuditoria(db, { paciente_id: paciente.id, modulo:'memoria', referencia_tipo:'paciente', referencia_id: paciente.id, prompt_resumo: prompt, input_hash: crypto.createHash('md5').update(prompt).digest('hex'), output_resumo: text, tokens_usados: data.usage?.output_tokens, duracao_ms: duracao, sucesso: true, modo:'ia' });
+    return { json, texto: text, modo: 'ia' };
+  } catch(e) {
+    await registrarAuditoria(db, { paciente_id: paciente.id, modulo:'memoria', sucesso:false, erro_msg:e.message, modo:'fallback' });
+    return { json: { temas_recorrentes:[], padroes_identificados:[], pontos_de_atencao:[], recursos_identificados:[], movimento_terapeutico:'', proximos_focos:[], resumo_processo: resumoAtual?.substring(0,200)||'' }, texto:'', modo:'fallback', api_erro:e.message };
+  }
+}
 
 // ── SUGERE CIDs (ICD-10) ──
 async function sugerirCIDs({ paciente, respostas, indices, flags }) {

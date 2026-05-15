@@ -173,6 +173,21 @@ body{font-family:var(--f-b);background:var(--bg);color:var(--text);min-height:10
   </div>
 </div>
 
+<!-- Modal: Briefing rápido -->
+<div class="modal-overlay" id="briefingModal">
+  <div class="modal" style="max-width:500px;max-height:88vh;overflow-y:auto">
+    <button onclick="fecharBriefing()" style="position:absolute;top:14px;right:16px;background:none;border:none;color:var(--dim);cursor:pointer;font-size:18px">&#10005;</button>
+    <div style="font-family:var(--f-display);font-size:15px;font-weight:700;margin-bottom:4px;color:var(--accent)">&#128203; Briefing Pré-Sessão</div>
+    <div style="font-size:12px;color:var(--dim);margin-bottom:16px" id="briefingModalNome">--</div>
+    <div id="briefingModalBody">
+      <div style="display:flex;align-items:center;gap:10px;padding:20px 0;color:var(--muted);font-size:13px">
+        <div style="width:16px;height:16px;border:2px solid rgba(212,175,127,.3);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0"></div>
+        Gerando briefing...
+      </div>
+    </div>
+  </div>
+</div>
+
 <script src="/js/shared.js"></script>
 
 <!-- Modal: editar paciente -->
@@ -466,6 +481,16 @@ function renderList(patients) {
       actions.appendChild(btnWa);
     }
 
+    // BRIEFING button
+    var btnBriefing = document.createElement('button');
+    btnBriefing.className = 'btn btn-ghost btn-sm';
+    btnBriefing.style.cssText = 'padding:6px 12px;font-size:12px;background:rgba(139,92,246,.08);border-color:rgba(139,92,246,.25);color:#c4b5fd';
+    btnBriefing.innerHTML = '&#128203; Briefing';
+    btnBriefing.dataset.id = p.id;
+    btnBriefing.dataset.nome = p.nome_completo.split(' ')[0];
+    btnBriefing.addEventListener('click', function(){ abrirBriefingRapido(this.dataset.id, this.dataset.nome); });
+    actions.appendChild(btnBriefing);
+
     // Edit button — discrete, always visible for active patients
     var btnEdit = document.createElement('button');
     btnEdit.className = 'btn btn-ghost btn-sm';
@@ -575,6 +600,49 @@ function mostrarMsgEdit(msg, ok) {
   el.style.background = ok ? 'rgba(16,185,129,.1)' : 'rgba(239,68,68,.1)';
   el.style.color = ok ? '#6ee7b7' : '#fca5a5';
   el.style.border = '1px solid ' + (ok ? 'rgba(16,185,129,.25)' : 'rgba(239,68,68,.25)');
+}
+
+// ── BRIEFING RÁPIDO ──
+function abrirBriefingRapido(id, nome) {
+  document.getElementById('briefingModalNome').textContent = nome;
+  document.getElementById('briefingModalBody').innerHTML =
+    '<div style="display:flex;align-items:center;gap:10px;padding:20px 0;color:var(--muted);font-size:13px">'
+    +'<div style="width:16px;height:16px;border:2px solid rgba(212,175,127,.3);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0"></div>'
+    +'Gerando briefing clínico...</div>';
+  document.getElementById('briefingModal').classList.add('open');
+  api('/api/briefing/' + id + '/gerar', 'POST', {})
+    .then(function(d) { renderBriefingModal(d); })
+    .catch(function(e) {
+      document.getElementById('briefingModalBody').innerHTML =
+        '<div style="color:#fca5a5;font-size:13px;padding:12px 0">'+escH(e.message||'Erro ao gerar briefing.')+'</div>';
+    });
+}
+
+function fecharBriefing() { document.getElementById('briefingModal').classList.remove('open'); }
+
+function renderBriefingModal(d) {
+  var j = d.conteudo_json || {};
+  var html = '';
+  if (d.sem_mudancas) html += '<div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:7px;padding:8px 12px;font-size:11.5px;color:#fcd34d;margin-bottom:12px">&#9888; Sem alterações desde o último briefing</div>';
+  if (j.risco_atual === 'vermelho' || j.risco_atual === 'alto') html += '<div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);border-radius:7px;padding:8px 12px;font-size:12px;font-weight:600;color:#fca5a5;margin-bottom:12px">&#9888; Risco elevado — cautela clínica</div>';
+  if (j.estado_atual) html += secBriefing('Estado Atual', j.estado_atual);
+  if (j.ultima_sessao) {
+    var s = j.ultima_sessao;
+    var items = [s.tema&&'Tema: '+s.tema, s.emocao&&'Emoção: '+s.emocao, s.ponto_trabalhado&&'Trabalhado: '+s.ponto_trabalhado, s.resistencia&&'Resistência: '+s.resistencia, s.tarefa&&'Tarefa: '+s.tarefa].filter(Boolean);
+    if (items.length) html += secBriefing('Última Sessão', items.join(' · '));
+  }
+  if (j.desde_ultima_sessao) html += secBriefing('Desde a Última Sessão', j.desde_ultima_sessao);
+  if (j.pontos_atencao && j.pontos_atencao.length) html += secBriefing('Pontos de Atenção', j.pontos_atencao.map(function(p){return '• '+p;}).join('\n'));
+  if (j.sugestoes_conducao && j.sugestoes_conducao.length) html += secBriefing('Sugestões de Condução', j.sugestoes_conducao.map(function(s,i){return (i+1)+'. '+s;}).join('\n'));
+  if (j.proxima_sessao_numero) html += '<div style="text-align:right;font-size:11px;color:var(--dim);margin-top:8px">Próxima: Sessão '+j.proxima_sessao_numero+'</div>';
+  document.getElementById('briefingModalBody').innerHTML = html || '<div style="color:var(--dim);font-size:13px">Briefing gerado.</div>';
+}
+
+function secBriefing(titulo, texto) {
+  return '<div style="margin-bottom:12px">'
+    +'<div style="font-size:10.5px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.7px;margin-bottom:4px">'+escH(titulo)+'</div>'
+    +'<div style="font-size:13px;color:var(--muted);line-height:1.65;white-space:pre-wrap">'+escH(String(texto))+'</div>'
+    +'</div>';
 }
 
 function reativarPaciente(id, nome) {

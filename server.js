@@ -7,7 +7,7 @@ const { runMigrations } = require('./db/migrations');
 
 const app     = express();
 const PORT    = process.env.PORT || 3000;
-const VERSION = '2.4.1';
+const VERSION = '3.0.0';
 
 // ── MIDDLEWARE ──
 app.use(cors());
@@ -32,6 +32,10 @@ app.use('/api/radar',      require('./routes/radar'));
 app.use('/api/programas',  require('./routes/programas'));
 app.use('/api/financeiro', require('./routes/financeiro'));
 app.use('/api/feedbacks',  require('./routes/feedbacks'));
+// ── v3.0 — Inteligência Clínica ──
+app.use('/api/briefing',    require('./routes/briefing'));
+app.use('/api/intervencoes',require('./routes/intervencoes'));
+app.use('/api/memoria',     require('./routes/memoria'));
 
 // ── PAGES ──
 app.get('/',              (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));

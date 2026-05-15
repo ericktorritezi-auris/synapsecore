@@ -609,20 +609,6 @@ function gerarResumo(force) {
       showToast(err.message||'Erro ao gerar resumo.','error');
     });
 }
-  document.getElementById('resumoText').innerHTML='<div class="resumo-loading"><div class="mini-spin"></div> A IA está analisando o histórico de sessões...</div>';
-  api('/api/sessoes/' + PACIENTE_ID + '/resumo/gerar', 'POST', {})
-    .then(function(data) {
-      document.getElementById('resumoBadge').textContent='v'+data.versao;
-      document.getElementById('resumoText').textContent=data.conteudo;
-      btn.disabled=false; btn.innerHTML='&#8635; Regenerar';
-      showToast('Resumo clínico atualizado!','success');
-    })
-    .catch(function(err) {
-      btn.disabled=false; btn.innerHTML='&#8635; Regenerar';
-      showToast(err.message||'Erro ao gerar resumo.','error');
-    });
-}
-
 // ── FEEDBACKS ──
 function toggleFeedbackForm() {
   var form = document.getElementById('feedbackForm');

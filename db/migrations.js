@@ -202,6 +202,21 @@ async function runMigrations() {
     await client.query(`ALTER TABLE mapeamentos ADD COLUMN IF NOT EXISTS programa_modo VARCHAR(20) DEFAULT 'fallback'`);
     await client.query(`ALTER TABLE sessoes ADD COLUMN IF NOT EXISTS pago BOOLEAN DEFAULT false`);
 
+    // ── FEEDBACKS DO PACIENTE ──
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS feedbacks_paciente (
+        id            SERIAL PRIMARY KEY,
+        paciente_id   INTEGER REFERENCES pacientes(id) ON DELETE CASCADE,
+        data_feedback DATE NOT NULL DEFAULT CURRENT_DATE,
+        conteudo      TEXT NOT NULL,
+        created_at    TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    // ── RESUMO CLÍNICO — campos de controle incremental ──
+    await client.query(`ALTER TABLE resumos_clinicos ADD COLUMN IF NOT EXISTS feedbacks_considerados JSONB DEFAULT '[]'`);
+    await client.query(`ALTER TABLE resumos_clinicos ADD COLUMN IF NOT EXISTS obs_hash VARCHAR(64)`);
+
     console.log('✅ Tabelas verificadas/criadas');
 
     // ── SEED: TERAPEUTA ──

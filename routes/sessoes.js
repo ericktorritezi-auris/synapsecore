@@ -146,7 +146,16 @@ router.get('/:paciente_id/resumo', verifyToken, async (req, res) => {
 // POST /api/sessoes/:paciente_id/resumo/gerar
 router.post('/:paciente_id/resumo/gerar', verifyToken, async (req, res) => {
   try {
-    const resumo = await gerarEAtualizarResumo(req.params.paciente_id);
+    const force = req.body && req.body.force === true;
+    const resumo = await gerarEAtualizarResumo(req.params.paciente_id, force);
+    if (resumo.sem_mudancas) {
+      return res.status(200).json({
+        sem_mudancas: true,
+        message: 'Resumo não gerado pois não houve alterações no sistema desde a última versão.',
+        conteudo: resumo.conteudo,
+        versao: resumo.versao
+      });
+    }
     res.json(resumo);
   } catch (err) {
     console.error('POST /resumo/gerar:', err.message);
@@ -204,9 +213,11 @@ router.delete('/:paciente_id/excluir', verifyToken, async (req, res) => {
   }
 });
 
-// ── HELPER: gera e salva resumo clínico ──
-async function gerarEAtualizarResumo(paciente_id) {
-  const pacRes  = await db.query('SELECT * FROM pacientes WHERE id = $1', [paciente_id]);
+// ── HELPER: gera e salva resumo clínico (com detecção de mudanças) ──
+async function gerarEAtualizarResumo(paciente_id, forceRegenerate) {
+  const crypto = require('crypto');
+
+  const pacRes = await db.query('SELECT * FROM pacientes WHERE id = $1', [paciente_id]);
   if (!pacRes.rows.length) throw new Error('Paciente não encontrado.');
   const paciente = pacRes.rows[0];
 
@@ -218,30 +229,95 @@ async function gerarEAtualizarResumo(paciente_id) {
   if (!sessoes.length) throw new Error('Nenhuma sessão realizada para gerar resumo.');
 
   const mapRes = await db.query(
-    'SELECT * FROM mapeamentos WHERE paciente_id = $1 ORDER BY versao DESC LIMIT 1',
-    [paciente_id]
+    'SELECT * FROM mapeamentos WHERE paciente_id = $1 ORDER BY versao DESC LIMIT 1', [paciente_id]
   );
   const mapeamento = mapRes.rows[0] || null;
 
   const pacoteRes = await db.query('SELECT * FROM pacotes WHERE id = $1', [paciente.pacote_id || 0]);
   const pacote = pacoteRes.rows[0] || null;
 
-  // Calculate version first so we can pass isPrimeiro correctly
-  const versaoRes = await db.query(
-    'SELECT COALESCE(MAX(versao),0)+1 AS prox FROM resumos_clinicos WHERE paciente_id = $1',
-    [paciente_id]
+  // Load feedbacks
+  const feedRes = await db.query(
+    'SELECT * FROM feedbacks_paciente WHERE paciente_id = $1 ORDER BY data_feedback ASC', [paciente_id]
   );
-  const versao = versaoRes.rows[0].prox;
+  const feedbacks = feedRes.rows;
 
-  const conteudo = await gerarResumoClinico({ paciente, sessoes, mapeamento, pacote, isPrimeiro: versao === 1 });
+  // Load last resumo
+  const lastRes = await db.query(
+    'SELECT * FROM resumos_clinicos WHERE paciente_id = $1 ORDER BY versao DESC LIMIT 1', [paciente_id]
+  );
+  const ultimoResumo = lastRes.rows[0] || null;
 
-  const ids = sessoes.map(s => s.id);
+  // ── CHANGE DETECTION ──
+  const versao = ultimoResumo ? ultimoResumo.versao + 1 : 1;
+  const isPrimeiro = versao === 1;
+
+  if (!isPrimeiro && !forceRegenerate && ultimoResumo) {
+    // Build current obs hash
+    const proto = mapeamento?.protocolo_json || {};
+    const obsAtual = [proto.obs_terapeuta, proto.objetivos_iniciais, proto.protocolo_sugerido, proto.sintese_caso].filter(Boolean).join('|');
+    const obsHashAtual = obsAtual ? crypto.createHash('md5').update(obsAtual).digest('hex') : '';
+
+    // Check what's new
+    const sessoesConsideradas = ultimoResumo.sessoes_consideradas || [];
+    const feedbacksConsiderados = ultimoResumo.feedbacks_considerados || [];
+    const obsHashSalvo = ultimoResumo.obs_hash || '';
+
+    const sessoesNovas = sessoes.filter(s => !sessoesConsideradas.includes(s.id));
+    const feedbacksNovos = feedbacks.filter(f => !feedbacksConsiderados.includes(f.id));
+    const obsMudou = obsHashAtual !== obsHashSalvo;
+
+    // Nothing changed — return signal
+    if (!sessoesNovas.length && !feedbacksNovos.length && !obsMudou) {
+      return { versao: ultimoResumo.versao, conteudo: ultimoResumo.conteudo_ia, sem_mudancas: true };
+    }
+
+    // Incremental generation
+    const proto2 = mapeamento?.protocolo_json || {};
+    const novosObsBlock = obsMudou ? [
+      proto2.obs_terapeuta      ? 'Observações: ' + proto2.obs_terapeuta : '',
+      proto2.objetivos_iniciais ? 'Objetivos: ' + proto2.objetivos_iniciais : '',
+      proto2.protocolo_sugerido ? 'Protocolo: ' + proto2.protocolo_sugerido : '',
+      proto2.sintese_caso        ? 'Síntese: ' + proto2.sintese_caso : ''
+    ].filter(Boolean).join('\n') : null;
+
+    const conteudo = await gerarResumoClinico({
+      paciente, sessoes, mapeamento, pacote,
+      isPrimeiro: false,
+      novasSessoes:  sessoesNovas.length ? sessoesNovas : null,
+      novosObsBlock: novosObsBlock || null,
+      novosFeedbacks: feedbacksNovos.length ? feedbacksNovos : null,
+      resumoAtual:   ultimoResumo.conteudo_ia
+    });
+
+    const ids = sessoes.map(s => s.id);
+    const fids = feedbacks.map(f => f.id);
+    const obsHash = obsHashAtual;
+
+    await db.query(
+      `INSERT INTO resumos_clinicos (paciente_id, versao, conteudo_ia, sessoes_consideradas, feedbacks_considerados, obs_hash)
+       VALUES ($1,$2,$3,$4,$5,$6)`,
+      [paciente_id, versao, conteudo, JSON.stringify(ids), JSON.stringify(fids), obsHash]
+    );
+    return { versao, conteudo, sessoes_count: sessoes.length, sem_mudancas: false };
+  }
+
+  // First generation or force full
+  const proto = mapeamento?.protocolo_json || {};
+  const obsAtual = [proto.obs_terapeuta, proto.objetivos_iniciais, proto.protocolo_sugerido, proto.sintese_caso].filter(Boolean).join('|');
+  const obsHash = obsAtual ? crypto.createHash('md5').update(obsAtual).digest('hex') : '';
+
+  const conteudo = await gerarResumoClinico({ paciente, sessoes, mapeamento, pacote, isPrimeiro });
+
+  const ids  = sessoes.map(s => s.id);
+  const fids = feedbacks.map(f => f.id);
+
   await db.query(
-    'INSERT INTO resumos_clinicos (paciente_id, versao, conteudo_ia, sessoes_consideradas) VALUES ($1,$2,$3,$4)',
-    [paciente_id, versao, conteudo, JSON.stringify(ids)]
+    `INSERT INTO resumos_clinicos (paciente_id, versao, conteudo_ia, sessoes_consideradas, feedbacks_considerados, obs_hash)
+     VALUES ($1,$2,$3,$4,$5,$6)`,
+    [paciente_id, versao, conteudo, JSON.stringify(ids), JSON.stringify(fids), obsHash]
   );
-
-  return { versao, conteudo, sessoes_count: sessoes.length };
+  return { versao, conteudo, sessoes_count: sessoes.length, sem_mudancas: false };
 }
 
 module.exports = router;

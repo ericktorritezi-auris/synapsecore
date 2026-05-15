@@ -7,7 +7,7 @@ const { runMigrations } = require('./db/migrations');
 
 const app     = express();
 const PORT    = process.env.PORT || 3000;
-const VERSION = '2.3.7';
+const VERSION = '2.4.0';
 
 // ── MIDDLEWARE ──
 app.use(cors());
@@ -31,6 +31,7 @@ app.use('/api/push',       require('./routes/push'));
 app.use('/api/radar',      require('./routes/radar'));
 app.use('/api/programas',  require('./routes/programas'));
 app.use('/api/financeiro', require('./routes/financeiro'));
+app.use('/api/feedbacks',  require('./routes/feedbacks'));
 
 // ── PAGES ──
 app.get('/',              (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));

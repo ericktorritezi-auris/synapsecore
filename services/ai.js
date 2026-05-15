@@ -533,11 +533,11 @@ Regras: indices_atuais devem refletir a evolução observada nas sessões (podem
 }
 
 // ── GERA RESUMO CLÍNICO PÓS-SESSÃO ──
-async function gerarResumoClinico({ paciente, sessoes, mapeamento, pacote, isPrimeiro }) {
+async function gerarResumoClinico({ paciente, sessoes, mapeamento, pacote, isPrimeiro, novasSessoes, novosObsBlock, novosFeedbacks, resumoAtual }) {
   const indicesStr = mapeamento ? JSON.stringify(mapeamento.indices_json || {}, null, 0) : 'Não disponível';
   const flagsStr   = mapeamento ? (mapeamento.flags_json || []).join(', ') || 'Nenhuma' : 'Não disponível';
 
-  // PRIMEIRO RESUMO: usa apenas dados do formulário (linha de base clínica)
+  // ── PRIMEIRO RESUMO: linha de base apenas com dados do formulário ──
   if (isPrimeiro) {
     const prompt = `Você é um assistente de inteligência clínica do Synapse Core — Evolution Therapy.
 Terapeuta: Erick Torritezi — Psicanalista e Psicoterapeuta Estratégico Integrativo.
@@ -545,20 +545,11 @@ Terapeuta: Erick Torritezi — Psicanalista e Psicoterapeuta Estratégico Integr
 PACIENTE: ${paciente.nome_completo} | Perfil: ${paciente.perfil_tipo || 'adulto'}
 PROGRAMA: ${pacote ? pacote.nome + ' (' + (pacote.qtd_sessoes || '?') + ' sessões)' : 'Não definido'}
 
-ÍNDICES DO MAPEAMENTO INICIAL (baseados no formulário preenchido pelo paciente):
+ÍNDICES DO MAPEAMENTO INICIAL:
 ${indicesStr}
+FLAGS CLÍNICAS: ${flagsStr}
 
-FLAGS CLÍNICAS IDENTIFICADAS: ${flagsStr}
-
-Este é o PRIMEIRO resumo analítico do paciente — baseado exclusivamente nos dados do formulário de avaliação inicial. Não há sessões ou observações do terapeuta para considerar.
-
-Gere um resumo clínico de linha de base (3-4 parágrafos) descrevendo:
-1. O perfil clínico inicial do paciente com base nos índices e flags identificados
-2. As principais áreas de atenção clínica
-3. O potencial terapêutico e pontos de força identificados
-4. Uma direção inicial para o trabalho terapêutico
-
-Use linguagem técnica e clínica. Este resumo servirá como referência de ponto de partida para acompanhar a evolução do paciente.`;
+Este é o PRIMEIRO resumo analítico — baseado exclusivamente nos dados do formulário de avaliação inicial. Gere um resumo clínico de linha de base (3-4 parágrafos) descrevendo o perfil clínico inicial, principais áreas de atenção, pontos de força e direção inicial para o trabalho terapêutico. Use linguagem técnica e clínica.`;
 
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -570,22 +561,53 @@ Use linguagem técnica e clínica. Este resumo servirá como referência de pont
     return d.content?.[0]?.text || 'Resumo inicial não gerado.';
   }
 
-  // REGERAÇÃO: usa tudo — observações, sessões, protocolo
-  const proto = mapeamento?.protocolo_json || {};
-  const obsText      = proto.obs_terapeuta     || '';
-  const objText      = proto.objetivos_iniciais || '';
-  const protocolText = proto.protocolo_sugerido || '';
-  const sinteseText  = proto.sintese_caso       || '';
+  // ── REGERAÇÃO INCREMENTAL: só passa o que é novo ──
+  if (resumoAtual && (novasSessoes || novosObsBlock || novosFeedbacks)) {
+    const novidades = [];
+    if (novosObsBlock) novidades.push('NOVA OBSERVAÇÃO DO TERAPEUTA:\n' + novosObsBlock);
+    if (novasSessoes && novasSessoes.length) {
+      novidades.push('NOVA(S) SESSÃO(ÕES) REGISTRADA(S):\n' +
+        novasSessoes.map(s => 'Sessão ' + s.sessao_numero + ' (' + new Date(s.data_sessao).toLocaleDateString('pt-BR') + '): ' + (s.resumo_terapeuta || 'Sem resumo registrado.')).join('\n'));
+    }
+    if (novosFeedbacks && novosFeedbacks.length) {
+      novidades.push('NOVO(S) FEEDBACK(S) DO PACIENTE:\n' +
+        novosFeedbacks.map(f => new Date(f.data_feedback).toLocaleDateString('pt-BR') + ': ' + f.conteudo).join('\n\n'));
+    }
 
+    const prompt = `Você é um assistente de inteligência clínica do Synapse Core — Evolution Therapy.
+Terapeuta: Erick Torritezi — Psicanalista e Psicoterapeuta Estratégico Integrativo.
+
+PACIENTE: ${paciente.nome_completo} | Perfil: ${paciente.perfil_tipo || 'adulto'}
+
+RESUMO CLÍNICO ATUAL:
+${resumoAtual}
+
+NOVIDADES DESDE A ÚLTIMA VERSÃO:
+${novidades.join('\n\n')}
+
+Atualize o resumo clínico incorporando essas novidades. Mantenha o que já estava correto e preciso. Acrescente e refine com base nas novas informações. Use linguagem técnica e clínica. Retorne apenas o resumo atualizado completo, sem comentários adicionais.`;
+
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': process.env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1800, messages: [{ role: 'user', content: prompt }] })
+    });
+    if (!resp.ok) throw new Error('Anthropic error: ' + resp.status);
+    const d = await resp.json();
+    return d.content?.[0]?.text || resumoAtual;
+  }
+
+  // ── REGERAÇÃO COMPLETA (fallback): usa tudo ──
+  const proto = mapeamento?.protocolo_json || {};
   const obsBlock = [
-    obsText      ? 'Observações do terapeuta: ' + obsText : '',
-    objText      ? 'Objetivos iniciais definidos: ' + objText : '',
-    protocolText ? 'Protocolo sugerido (editado): ' + protocolText : '',
-    sinteseText  ? 'Síntese inicial do caso: ' + sinteseText : ''
+    proto.obs_terapeuta      ? 'Observações: ' + proto.obs_terapeuta : '',
+    proto.objetivos_iniciais ? 'Objetivos: ' + proto.objetivos_iniciais : '',
+    proto.protocolo_sugerido ? 'Protocolo: ' + proto.protocolo_sugerido : '',
+    proto.sintese_caso        ? 'Síntese: ' + proto.sintese_caso : ''
   ].filter(Boolean).join('\n\n');
 
   const sessoesStr = sessoes.map(s =>
-    'Sessão ' + s.sessao_numero + ' (' + new Date(s.data_sessao).toLocaleDateString('pt-BR') + '): ' + (s.resumo_terapeuta || 'Sem resumo registrado.')
+    'Sessão ' + s.sessao_numero + ' (' + new Date(s.data_sessao).toLocaleDateString('pt-BR') + '): ' + (s.resumo_terapeuta || 'Sem resumo.')
   ).join('\n');
 
   const prompt = `Você é um assistente de inteligência clínica do Synapse Core — Evolution Therapy.

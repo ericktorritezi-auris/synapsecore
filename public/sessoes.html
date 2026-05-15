@@ -276,6 +276,35 @@ body{font-family:var(--fb);background:var(--bg);color:var(--tx);min-height:100vh
 
   <!-- Danger zone -->
   <div class="danger-zone" id="dangerZone" style="display:none">
+  <!-- FEEDBACKS DO PACIENTE -->
+  <div style="background:var(--s2);border:1px solid var(--border);border-radius:var(--r);padding:18px;margin-bottom:16px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <div style="font-family:var(--f-display);font-size:13px;font-weight:700;display:flex;align-items:center;gap:7px">
+        <span>&#128172;</span> Feedbacks do Paciente
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="toggleFeedbackForm()">+ Novo</button>
+    </div>
+    <!-- Form -->
+    <div id="feedbackForm" style="display:none;background:rgba(11,19,43,.4);border:1px solid var(--border);border-radius:9px;padding:14px;margin-bottom:14px">
+      <div style="display:grid;grid-template-columns:140px 1fr;gap:10px;margin-bottom:10px">
+        <div>
+          <label style="font-size:10.5px;font-weight:500;color:var(--muted);letter-spacing:.7px;text-transform:uppercase;display:block;margin-bottom:5px">Data</label>
+          <input type="date" id="fFeedbackData" style="width:100%;background:rgba(11,19,43,.6);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;padding:8px 10px;outline:none">
+        </div>
+        <div>
+          <label style="font-size:10.5px;font-weight:500;color:var(--muted);letter-spacing:.7px;text-transform:uppercase;display:block;margin-bottom:5px">Feedback</label>
+          <textarea id="fFeedbackConteudo" rows="3" placeholder="Cole ou escreva o feedback do paciente..." style="width:100%;background:rgba(11,19,43,.6);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;padding:8px 10px;outline:none;resize:vertical;line-height:1.5"></textarea>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn btn-ghost btn-sm" onclick="toggleFeedbackForm()">Cancelar</button>
+        <button class="btn btn-primary btn-sm" onclick="salvarFeedback()" id="btnSalvarFeedback">Salvar</button>
+      </div>
+    </div>
+    <!-- List -->
+    <div id="feedbackList"><div style="font-size:12.5px;color:var(--dim);padding:8px 0">Carregando...</div></div>
+  </div>
+
     <div class="dz-title">&#9888; Zona de Perigo</div>
     <div class="dz-row">
       <div class="dz-desc" id="dzDesc">Inativar remove o paciente da lista ativa. Pode ser reativado.</div>
@@ -311,6 +340,7 @@ window.addEventListener('DOMContentLoaded', function() {
     renderPatient();
     renderSessoes();
     loadResumo();
+    carregarFeedbacks();
   }).catch(function(err) {
     showToast('Erro ao carregar dados.', 'error');
   });
@@ -544,9 +574,41 @@ function verResumo() {
   document.getElementById('resumoCard').scrollIntoView({behavior:'smooth'});
 }
 
-function gerarResumo() {
+function gerarResumo(force) {
   var btn = document.getElementById('btnGerarResumo');
   btn.disabled=true; btn.textContent='Gerando...';
+  document.getElementById('resumoText').innerHTML='<div class="resumo-loading"><div class="mini-spin"></div> A IA está analisando o histórico...</div>';
+  api('/api/sessoes/' + PACIENTE_ID + '/resumo/gerar', 'POST', { force: force === true })
+    .then(function(data) {
+      btn.disabled=false; btn.innerHTML='&#8635; Regenerar';
+      if (data.sem_mudancas) {
+        document.getElementById('resumoText').textContent = data.conteudo || '';
+        // Show alert
+        var alerta = document.getElementById('resumoSemMudancas');
+        if (!alerta) {
+          alerta = document.createElement('div');
+          alerta.id = 'resumoSemMudancas';
+          alerta.style.cssText = 'background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:8px;padding:10px 14px;font-size:12.5px;color:#fcd34d;margin-top:10px;display:flex;align-items:center;justify-content:space-between;gap:10px';
+          alerta.innerHTML = '<span>&#9888; Resumo não gerado pois não houve alterações no sistema desde a última versão.</span>'
+            +'<button onclick="gerarResumo(true)" style="background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.3);color:#fcd34d;border-radius:6px;padding:4px 10px;font-size:11.5px;cursor:pointer;white-space:nowrap">Forçar ↻</button>';
+          document.getElementById('resumoText').after(alerta);
+        }
+        alerta.style.display = 'flex';
+        return;
+      }
+      // New resumo generated
+      var alerta = document.getElementById('resumoSemMudancas');
+      if (alerta) alerta.style.display = 'none';
+      document.getElementById('resumoBadge').textContent='v'+data.versao;
+      document.getElementById('resumoText').textContent=data.conteudo;
+      showToast('Resumo clínico atualizado!','success');
+    })
+    .catch(function(err) {
+      btn.disabled=false; btn.innerHTML='&#8635; Regenerar';
+      document.getElementById('resumoText').textContent = '';
+      showToast(err.message||'Erro ao gerar resumo.','error');
+    });
+}
   document.getElementById('resumoText').innerHTML='<div class="resumo-loading"><div class="mini-spin"></div> A IA está analisando o histórico de sessões...</div>';
   api('/api/sessoes/' + PACIENTE_ID + '/resumo/gerar', 'POST', {})
     .then(function(data) {
@@ -560,6 +622,70 @@ function gerarResumo() {
       showToast(err.message||'Erro ao gerar resumo.','error');
     });
 }
+
+// ── FEEDBACKS ──
+function toggleFeedbackForm() {
+  var form = document.getElementById('feedbackForm');
+  var isOpen = form.style.display === 'block';
+  form.style.display = isOpen ? 'none' : 'block';
+  if (!isOpen) {
+    var today = new Date().toISOString().split('T')[0];
+    document.getElementById('fFeedbackData').value = today;
+    document.getElementById('fFeedbackConteudo').value = '';
+  }
+}
+
+function carregarFeedbacks() {
+  api('/api/feedbacks/' + PACIENTE_ID)
+    .then(function(data) {
+      var wrap = document.getElementById('feedbackList');
+      if (!data.length) {
+        wrap.innerHTML = '<div style="font-size:12.5px;color:var(--dim);padding:4px 0">Nenhum feedback registrado ainda.</div>';
+        return;
+      }
+      wrap.innerHTML = '';
+      data.forEach(function(f, i) {
+        var isLast = i === data.length - 1;
+        var item = document.createElement('div');
+        item.style.cssText = 'padding:10px 0;' + (isLast ? '' : 'border-bottom:1px solid var(--border);');
+        item.innerHTML =
+          '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">'
+            +'<span style="font-size:11.5px;font-weight:600;color:var(--accent)">'
+              + formatDate(f.data_feedback)
+            +'</span>'
+            +'<button onclick="removerFeedback('+f.id+')" style="background:none;border:none;color:var(--dim);cursor:pointer;font-size:13px;padding:2px 5px">&#10005;</button>'
+          +'</div>'
+          +'<div style="font-size:13px;color:var(--muted);line-height:1.65;white-space:pre-wrap">'+escH(f.conteudo)+'</div>';
+        wrap.appendChild(item);
+      });
+    })
+    .catch(function(){});
+}
+
+function salvarFeedback() {
+  var conteudo = document.getElementById('fFeedbackConteudo').value.trim();
+  var data = document.getElementById('fFeedbackData').value;
+  if (!conteudo) { showToast('Escreva o feedback antes de salvar.','error'); return; }
+  var btn = document.getElementById('btnSalvarFeedback');
+  btn.disabled=true; btn.textContent='Salvando...';
+  api('/api/feedbacks/' + PACIENTE_ID, 'POST', { conteudo: conteudo, data_feedback: data })
+    .then(function() {
+      toggleFeedbackForm();
+      carregarFeedbacks();
+      showToast('Feedback salvo!','success');
+    })
+    .catch(function(e){ showToast(e.message||'Erro.','error'); })
+    .finally(function(){ btn.disabled=false; btn.textContent='Salvar'; });
+}
+
+function removerFeedback(id) {
+  if (!confirm('Remover este feedback?')) return;
+  api('/api/feedbacks/'+id,'DELETE')
+    .then(function(){ carregarFeedbacks(); showToast('Removido.','success'); })
+    .catch(function(e){ showToast(e.message,'error'); });
+}
+
+function escH(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 // ── RELATÓRIO DE EVOLUÇÃO (sessões) ──
 function abrirEvolucao() {

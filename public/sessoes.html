@@ -317,7 +317,7 @@ body{font-family:var(--fb);background:var(--bg);color:var(--tx);min-height:100vh
       </div>
       <div style="display:flex;gap:8px">
         <button class="btn btn-ghost btn-sm" onclick="gerarMemoriaSess()" id="btnGerarMemoria" style="font-size:11.5px">&#8635; Atualizar</button>
-        <a id="btnVerMemoriaCompleta" href="#" class="btn btn-ghost btn-sm" style="font-size:11.5px;display:none">Ver completa &#8599;</a>
+        <button id="btnVerMemoriaCompleta" onclick="abrirMemoriaCompleta()" class="btn btn-ghost btn-sm" style="font-size:11.5px;display:none">Ver completa &#8599;</button>
       </div>
     </div>
     <div id="memoriaResumo"><div style="font-size:12.5px;color:var(--dim);padding:4px 0">Nenhuma memória gerada ainda.</div></div>
@@ -365,7 +365,35 @@ body{font-family:var(--fb);background:var(--bg);color:var(--tx);min-height:100vh
   <div class="page-footer">&copy; 2026 Synapse Core &mdash; <strong>Erick Torritezi</strong></div>
 </main>
 
+<!-- Modal: Memória Terapêutica Completa -->
+<div style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:100;align-items:flex-start;justify-content:center;padding:16px;backdrop-filter:blur(4px);overflow-y:auto" id="memoriaModal" onclick="if(event.target===this)fecharMemoriaModal()">
+  <div style="background:#1a2540;border:1px solid rgba(212,175,127,.25);border-radius:18px;padding:24px 20px;width:100%;max-width:540px;margin:auto;position:relative;max-height:88vh;overflow-y:auto">
+    <button onclick="fecharMemoriaModal()" style="position:absolute;top:14px;right:16px;background:none;border:none;color:rgba(201,209,217,.4);cursor:pointer;font-size:18px">&#10005;</button>
+    <div style="font-family:var(--f-display);font-size:15px;font-weight:700;color:var(--accent);margin-bottom:4px">&#129504; Memória Terapêutica</div>
+    <div style="font-size:12px;color:var(--dim);margin-bottom:18px" id="memoriaModalMeta">--</div>
+    <div id="memoriaModalBody"></div>
+    <div style="margin-top:18px;border-top:1px solid var(--border);padding-top:14px">
+      <div style="font-family:var(--f-display);font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px">Histórico de versões</div>
+      <div id="memoriaHistorico"></div>
+    </div>
+  </div>
+</div>
+
 <script src="/js/shared.js"></script>
+
+<!-- Modal: Memória Terapêutica Completa -->
+<div class="modal-overlay" id="memoriaModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:100;align-items:flex-start;justify-content:center;padding:16px;backdrop-filter:blur(4px);overflow-y:auto">
+  <div style="background:#1a2540;border:1px solid rgba(212,175,127,.25);border-radius:18px;padding:22px 20px;width:100%;max-width:520px;margin:auto;position:relative">
+    <button onclick="fecharMemoriaModal()" style="position:absolute;top:14px;right:16px;background:none;border:none;color:rgba(201,209,217,.4);cursor:pointer;font-size:18px">&#10005;</button>
+    <div style="font-family:var(--f-display);font-size:15px;font-weight:700;margin-bottom:4px">&#129504; Memória Terapêutica</div>
+    <div style="font-size:11.5px;color:var(--muted);margin-bottom:16px" id="memoriaModalMeta">--</div>
+    <div id="memoriaModalBody"></div>
+    <div style="margin-top:16px;border-top:1px solid rgba(201,209,217,.1);padding-top:12px">
+      <div style="font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px">Histórico de versões</div>
+      <div id="memoriaHistoricoList" style="font-size:12px;color:rgba(201,209,217,.4)">Carregando...</div>
+    </div>
+  </div>
+</div>
 <script>
 checkAuth();
 renderUserPill();
@@ -795,11 +823,11 @@ function carregarMemoria() {
 function renderMemoriaResumo(d) {
   var j = d.conteudo_json || {};
   var wrap = document.getElementById('memoriaResumo');
-  var lnk  = document.getElementById('btnVerMemoriaCompleta');
-  lnk.style.display = 'inline-flex';
-  lnk.href = '/sessoes/' + PACIENTE_ID + '#memoria-completa';
+  var btn  = document.getElementById('btnVerMemoriaCompleta');
+  btn.style.display = 'inline-flex';
+  btn.dataset.memoriaId = d.id;
 
-  var html = '<div style="font-size:11px;color:var(--dim);margin-bottom:10px">v'+d.versao+' · '+new Date(d.gerado_em).toLocaleDateString('pt-BR')+(d.ativa?' · Ativa':'')+'</div>';
+  var html = '<div style="font-size:11px;color:var(--dim);margin-bottom:10px">v'+d.versao+' · '+new Date(d.gerado_em).toLocaleDateString('pt-BR')+'</div>';
   if (j.temas_recorrentes && j.temas_recorrentes.length) {
     html += '<div style="margin-bottom:8px"><div style="font-size:10.5px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.7px;margin-bottom:4px">Temas Recorrentes</div>'
       +'<div style="display:flex;flex-wrap:wrap;gap:5px">'
@@ -815,6 +843,118 @@ function renderMemoriaResumo(d) {
       +'<div style="font-size:12.5px;color:var(--muted);line-height:1.6">'+escH(j.movimento_terapeutico)+'</div></div>';
   }
   wrap.innerHTML = html;
+}
+
+var memoriaAtualData = null;
+
+function abrirMemoriaCompleta() {
+  var modal = document.getElementById('memoriaModal');
+  modal.style.display = 'flex';
+  api('/api/memoria/' + PACIENTE_ID + '/atual').then(function(d) {
+    if (!d) { document.getElementById('memoriaModalBody').innerHTML='<div style="color:var(--dim);font-size:13px">Nenhuma memória gerada ainda.</div>'; return; }
+    memoriaAtualData = d;
+    var j = d.conteudo_json || {};
+    document.getElementById('memoriaModalMeta').textContent = 'Versão '+d.versao+' · Gerada em '+new Date(d.gerado_em).toLocaleDateString('pt-BR');
+    var html = '';
+    var secs = [
+      ['Resumo do Processo', j.resumo_processo, '#c4b5fd'],
+      ['Temas Recorrentes', j.temas_recorrentes && j.temas_recorrentes.join(' · '), 'var(--accent)'],
+      ['Padrões Identificados', j.padroes_identificados && j.padroes_identificados.join('\n'), '#93c5fd'],
+      ['Pontos de Atenção', j.pontos_de_atencao && j.pontos_de_atencao.map(function(p){return '⚑ '+p;}).join('\n'), '#fca5a5'],
+      ['Recursos Identificados', j.recursos_identificados && j.recursos_identificados.join('\n'), '#6ee7b7'],
+      ['Movimento Terapêutico', j.movimento_terapeutico, '#6ee7b7'],
+      ['Próximos Focos', j.proximos_focos && j.proximos_focos.map(function(f,i){return (i+1)+'. '+f;}).join('\n'), '#fcd34d'],
+    ];
+    secs.forEach(function(s) {
+      if (!s[1]) return;
+      html += '<div style="margin-bottom:14px">'
+        +'<div style="font-size:10.5px;font-weight:700;color:'+s[2]+';text-transform:uppercase;letter-spacing:.7px;margin-bottom:5px">'+escH(s[0])+'</div>'
+        +'<div style="font-size:13px;color:var(--muted);line-height:1.7;white-space:pre-wrap">'+escH(String(s[1]))+'</div>'
+        +'</div>';
+    });
+    document.getElementById('memoriaModalBody').innerHTML = html || '<div style="color:var(--dim)">Sem conteúdo.</div>';
+  }).catch(function(){});
+
+  // Load history
+  api('/api/memoria/' + PACIENTE_ID + '/historico').then(function(hist) {
+    var hl = document.getElementById('memoriaHistoricoList');
+    if (!hist.length) { hl.textContent='Nenhuma versão anterior.'; return; }
+    hl.innerHTML = hist.map(function(h) {
+      return '<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid rgba(201,209,217,.06)">'
+        +'<span style="font-weight:600;color:'+(h.ativa?'var(--accent)':'rgba(201,209,217,.3)')+'">v'+h.versao+'</span>'
+        +'<span style="color:rgba(201,209,217,.4)">'+new Date(h.gerado_em).toLocaleDateString('pt-BR')+'</span>'
+        +(h.ativa?'<span style="font-size:10px;background:rgba(16,185,129,.1);color:#6ee7b7;padding:1px 7px;border-radius:10px">ativa</span>':'')
+        +'</div>';
+    }).join('');
+  }).catch(function(){});
+}
+
+function fecharMemoriaModal() {
+  document.getElementById('memoriaModal').style.display = 'none';
+}
+
+function fecharMemoriaModal() {
+  document.getElementById('memoriaModal').style.display = 'none';
+}
+
+function abrirMemoriaCompleta() {
+  var modal = document.getElementById('memoriaModal');
+  modal.style.display = 'flex';
+  document.getElementById('memoriaModalBody').innerHTML = '<div style="color:var(--dim);font-size:13px">Carregando...</div>';
+  document.getElementById('memoriaHistorico').innerHTML = '';
+
+  api('/api/memoria/' + PACIENTE_ID + '/atual').then(function(d) {
+    if (!d) { document.getElementById('memoriaModalBody').innerHTML='<div style="color:var(--dim);font-size:13px">Nenhuma memória gerada ainda.</div>'; return; }
+    document.getElementById('memoriaModalMeta').textContent = 'v' + d.versao + ' · ' + new Date(d.gerado_em).toLocaleDateString('pt-BR') + ' · Versão ativa';
+    renderMemoriaCompleta(d.conteudo_json || {});
+  }).catch(function(e){ document.getElementById('memoriaModalBody').innerHTML='<div style="color:#fca5a5;font-size:13px">'+escH(e.message)+'</div>'; });
+
+  api('/api/memoria/' + PACIENTE_ID + '/historico').then(function(hist) {
+    var wrap = document.getElementById('memoriaHistorico');
+    if (!hist.length) { wrap.innerHTML='<div style="font-size:12px;color:var(--dim)">Apenas uma versão registrada.</div>'; return; }
+    wrap.innerHTML = hist.map(function(h) {
+      return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px;color:var(--muted)">'
+        +'<span style="font-family:var(--f-display);font-weight:700;color:'+( h.ativa?'var(--accent)':'var(--dim)')+'"">v'+h.versao+'</span>'
+        +'<span>'+new Date(h.gerado_em).toLocaleDateString('pt-BR')+'</span>'
+        +(h.ativa?'<span style="font-size:10.5px;background:rgba(16,185,129,.1);color:#6ee7b7;padding:1px 7px;border-radius:10px;font-weight:600">Ativa</span>':'')
+        +'</div>';
+    }).join('');
+  }).catch(function(){});
+}
+
+function renderMemoriaCompleta(j) {
+  var SECTIONS = [
+    ['Temas Recorrentes', j.temas_recorrentes, 'var(--accent)', 'tags'],
+    ['Padrões Identificados', j.padroes_identificados, '#c4b5fd', 'list'],
+    ['Pontos de Atenção', j.pontos_de_atencao, '#fca5a5', 'list'],
+    ['Recursos Identificados', j.recursos_identificados, '#6ee7b7', 'list'],
+    ['Próximos Focos', j.proximos_focos, '#93c5fd', 'list'],
+  ];
+  var html = '';
+  SECTIONS.forEach(function(sec) {
+    if (!sec[1] || !sec[1].length) return;
+    html += '<div style="margin-bottom:14px">'
+      +'<div style="font-size:10.5px;font-weight:700;color:'+sec[2]+';text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px">'+escH(sec[0])+'</div>';
+    if (sec[3]==='tags') {
+      html += '<div style="display:flex;flex-wrap:wrap;gap:5px">'
+        +sec[1].map(function(t){return '<span style="font-size:12px;background:rgba(212,175,127,.08);border:1px solid rgba(212,175,127,.2);border-radius:20px;padding:2px 10px;color:var(--accent)">'+escH(t)+'</span>';}).join('')
+        +'</div>';
+    } else {
+      html += sec[1].map(function(t){return '<div style="font-size:13px;color:var(--muted);margin-bottom:3px;line-height:1.55">• '+escH(t)+'</div>';}).join('');
+    }
+    html += '</div>';
+  });
+  if (j.movimento_terapeutico) {
+    html += '<div style="background:rgba(16,185,129,.05);border:1px solid rgba(16,185,129,.15);border-radius:9px;padding:12px 14px;margin-bottom:14px">'
+      +'<div style="font-size:10.5px;font-weight:700;color:#6ee7b7;text-transform:uppercase;letter-spacing:.7px;margin-bottom:5px">Movimento Terapêutico</div>'
+      +'<div style="font-size:13px;color:var(--muted);line-height:1.65">'+escH(j.movimento_terapeutico)+'</div></div>';
+  }
+  if (j.resumo_processo) {
+    html += '<div style="background:rgba(212,175,127,.05);border:1px solid rgba(212,175,127,.15);border-radius:9px;padding:12px 14px">'
+      +'<div style="font-size:10.5px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.7px;margin-bottom:5px">Síntese do Processo</div>'
+      +'<div style="font-size:13px;color:var(--muted);line-height:1.65">'+escH(j.resumo_processo)+'</div></div>';
+  }
+  document.getElementById('memoriaModalBody').innerHTML = html || '<div style="color:var(--dim);font-size:13px">Memória gerada sem dados suficientes.</div>';
 }
 
 // ── CALL ON INIT ──

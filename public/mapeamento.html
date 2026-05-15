@@ -254,7 +254,7 @@ body{font-family:var(--fb);background:var(--bg);color:var(--text);min-height:100
 
       <!-- PROGRAMA -->
       <div class="prog-card" id="progCard" style="display:none">
-        <div class="prog-compat"><span class="compat-num" id="compatNum">--</span><span style="font-size:13px;color:var(--muted)">% compatibilidade</span></div>
+        <div class="prog-compat"><span class="compat-num" id="compatNum">--</span><span id="compatSuffix" style="font-size:13px;color:var(--muted)">% compatibilidade</span></div>
         <div class="prog-title" id="progNome">--</div>
         <div class="sec-text" id="progJust">--</div>
         <!-- Fallback warning -->
@@ -582,19 +582,31 @@ function renderReport(data) {
   }
 
   // Programa
-  if (programa && programa.nome) {
-    document.getElementById('compatNum').textContent = programa.compat || 70;
-    document.getElementById('progNome').textContent  = programa.nome;
-    document.getElementById('progJust').textContent  = programa.justificativa || relatorio.programa_recomendado?.justificativa || '';
-    document.getElementById('progCard').style.display = 'block';
-    // Show fallback warning if AI was not used
-    if (programa.modo === 'fallback' || data.programa_modo === 'fallback') {
-      document.getElementById('progFallbackWarn').style.display = 'block';
+  if (programa) {
+    var progNome   = (programa.nome && programa.nome !== 'undefined') ? programa.nome : null;
+    var progCompat = (programa.compat && programa.compat !== 'undefined') ? parseInt(programa.compat) : null;
+    var progJust   = programa.justificativa || (relatorio.programa_recomendado && relatorio.programa_recomendado.justificativa) || '';
+
+    if (!progNome) {
+      // IA didn't find a matching program — show graceful message
+      document.getElementById('compatNum').textContent = '--';
+      document.getElementById('compatSuffix').style.display = 'none';
+      document.getElementById('progNome').textContent  = 'Abordagem individualizada recomendada';
+      document.getElementById('progJust').textContent  = progJust || 'O perfil clínico apresentado requer uma abordagem personalizada. Nenhum dos programas estruturados foi identificado como plenamente compatível neste momento.';
+    } else {
+      document.getElementById('compatNum').textContent = progCompat || '--';
+      document.getElementById('progNome').textContent  = progNome;
+      document.getElementById('progJust').textContent  = progJust;
+      if (programa.modo === 'fallback' || data.programa_modo === 'fallback') {
+        document.getElementById('progFallbackWarn').style.display = 'block';
+      }
     }
+    document.getElementById('progCard').style.display = 'block';
   } else if (relatorio.programa_recomendado) {
     var pr = relatorio.programa_recomendado;
-    document.getElementById('compatNum').textContent = pr.compatibilidade || 70;
-    document.getElementById('progNome').textContent  = pr.nome || '';
+    var prNome = (pr.nome && pr.nome !== 'undefined') ? pr.nome : 'Abordagem individualizada recomendada';
+    document.getElementById('compatNum').textContent = (pr.compatibilidade && pr.compatibilidade !== 'undefined') ? pr.compatibilidade : '--';
+    document.getElementById('progNome').textContent  = prNome;
     document.getElementById('progJust').textContent  = pr.justificativa || '';
     document.getElementById('progCard').style.display = 'block';
   }
@@ -657,6 +669,9 @@ function renderReport(data) {
   carregarCIDs(regeandoMapeamento);
   regeandoMapeamento = false;
   carregarHistoricoEvolucao();
+
+  // Auto-patch existing evolution report with correct session data (silently)
+  api('/api/evolucao/' + PACIENTE_ID + '/patch-conteudo', 'POST', {}).catch(function(){});
 }
 
 // ── RADAR SVG ──

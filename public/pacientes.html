@@ -645,6 +645,8 @@ function secBriefing(titulo, texto) {
     +'</div>';
 }
 
+function escH(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
 function reativarPaciente(id, nome) {
   if (!confirm('Reativar ' + nome + '?\nEle voltará para a lista ativa.')) return;
   api('/api/sessoes/' + id + '/reativar', 'PUT', {})

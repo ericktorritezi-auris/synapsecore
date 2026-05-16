@@ -218,12 +218,12 @@ body{font-family:var(--fb);background:var(--bg);color:var(--tx);min-height:100vh
     </div>
 
     <!-- Linha Evolutiva -->
-    <div class="sec sec-accent" style="margin-bottom:14px">
+    <div class="sec sec-accent open" id="secLinhaEv" style="margin-bottom:14px">
       <div class="sec-header" onclick="toggleSec('secLinhaEv')">
         <div class="sec-title" style="color:var(--ac)">&#128200; Linha Evolutiva Emocional</div>
         <span class="sec-arrow">▾</span>
       </div>
-      <div class="sec-body" id="secLinhaEv" style="display:block">
+      <div class="sec-body">
         <div id="linhaEvChart">
           <div class="loading-row"><div class="mini-spin"></div>Carregando linha evolutiva...</div>
         </div>
@@ -231,36 +231,36 @@ body{font-family:var(--fb);background:var(--bg);color:var(--tx);min-height:100vh
     </div>
 
     <!-- Risco de Abandono -->
-    <div class="sec" style="margin-bottom:14px;border-color:rgba(239,68,68,.2)">
+    <div class="sec open" id="secRisco" style="margin-bottom:14px;border-color:rgba(239,68,68,.2)">
       <div style="height:2px;background:linear-gradient(90deg,#ef4444,transparent)"></div>
       <div class="sec-header" onclick="toggleSec('secRisco')">
         <div class="sec-title" style="color:#fca5a5">&#9888; Risco de Abandono</div>
         <span class="sec-arrow">▾</span>
       </div>
-      <div class="sec-body" id="secRisco">
+      <div class="sec-body">
         <div id="riscoBody"><div class="loading-row"><div class="mini-spin"></div>Carregando risco...</div></div>
       </div>
     </div>
 
     <!-- Tendência Prospectiva -->
-    <div class="sec" style="margin-bottom:14px;border-color:rgba(99,102,241,.25)">
+    <div class="sec open" id="secPreditiva" style="margin-bottom:14px;border-color:rgba(99,102,241,.25)">
       <div style="height:2px;background:linear-gradient(90deg,#6366f1,transparent)"></div>
       <div class="sec-header" onclick="toggleSec('secPreditiva')">
         <div class="sec-title" style="color:#a5b4fc">&#128302; Tendência Prospectiva</div>
         <span class="sec-arrow">▾</span>
       </div>
-      <div class="sec-body" id="secPreditiva">
+      <div class="sec-body">
         <div id="preditivaBody"><div class="loading-row"><div class="mini-spin"></div>Carregando tendência...</div></div>
       </div>
     </div>
 
     <!-- Histórico de Tendências -->
-    <div class="sec" style="margin-bottom:14px">
-      <div class="sec-header" onclick="toggleSec('secHistLong');if(!this.parentElement.classList.contains('open'))carregarHistLongitudinal()">
+    <div class="sec" id="secHistLong" style="margin-bottom:14px">
+      <div class="sec-header" onclick="toggleSec('secHistLong');if(document.getElementById('secHistLong').classList.contains('open'))carregarHistLongitudinal()">
         <div class="sec-title" style="color:var(--dim)">&#128337; Histórico de Tendências</div>
         <span class="sec-arrow">▾</span>
       </div>
-      <div class="sec-body" id="secHistLong">
+      <div class="sec-body">
         <div id="histLongBody"><div style="font-size:12.5px;color:var(--dim)">Clique para expandir</div></div>
       </div>
     </div>
@@ -832,7 +832,7 @@ function carregarHistLongitudinal() {
     }
     if (!html) html = '<div style="font-size:12.5px;color:var(--dim)">Sem histórico ainda.</div>';
     document.getElementById('histLongBody').innerHTML = html;
-    document.getElementById('secHistLong').parentElement.classList.add('open');
+    document.getElementById('secHistLong').classList.add('open');
   }).catch(function(){});
 }
 

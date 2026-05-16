@@ -378,7 +378,7 @@ NÃO diagnostique. Use linguagem de hipóteses ("sugere", "indica", "observa-se 
   return { relatorio, programa: prog };
 }
 
-module.exports = { calcularIndices, detectarFlags, gerarMapeamento, FLAG_LABELS, sugerirPrograma, sugerirProgramaLocal, gerarResumoClinico, gerarEvolucao, sugerirCIDs, registrarAuditoria, gerarBriefingSessao, gerarIntervencoes, atualizarMemoriaTerapeutica, gerarAnaliseEstrutural, gerarHipotesesClinicas, gerarMapaIdentidade, gerarSnapshotEvolutivoLeve, calcularScoreRiscoBasico, gerarRiscoAbandonoClinico, gerarEvolucaoPreditiva };
+module.exports = { calcularIndices, detectarFlags, gerarMapeamento, FLAG_LABELS, sugerirPrograma, sugerirProgramaLocal, gerarResumoClinico, gerarEvolucao, sugerirCIDs, registrarAuditoria, gerarBriefingSessao, gerarIntervencoes, atualizarMemoriaTerapeutica, gerarAnaliseEstrutural, gerarHipotesesClinicas, gerarMapaIdentidade, gerarSnapshotEvolutivoLeve, calcularScoreRiscoBasico, gerarRiscoAbandonoClinico, gerarEvolucaoPreditiva, gerarProntuarioInteligente };
 
 // ══════════════════════════════════════════════
 // v3.0.0 — INTELIGÊNCIA CLÍNICA INTEGRATIVA
@@ -1364,6 +1364,194 @@ Retorne APENAS JSON válido:
     return { nivel_dados:nivelDados, nivel_confianca:nivelConfianca, horizonte_sessoes:horizSessoes, tendencia_predominante:json.tendencia_predominante||'', fatores_favoraveis:json.fatores_favoraveis||[], fatores_risco:json.fatores_risco||[], dimensoes_frageis:json.dimensoes_frageis||[], dimensoes_fortalecidas:json.dimensoes_fortalecidas||[], proximos_focos:json.proximos_focos||[], ajustes_recomendados:json.ajustes_recomendados||[], modo:'ia' };
   } catch(e) {
     await registrarAuditoria(db,{paciente_id:paciente.id,modulo:'evolucao_preditiva',sucesso:false,erro_msg:e.message,modo:'fallback'});
+    throw e;
+  }
+}
+
+// ══════════════════════════════════════════════
+// PRONTUÁRIO INTELIGENTE PRÉ-SESSÃO
+// ══════════════════════════════════════════════
+
+async function gerarProntuarioInteligente({ db, paciente, mapeamento, sessoes, feedbacks, resumoAtual, analiseEstrutural, hipoteses, memoria, briefing, linhaEvolutiva, riscoAbandono, preditiva, pacote, intervencoes }) {
+  const inicio = Date.now();
+  const ant    = parseInt(paciente.sessoes_anteriores)||0;
+  const totalSessoes = ant + sessoes.length;
+  const FLAG_L = {risco_depressivo:'Risco Depressivo',burnout_provavel:'Burnout',ansiedade_elevada:'Ansiedade Elevada',trauma_indicado:'Trauma',isolamento_social:'Isolamento Social',instabilidade_emocional:'Instabilidade Emocional',conflito_relacional:'Conflito Relacional',baixa_autoestima:'Baixa Autoestima',crise_existencial:'Crise Existencial',avaliacao_psiquiatrica:'Avaliação Psiquiátrica',vulnerabilidade_relacional:'Vulnerabilidade Relacional'};
+  const flags  = (mapeamento&&mapeamento.flags_json)||[];
+  const proto  = (mapeamento&&mapeamento.protocolo_json)||{};
+  const ae     = analiseEstrutural||{};
+  const mem    = memoria||{};
+  const brf    = briefing||{};
+  const risco  = riscoAbandono||null;
+  const pred   = preditiva||null;
+
+  const ultimaSessao = sessoes.length ? sessoes[sessoes.length-1] : null;
+  const ultimasSessoes = sessoes.slice(-3).map(function(s){
+    return 'S'+s.sessao_numero+' ('+new Date(s.data_sessao).toLocaleDateString('pt-BR')+'): '+(s.resumo_terapeuta||'sem resumo');
+  }).join('\n');
+  const feedbacksStr = feedbacks.slice(0,5).map(function(f){
+    return new Date(f.data_feedback).toLocaleDateString('pt-BR')+': '+f.conteudo;
+  }).join('\n');
+  const hipStr = (hipoteses||[]).slice(0,5).map(function(h,i){
+    return (i+1)+'. ['+h.tipo+' / confiança '+h.nivel_confianca+'] '+h.hipotese_ia;
+  }).join('\n');
+  const intervStr = (intervencoes||[]).filter(function(i){return i.status==='utilizada';}).slice(0,6).map(function(i){
+    return i.titulo+(i.avaliacao?' → '+i.avaliacao:'');
+  }).join(', ');
+
+  var tendenciaAtual = linhaEvolutiva.length ? linhaEvolutiva[0].tendencia : 'não avaliada';
+  var scoreAtual = (linhaEvolutiva.length && linhaEvolutiva[0].scores_estruturais_json) ? linhaEvolutiva[0].scores_estruturais_json.score_global : null;
+
+  // Risco
+  var riscoStr = risco ? 'Nível: '+risco.nivel+' ('+Math.round(risco.score_clinico||risco.score_basico||0)+'/100). '+( risco.explicacao||'') : 'Não avaliado';
+
+  // Briefing
+  var brifStr = '';
+  if (brf.estado_atual) brifStr += 'Estado atual: '+brf.estado_atual+'\n';
+  if (brf.pontos_atencao && brf.pontos_atencao.length) brifStr += 'Pontos de atenção: '+brf.pontos_atencao.join(', ')+'\n';
+  if (brf.sugestoes_conducao && brf.sugestoes_conducao.length) brifStr += 'Sugestões: '+brf.sugestoes_conducao.join(' | ');
+
+  // Memória
+  var memStr = '';
+  if (mem.temas_recorrentes&&mem.temas_recorrentes.length) memStr += 'Temas: '+mem.temas_recorrentes.join(', ')+'\n';
+  if (mem.padroes_identificados&&mem.padroes_identificados.length) memStr += 'Padrões: '+mem.padroes_identificados.join(', ')+'\n';
+  if (mem.movimento_terapeutico) memStr += 'Movimento: '+mem.movimento_terapeutico;
+
+  // Preditiva
+  var predStr = pred ? 'Tendência: '+(pred.tendencia_predominante||'').substring(0,200) : 'Não avaliada';
+
+  const riscoAlto = risco && (risco.nivel==='alto'||risco.nivel==='critico');
+  const flagsAlto = flags.includes('ideacao_suicida')||flags.includes('risco_suicida');
+  const manejo_seguranca = riscoAlto||flagsAlto;
+
+  const prompt = `Você é o motor de Prontuário Inteligente do Synapse Core — Evolution Therapy.
+Terapeuta: Erick Torritezi — Psicanalista, Psicoterapeuta Integrativo, Master Hipnoterapeuta, PNL Terapêutica, Logoterapia, Protocolo ESSÊNCIA, Metodologia 4F.
+
+OBJETIVO: Gerar prontuário clínico pré-sessão completo, objetivo e operacional.
+REGRA PRINCIPAL: NÃO reinvente o caso. Consolide o que já existe. Organize, destaque e atualize com o que é novo.
+
+═══ DADOS DO PACIENTE ═══
+Nome: ${paciente.nome_completo} | Perfil: ${paciente.perfil_tipo||'adulto'} | ${paciente.idade||''}${paciente.idade?' anos':''}
+Programa: ${pacote ? pacote.nome+' ('+totalSessoes+'/'+pacote.qtd_sessoes+' sessões)' : 'Sessões avulsas — '+totalSessoes+' total'}
+Data início: ${ant>0&&paciente.data_primeira_sessao ? new Date(paciente.data_primeira_sessao).toLocaleDateString('pt-BR') : (sessoes[0]?new Date(sessoes[0].data_sessao).toLocaleDateString('pt-BR'):'não registrada')}
+FLAGS CLÍNICAS: ${flags.map(function(f){return FLAG_L[f]||f;}).join(', ')||'Nenhuma'}
+${manejo_seguranca?'⚠️ ATENÇÃO: RISCO ELEVADO — priorize manejo de segurança\n':''}
+
+═══ RESUMO CLÍNICO ATUAL ═══
+${resumoAtual||'Não disponível'}
+
+═══ MAPA ESTRUTURAL ═══
+Núcleo emocional: ${ae.nucleo_emocional||'não mapeado'}
+Conflito central: ${ae.conflito_central||proto.sintese_caso||'não mapeado'}
+Mecanismos de defesa: ${(ae.mecanismos_defesa||[]).join(', ')||'não mapeados'}
+Padrão de sabotagem: ${ae.padrao_sabotagem||'não mapeado'}
+Estilo relacional: ${ae.estilo_relacional||'não mapeado'}
+Eixo existencial: ${ae.eixo_existencial||'não mapeado'}
+Recursos internos: ${(ae.recursos_internos||[]).join(', ')||'não mapeados'}
+Direção terapêutica: ${ae.direcao_terapeutica||'não definida'}
+
+═══ MEMÓRIA TERAPÊUTICA ═══
+${memStr||'Não disponível'}
+
+═══ ÚLTIMAS SESSÕES ═══
+${ultimasSessoes||'Nenhuma sessão registrada'}
+
+═══ FEEDBACKS DO PACIENTE ═══
+${feedbacksStr||'Nenhum feedback registrado'}
+
+═══ BRIEFING PRÉ-SESSÃO ATUAL ═══
+${brifStr||'Briefing não gerado recentemente'}
+
+═══ HIPÓTESES CLÍNICAS ATIVAS ═══
+${hipStr||'Nenhuma hipótese registrada'}
+
+═══ LINHA EVOLUTIVA ═══
+Tendência atual: ${tendenciaAtual} | Score global: ${scoreAtual||'N/D'}
+${pred ? 'Tendência prospectiva: '+predStr : ''}
+
+═══ RISCO DE ABANDONO ═══
+${riscoStr}
+
+═══ INTERVENÇÕES JÁ UTILIZADAS ═══
+${intervStr||'Nenhuma registrada'}
+
+${proto.obs_terapeuta?'═══ OBSERVAÇÕES DO TERAPEUTA ═══\n'+proto.obs_terapeuta:''}
+
+Gere o Prontuário Inteligente completo. Use linguagem clínica, objetiva e operacional.
+NUNCA diagnostique. Use sempre linguagem de hipótese.
+${manejo_seguranca?'PRIORIDADE: Blocos 9 (risco) e 12 (recomendações) devem focar em manejo de segurança antes de condução terapêutica.':''}
+
+Retorne APENAS JSON válido com esta estrutura exata:
+{
+  "sintese_clinica": "síntese de 8-12 linhas sobre funcionamento atual",
+  "nucleo_trabalho": {
+    "motivo_inicial": "...", "conflito_central": "...",
+    "travamento_principal": "...", "demanda_atual": "..."
+  },
+  "linha_processo": {
+    "inicio": "...", "agora": "...",
+    "principais_avancos": ["...", "..."],
+    "pontos_estagnacao": ["..."],
+    "padroes_recorrentes": ["...", "..."]
+  },
+  "ultima_sessao": {
+    "tema": "...", "emocao": "...", "resistencia": "...",
+    "movimento": "...", "tarefa": "...", "observacoes": "..."
+  },
+  "evolucao_emocional": {
+    "dimensoes_avanco": ["..."], "dimensoes_frageis": ["..."],
+    "tendencia": "...", "risco_regressao": "...", "sinais_consolidacao": "..."
+  },
+  "risco_atencao": {
+    "nivel": "...", "fatores": ["..."],
+    "sinais_evasao": ["..."], "sugestao_manejo": "..."
+  },
+  "hipoteses_destaque": ["hipótese relevante para hoje 1", "hipótese 2", "hipótese 3"],
+  "nao_esquecer": ["ponto crítico 1", "ponto 2", "ponto 3", "ponto 4", "ponto 5"],
+  "recomendacoes_sessao": {
+    "foco_principal": "...",
+    "tom": "acolhimento|aprofundamento|confrontacao_suave|regulacao|consolidacao",
+    "prioridade": "...", "cuidado_etico": "..."
+  },
+  "perguntas_certeiras": ["pergunta 1", "pergunta 2", "pergunta 3", "pergunta 4", "pergunta 5"],
+  "intervencoes_sugeridas": [
+    { "tipo": "...", "titulo": "...", "descricao": "..." }
+  ],
+  "frase_direcao": "frase clínica final para orientar o terapeuta"
+}`;
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':process.env.ANTHROPIC_API_KEY,'anthropic-version':'2023-06-01'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:3500,messages:[{role:'user',content:prompt}]})
+    });
+    if (!resp.ok) { const e=await resp.text().catch(function(){return '';}); throw new Error('Anthropic 400: '+e.substring(0,300)); }
+    const data = await resp.json();
+    const text = (data.content&&data.content[0]&&data.content[0].text)||'{}';
+    const clean = text.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
+    const m = clean.match(/\{[\s\S]*\}/);
+    const json = m ? JSON.parse(m[0]) : {};
+    const duracao = Date.now()-inicio;
+    await registrarAuditoria(db,{paciente_id:paciente.id,modulo:'prontuario_inteligente',referencia_tipo:'paciente',referencia_id:paciente.id,prompt_resumo:prompt,input_hash:crypto.createHash('md5').update(prompt).digest('hex'),output_resumo:text,tokens_usados:data.usage&&data.usage.output_tokens,duracao_ms:duracao,sucesso:true,modelo:'claude-sonnet-4-20250514',modo:'ia'});
+    return {
+      paciente: {
+        nome: paciente.nome_completo, perfil: paciente.perfil_tipo||'adulto',
+        idade: paciente.idade, programa: pacote ? pacote.nome : 'Sessões avulsas',
+        total_sessoes: totalSessoes,
+        qtd_sessoes_programa: pacote ? pacote.qtd_sessoes : null,
+        data_inicio: ant>0&&paciente.data_primeira_sessao ? paciente.data_primeira_sessao : (sessoes[0]?sessoes[0].data_sessao:null),
+        ultima_sessao: ultimaSessao ? ultimaSessao.data_sessao : null,
+        risco_nivel: risco ? risco.nivel : 'nao_avaliado',
+        tem_briefing_recente: !!briefing,
+        manejo_seguranca
+      },
+      conteudo: json,
+      gerado_em: new Date().toISOString(),
+      modo: 'ia'
+    };
+  } catch(e) {
+    await registrarAuditoria(db,{paciente_id:paciente.id,modulo:'prontuario_inteligente',sucesso:false,erro_msg:e.message,modo:'fallback'});
     throw e;
   }
 }

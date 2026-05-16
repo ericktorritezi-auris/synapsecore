@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Prontuário Inteligente — Synapse Core</title>
+<meta name="theme-color" content="#0B132B">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<link rel="icon" href="/favicon.ico">
+<link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700,900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0B132B;--sf:#1C2541;--s2:rgba(28,37,65,.75);--ac:#D4AF7F;--adim:rgba(212,175,127,.1);--abrd:rgba(212,175,127,.25);--tx:#F5F7FA;--mu:#C9D1D9;--dim:rgba(201,209,217,.4);--brd:rgba(201,209,217,.1);--fd:'Satoshi',sans-serif;--fb:'Inter',sans-serif;--r:12px;--sw:260px;--th:60px}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--fb);background:var(--bg);color:var(--tx);min-height:100vh}
+.topbar{display:flex;align-items:center;justify-content:space-between;height:calc(var(--th) + env(safe-area-inset-top,0px));padding:env(safe-area-inset-top,0px) 16px 0;background:var(--sf);border-bottom:1px solid var(--brd);position:fixed;top:0;left:0;right:0;z-index:50}
+.topbar img{height:28px}
+.hamburger{background:none;border:none;color:var(--mu);cursor:pointer;padding:8px;border-radius:8px;font-size:20px}
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:40;backdrop-filter:blur(2px)}
+.overlay.open{display:block}
+.sidebar{width:var(--sw);background:var(--sf);border-right:1px solid var(--brd);position:fixed;top:0;left:0;bottom:0;z-index:45;display:flex;flex-direction:column;transform:translateX(-100%);transition:transform .3s cubic-bezier(.4,0,.2,1);overflow-y:auto}
+.sidebar.open{transform:translateX(0)}
+.sb-logo{padding:20px 20px 18px;border-bottom:1px solid var(--brd)}
+.sb-logo img{height:32px}
+.sb-nav{flex:1;padding:12px 10px;overflow-y:auto}
+.nav-section{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--dim);padding:14px 10px 6px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:9px;color:var(--mu);font-size:13.5px;text-decoration:none;transition:all .18s;margin-bottom:1px;border:1px solid transparent}
+.nav-item:hover{background:rgba(255,255,255,.04);color:var(--tx)}
+.nav-item.active{background:var(--adim);color:var(--ac);border-color:var(--abrd)}
+.nav-item .ni{font-size:16px;width:20px;text-align:center;flex-shrink:0}
+.sb-footer{padding:14px 12px;border-top:1px solid var(--brd)}
+.user-pill{display:flex;align-items:center;gap:10px;padding:10px;background:rgba(11,19,43,.5);border-radius:10px;border:1px solid var(--brd)}
+.user-av{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--ac),#b8924e);display:flex;align-items:center;justify-content:center;font-family:var(--fd);font-size:12px;font-weight:700;color:var(--bg);flex-shrink:0}
+.user-name{font-size:12.5px;font-weight:500}
+.user-role{font-size:10px;color:var(--dim)}
+.logout-btn{margin-left:auto;background:none;border:none;color:var(--dim);cursor:pointer;font-size:13px;padding:4px 6px}
+.main{padding:calc(var(--th)+20px+env(safe-area-inset-top,0px)) 16px 80px}
+/* Selector */
+.selector-card{background:var(--s2);border:1px solid var(--brd);border-radius:var(--r);padding:20px;margin-bottom:20px}
+.selector-card::before{content:'';display:block;height:2px;background:linear-gradient(90deg,var(--ac),transparent);border-radius:2px;margin-bottom:16px}
+.selector-title{font-family:var(--fd);font-size:18px;font-weight:700;margin-bottom:4px}
+.selector-sub{font-size:12px;color:var(--dim);margin-bottom:16px}
+select.pac-sel{width:100%;background:rgba(11,19,43,.6);border:1px solid var(--brd);border-radius:9px;color:var(--tx);font-family:var(--fb);font-size:14px;padding:11px 14px;outline:none;-webkit-appearance:none;cursor:pointer;margin-bottom:14px}
+select.pac-sel:focus{border-color:var(--abrd)}
+select.pac-sel option{background:#1C2541}
+.btn{display:inline-flex;align-items:center;gap:7px;padding:10px 20px;border-radius:10px;font-family:var(--fd);font-size:14px;font-weight:700;cursor:pointer;border:none;transition:all .2s;text-decoration:none}
+.btn-primary{background:linear-gradient(135deg,var(--ac),#b8924e);color:var(--bg);box-shadow:0 4px 16px rgba(212,175,127,.2)}
+.btn-ghost{background:var(--adim);color:var(--ac);border:1px solid var(--abrd)}
+.btn-green{background:rgba(16,185,129,.1);color:#6ee7b7;border:1px solid rgba(16,185,129,.2)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn-row{display:flex;gap:10px;flex-wrap:wrap}
+/* Aviso */
+.aviso-interno{background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.18);border-radius:8px;padding:8px 14px;font-size:11.5px;color:#fcd34d;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+/* Prontuário content */
+.pront-wrap{display:none}
+.pront-header{background:linear-gradient(135deg,rgba(212,175,127,.1),rgba(11,19,43,.8));border:1px solid var(--abrd);border-radius:var(--r);padding:20px;margin-bottom:16px}
+.pront-header-nome{font-family:var(--fd);font-size:22px;font-weight:900;margin-bottom:4px}
+.pront-header-meta{font-size:13px;color:var(--mu);display:flex;flex-wrap:wrap;gap:12px;margin-bottom:12px}
+.pront-header-meta span{display:flex;align-items:center;gap:5px}
+.pront-header-ts{font-size:11px;color:var(--dim);margin-top:8px;font-style:italic}
+.alerta-seguranca{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:9px;padding:12px 14px;margin-bottom:14px;font-size:13px;color:#fca5a5;font-weight:600}
+/* Sections */
+.sec{background:var(--s2);border:1px solid var(--brd);border-radius:var(--r);overflow:hidden;margin-bottom:12px}
+.sec-top{height:2px;background:linear-gradient(90deg,var(--ac),transparent)}
+.sec-hdr{padding:14px 16px 12px;cursor:pointer;display:flex;align-items:center;justify-content:space-between}
+.sec-hdr-title{font-family:var(--fd);font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px}
+.sec-toggle{font-size:11px;color:var(--dim);transition:transform .2s}
+.sec.open .sec-toggle{transform:rotate(-180deg)}
+.sec-body{display:none;padding:0 16px 16px}
+.sec.open .sec-body{display:block}
+.field-lbl{font-size:10.5px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.7px;margin-bottom:4px;margin-top:12px}
+.field-val{font-size:13px;color:var(--mu);line-height:1.65}
+.tag{display:inline-block;font-size:11.5px;padding:3px 10px;border-radius:20px;font-weight:600;margin:2px}
+.tag-gold{background:rgba(212,175,127,.1);color:var(--ac);border:1px solid rgba(212,175,127,.2)}
+.tag-red{background:rgba(239,68,68,.08);color:#fca5a5;border:1px solid rgba(239,68,68,.15)}
+.tag-green{background:rgba(16,185,129,.08);color:#6ee7b7;border:1px solid rgba(16,185,129,.15)}
+.tag-blue{background:rgba(59,130,246,.08);color:#93c5fd;border:1px solid rgba(59,130,246,.15)}
+.tag-violet{background:rgba(124,58,237,.1);color:#c4b5fd;border:1px solid rgba(124,58,237,.2)}
+/* Frase direção */
+.frase-card{background:linear-gradient(135deg,rgba(212,175,127,.08),rgba(11,19,43,.6));border:1px solid var(--abrd);border-radius:var(--r);padding:20px;margin-bottom:16px;text-align:center}
+.frase-text{font-family:var(--fd);font-size:16px;font-weight:700;color:var(--ac);line-height:1.6;font-style:italic}
+/* Actions bottom */
+.actions-bottom{position:fixed;bottom:0;left:0;right:0;padding:12px 16px;background:rgba(11,19,43,.95);backdrop-filter:blur(12px);border-top:1px solid var(--brd);display:none;gap:10px;z-index:20;overflow-x:auto}
+.mini-spin{width:16px;height:16px;border:2px solid var(--adim);border-top-color:var(--ac);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* PRINT STYLES */
+@media print {
+  .topbar,.sidebar,.overlay,.selector-card,.actions-bottom,.aviso-interno,.btn-row,.pront-header-ts{display:none!important}
+  body{background:white;color:#1a1a2e}
+  .main{margin:0;padding:16px;max-width:100%}
+  .pront-wrap{display:block!important}
+  .sec{border:1px solid #ddd;margin-bottom:8px;break-inside:avoid}
+  .sec-body{display:block!important}
+  .sec-toggle{display:none}
+  .pront-header{background:#f8f6f0;border-color:#D4AF7F}
+  .pront-header-nome{color:#1a1a2e}
+  .pront-header-meta{color:#555}
+  .field-lbl{color:#888}
+  .field-val{color:#1a1a2e}
+  .tag{border:1px solid #ddd}
+  .frase-card{background:#f8f6f0;border-color:#D4AF7F}
+  .frase-text{color:#8B5E1A}
+  .alerta-interno-print{display:block!important}
+}
+.alerta-interno-print{display:none;font-size:10px;color:#888;text-align:center;margin-top:20px;border-top:1px solid #ddd;padding-top:8px}
+@media(min-width:960px){
+  .topbar{display:none}.overlay{display:none!important}.sidebar{transform:translateX(0)}
+  .main{margin-left:var(--sw);padding-left:32px;padding-right:32px}
+  .actions-bottom{left:var(--sw)}
+}
+@media(min-width:600px){.main{padding-left:24px;padding-right:24px}}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:2px}
+</style>
+</head>
+<body>
+<div class="topbar" id="topbar">
+  <img src="/img/logo-horizontal.png" alt="Synapse Core">
+  <button class="hamburger" onclick="toggleSidebar()">&#9776;</button>
+</div>
+<div class="overlay" id="overlay" onclick="closeSidebar()"></div>
+<aside class="sidebar" id="sidebar">
+  <div class="sb-logo"><img src="/img/logo-horizontal.png" alt="Synapse Core"></div>
+  <nav class="sb-nav">
+    <div class="nav-section">Principal</div>
+    <a href="/dashboard" class="nav-item"><span class="ni">&#9672;</span> Dashboard</a>
+    <a href="/pacientes" class="nav-item"><span class="ni">&#9675;</span> Pacientes</a>
+    <div class="nav-section">Clínico</div>
+    <a href="/prontuario-inteligente" class="nav-item active"><span class="ni">&#128196;</span> Prontuário</a>
+    <a href="/paciente-novo" class="nav-item"><span class="ni">&#9703;</span> Nova Avaliação</a>
+    <a href="/radar" class="nav-item"><span class="ni">&#128225;</span> Radar Clínico</a>
+    <a href="/programas" class="nav-item"><span class="ni">&#128203;</span> Programas</a>
+    <div class="nav-section">Gestão</div>
+    <a href="/financeiro" class="nav-item"><span class="ni">&#128176;</span> Financeiro</a>
+    <div class="nav-section">Sistema</div>
+    <a href="/perfil" class="nav-item"><span class="ni">&#9715;</span> Configurações</a>
+  </nav>
+  <div class="sb-footer">
+    <div class="user-pill">
+      <div class="user-av" id="userAvatar">ET</div>
+      <div style="overflow:hidden;flex:1"><div class="user-name" id="userName">--</div><div class="user-role">Evolution Therapy</div></div>
+      <button class="logout-btn" onclick="logout()">Sair</button>
+    </div>
+  </div>
+</aside>
+
+<main class="main">
+  <!-- Seletor -->
+  <div class="selector-card" id="selectorCard">
+    <div class="selector-title">&#128196; Prontuário Inteligente</div>
+    <div class="selector-sub">Visão clínica completa para preparação da sessão · Uso interno exclusivo</div>
+    <select class="pac-sel" id="pacSel">
+      <option value="">Selecione o paciente...</option>
+    </select>
+    <div class="aviso-interno">&#9888; Documento de apoio clínico interno. Não substitui julgamento profissional.</div>
+    <div class="btn-row">
+      <button class="btn btn-primary" id="btnGerar" onclick="gerarProntuario()" disabled>
+        <span id="btnGerarIcon">&#9673;</span> Gerar Prontuário do Dia
+      </button>
+    </div>
+  </div>
+
+  <!-- Conteúdo do Prontuário -->
+  <div class="pront-wrap" id="prontWrap">
+
+    <!-- Header identificação -->
+    <div class="pront-header" id="prontHeader"></div>
+
+    <!-- Alerta segurança -->
+    <div class="alerta-seguranca" id="alertaSeguranca" style="display:none">
+      &#9888; ATENÇÃO CLÍNICA — Este paciente apresenta indicadores de risco elevado. Priorize avaliação de segurança e manejo clínico antes de qualquer condução terapêutica.
+    </div>
+
+    <!-- Aviso sem briefing -->
+    <div id="avisoBriefing" style="display:none;background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.18);border-radius:8px;padding:10px 14px;font-size:12.5px;color:#fcd34d;margin-bottom:14px">
+      &#9888; Não há briefing recente gerado. Recomenda-se gerar briefing para maior precisão do prontuário.
+    </div>
+
+    <!-- Frase de Direção -->
+    <div class="frase-card" id="fraseCard" style="display:none">
+      <div style="font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">Frase Clínica de Direção</div>
+      <div class="frase-text" id="fraseText"></div>
+    </div>
+
+    <!-- Seções dinâmicas -->
+    <div id="secoesWrap"></div>
+
+    <!-- Alerta interno print -->
+    <div class="alerta-interno-print">Synapse Core — Evolution Therapy · Documento de apoio clínico interno · Uso exclusivo do terapeuta · Não divulgar ao paciente</div>
+  </div>
+</main>
+
+<!-- Actions bar -->
+<div class="actions-bottom" id="actionsBottom">
+  <button class="btn btn-primary" onclick="exportarPDF()">&#128438; Exportar PDF</button>
+  <button class="btn btn-green" id="btnWhats" onclick="enviarWhatsApp()">&#128241; WhatsApp</button>
+  <button class="btn btn-ghost" onclick="novoRelatorio()">&#8635; Novo</button>
+</div>
+
+<script src="/js/shared.js"></script>
+<script>
+checkAuth();
+renderUserPill();
+
+var pacientes = [];
+var prontuarioAtual = null;
+
+window.addEventListener('DOMContentLoaded', function() {
+  api('/api/pacientes').then(function(data) {
+    pacientes = data.filter(function(p){return p.status !== 'inativo';});
+    var sel = document.getElementById('pacSel');
+    pacientes.forEach(function(p) {
+      var opt = document.createElement('option');
+      opt.value = p.id;
+      opt.textContent = p.nome_completo + (p.perfil_tipo ? ' · ' + p.perfil_tipo : '');
+      sel.appendChild(opt);
+    });
+  }).catch(function(){});
+  document.getElementById('pacSel').addEventListener('change', function() {
+    document.getElementById('btnGerar').disabled = !this.value;
+  });
+});
+
+function gerarProntuario() {
+  var pid = document.getElementById('pacSel').value;
+  if (!pid) return;
+  var btn = document.getElementById('btnGerar');
+  var icon = document.getElementById('btnGerarIcon');
+  btn.disabled=true;
+  icon.outerHTML = '<div class="mini-spin" id="btnGerarIcon"></div>';
+
+  // Hide previous
+  document.getElementById('prontWrap').style.display='none';
+  document.getElementById('actionsBottom').style.display='none';
+
+  api('/api/prontuario/'+pid+'/gerar','POST',{})
+    .then(function(data) {
+      prontuarioAtual = data;
+      renderProntuario(data);
+      btn.disabled=false;
+      document.getElementById('btnGerarIcon').outerHTML='<span id="btnGerarIcon">&#9673;</span>';
+    })
+    .catch(function(e) {
+      btn.disabled=false;
+      document.getElementById('btnGerarIcon').outerHTML='<span id="btnGerarIcon">&#9673;</span>';
+      showToast(e.message||'Erro ao gerar prontuário.','error');
+    });
+}
+
+function renderProntuario(data) {
+  var p = data.paciente;
+  var c = data.conteudo;
+
+  // Header
+  var riscoNivel = p.risco_nivel||'nao_avaliado';
+  var riscoCor = {baixo:'#6ee7b7',moderado:'#fcd34d',alto:'#fdba74',critico:'#fca5a5',nao_avaliado:'var(--dim)'}[riscoNivel]||'var(--dim)';
+  document.getElementById('prontHeader').innerHTML =
+    '<div class="pront-header-nome">'+escH(p.nome)+'</div>'
+    +'<div class="pront-header-meta">'
+      +'<span>&#128100; '+escH(p.perfil||'adulto')+(p.idade?' · '+p.idade+' anos':'')+'</span>'
+      +'<span>&#128197; '+escH(p.programa)+'</span>'
+      +'<span>&#128200; '+p.total_sessoes+' sessões'+(p.qtd_sessoes_programa?' / '+p.qtd_sessoes_programa:'')+'</span>'
+      +(p.ultima_sessao?'<span>&#9200; Última: '+formatDate(p.ultima_sessao)+'</span>':'')
+      +'<span style="color:'+riscoCor+'">&#9679; Risco: '+riscoNivel.replace('_',' ')+'</span>'
+    +'</div>'
+    +'<div class="pront-header-ts">Gerado em '+new Date(data.gerado_em).toLocaleString('pt-BR')+' · Uso interno exclusivo</div>';
+
+  // Alertas
+  document.getElementById('alertaSeguranca').style.display = p.manejo_seguranca ? 'block' : 'none';
+  document.getElementById('avisoBriefing').style.display = !p.tem_briefing_recente ? 'block' : 'none';
+
+  // Frase de direção
+  if (c.frase_direcao) {
+    document.getElementById('fraseText').textContent = c.frase_direcao;
+    document.getElementById('fraseCard').style.display = 'block';
+  }
+
+  // Build sections
+  var secoesWrap = document.getElementById('secoesWrap');
+  secoesWrap.innerHTML = '';
+
+  var secDefs = [
+    { id:'sintese', emoji:'&#129504;', titulo:'Síntese Clínica Geral', cor:'var(--ac)', fn: function(c) {
+      return c.sintese_clinica ? '<div class="field-val" style="font-size:14px;line-height:1.75">'+escH(c.sintese_clinica)+'</div>' : '';
+    }},
+    { id:'nucleo', emoji:'&#9889;', titulo:'Queixa / Núcleo de Trabalho', cor:'#fcd34d', fn: function(c) {
+      if (!c.nucleo_trabalho) return '';
+      var n = c.nucleo_trabalho;
+      return ['motivo_inicial:Motivo Inicial','conflito_central:Conflito Central','travamento_principal:Travamento Principal','demanda_atual:Demanda Atual'].map(function(kv){
+        var parts=kv.split(':'); var val=n[parts[0]];
+        return val?'<div class="field-lbl">'+parts[1]+'</div><div class="field-val">'+escH(val)+'</div>':'';
+      }).join('');
+    }},
+    { id:'linha', emoji:'&#128200;', titulo:'Linha do Processo', cor:'#93c5fd', fn: function(c) {
+      if (!c.linha_processo) return '';
+      var l = c.linha_processo;
+      var html = '';
+      if (l.inicio) html += '<div class="field-lbl">Início</div><div class="field-val">'+escH(l.inicio)+'</div>';
+      if (l.agora) html += '<div class="field-lbl">Onde Está Agora</div><div class="field-val">'+escH(l.agora)+'</div>';
+      if (l.principais_avancos&&l.principais_avancos.length) html += '<div class="field-lbl">Principais Avanços</div><div>'+l.principais_avancos.map(function(a){return '<span class="tag tag-green">'+escH(a)+'</span>';}).join('')+'</div>';
+      if (l.pontos_estagnacao&&l.pontos_estagnacao.length) html += '<div class="field-lbl">Pontos de Estagnação</div><div>'+l.pontos_estagnacao.map(function(a){return '<span class="tag tag-red">'+escH(a)+'</span>';}).join('')+'</div>';
+      if (l.padroes_recorrentes&&l.padroes_recorrentes.length) html += '<div class="field-lbl">Padrões Recorrentes</div><div>'+l.padroes_recorrentes.map(function(a){return '<span class="tag tag-gold">'+escH(a)+'</span>';}).join('')+'</div>';
+      return html;
+    }},
+    { id:'ult_sess', emoji:'&#128197;', titulo:'Última Sessão', cor:'#c4b5fd', fn: function(c) {
+      if (!c.ultima_sessao) return '';
+      var u = c.ultima_sessao;
+      return ['tema:Tema','emocao:Emoção Predominante','resistencia:Resistência','movimento:Movimento Gerado','tarefa:Tarefa/Combinado','observacoes:Observações'].map(function(kv){
+        var parts=kv.split(':'); var val=u[parts[0]];
+        return val&&val!=='—'?'<div class="field-lbl">'+parts[1]+'</div><div class="field-val">'+escH(val)+'</div>':'';
+      }).join('');
+    }},
+    { id:'evolucao', emoji:'&#128197;', titulo:'Evolução Emocional', cor:'#6ee7b7', fn: function(c) {
+      if (!c.evolucao_emocional) return '';
+      var e = c.evolucao_emocional;
+      var html = '';
+      if (e.dimensoes_avanco&&e.dimensoes_avanco.length) html += '<div class="field-lbl">Dimensões com Avanço</div><div>'+e.dimensoes_avanco.map(function(a){return '<span class="tag tag-green">'+escH(a)+'</span>';}).join('')+'</div>';
+      if (e.dimensoes_frageis&&e.dimensoes_frageis.length) html += '<div class="field-lbl">Dimensões Frágeis</div><div>'+e.dimensoes_frageis.map(function(a){return '<span class="tag tag-red">'+escH(a)+'</span>';}).join('')+'</div>';
+      if (e.tendencia) html += '<div class="field-lbl">Tendência</div><div class="field-val">'+escH(e.tendencia)+'</div>';
+      if (e.sinais_consolidacao) html += '<div class="field-lbl">Sinais de Consolidação</div><div class="field-val">'+escH(e.sinais_consolidacao)+'</div>';
+      return html;
+    }},
+    { id:'risco', emoji:'&#9888;', titulo:'Risco de Abandono / Atenção Clínica', cor:'#fca5a5', fn: function(c) {
+      if (!c.risco_atencao) return '';
+      var r = c.risco_atencao;
+      var html = '<div class="field-lbl">Nível</div><div class="field-val" style="font-weight:700;text-transform:uppercase">'+escH(r.nivel||'—')+'</div>';
+      if (r.fatores&&r.fatores.length) html += '<div class="field-lbl">Fatores</div><div>'+r.fatores.map(function(f){return '<span class="tag tag-red">'+escH(f)+'</span>';}).join('')+'</div>';
+      if (r.sinais_evasao&&r.sinais_evasao.length) html += '<div class="field-lbl">Sinais de Evasão</div>'+r.sinais_evasao.map(function(s){return '<div class="field-val">• '+escH(s)+'</div>';}).join('');
+      if (r.sugestao_manejo) html += '<div class="field-lbl">Sugestão de Manejo</div><div class="field-val">'+escH(r.sugestao_manejo)+'</div>';
+      return html;
+    }},
+    { id:'hipoteses', emoji:'&#128302;', titulo:'Hipóteses Clínicas Ativas', cor:'#c4b5fd', fn: function(c) {
+      if (!c.hipoteses_destaque||!c.hipoteses_destaque.length) return '';
+      return c.hipoteses_destaque.map(function(h,i){
+        return '<div style="padding:8px 0;border-bottom:1px solid var(--brd)"><span style="font-size:11px;color:var(--dim)">'+(i+1)+'.</span> <span class="field-val">'+escH(h)+'</span></div>';
+      }).join('');
+    }},
+    { id:'nao_esquecer', emoji:'&#128276;', titulo:'Não Esquecer', cor:'#fcd34d', fn: function(c) {
+      if (!c.nao_esquecer||!c.nao_esquecer.length) return '';
+      return '<div style="display:flex;flex-direction:column;gap:6px">'+c.nao_esquecer.map(function(p){
+        return '<div style="display:flex;gap:10px;padding:7px 0;border-bottom:1px solid var(--brd)"><span style="color:#fcd34d;font-weight:700;flex-shrink:0">&#9654;</span><span class="field-val">'+escH(p)+'</span></div>';
+      }).join('')+'</div>';
+    }},
+    { id:'recomendacoes', emoji:'&#127919;', titulo:'Recomendações Para a Sessão', cor:'var(--ac)', fn: function(c) {
+      if (!c.recomendacoes_sessao) return '';
+      var r = c.recomendacoes_sessao;
+      var html = '';
+      if (r.foco_principal) html += '<div class="field-lbl">Foco Principal</div><div class="field-val" style="font-size:14px;font-weight:600">'+escH(r.foco_principal)+'</div>';
+      if (r.tom) html += '<div class="field-lbl">Tom Recomendado</div><span class="tag tag-gold" style="font-size:12.5px">'+escH(r.tom.replace(/_/g,' '))+'</span>';
+      if (r.prioridade) html += '<div class="field-lbl">Prioridade</div><div class="field-val">'+escH(r.prioridade)+'</div>';
+      if (r.cuidado_etico) html += '<div class="field-lbl">Cuidado Ético/Clínico</div><div class="field-val" style="color:#fcd34d">'+escH(r.cuidado_etico)+'</div>';
+      return html;
+    }},
+    { id:'perguntas', emoji:'&#10067;', titulo:'Perguntas Certeiras', cor:'#93c5fd', fn: function(c) {
+      if (!c.perguntas_certeiras||!c.perguntas_certeiras.length) return '';
+      return c.perguntas_certeiras.map(function(q,i){
+        return '<div style="padding:8px 0;border-bottom:1px solid var(--brd)"><span style="font-size:11px;font-weight:700;color:#93c5fd">'+(i+1)+'.</span> <span class="field-val" style="font-style:italic">"'+escH(q)+'"</span></div>';
+      }).join('');
+    }},
+    { id:'intervencoes', emoji:'&#9889;', titulo:'Intervenções Possíveis', cor:'#6ee7b7', fn: function(c) {
+      if (!c.intervencoes_sugeridas||!c.intervencoes_sugeridas.length) return '';
+      return c.intervencoes_sugeridas.map(function(iv){
+        return '<div style="background:rgba(11,19,43,.4);border:1px solid var(--brd);border-radius:8px;padding:10px 12px;margin-bottom:8px">'
+          +'<div style="font-size:10px;font-weight:700;color:#6ee7b7;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">'+escH(iv.tipo||'intervenção')+'</div>'
+          +'<div style="font-size:13px;font-weight:600;margin-bottom:3px">'+escH(iv.titulo||'')+'</div>'
+          +'<div style="font-size:12.5px;color:var(--dim);line-height:1.55">'+escH(iv.descricao||'')+'</div>'
+          +'</div>';
+      }).join('');
+    }},
+  ];
+
+  secDefs.forEach(function(s, idx) {
+    var html = s.fn(c);
+    if (!html) return;
+    var div = document.createElement('div');
+    div.className = 'sec' + (idx < 3 ? ' open' : ''); // First 3 open by default
+    div.id = 'psec_'+s.id;
+    div.innerHTML =
+      '<div class="sec-top" style="background:linear-gradient(90deg,'+s.cor+',transparent)"></div>'
+      +'<div class="sec-hdr" onclick="this.parentElement.classList.toggle(\'open\')">'
+        +'<div class="sec-hdr-title" style="color:'+s.cor+'">'+s.emoji+' '+escH(s.titulo)+'</div>'
+        +'<span class="sec-toggle">▾</span>'
+      +'</div>'
+      +'<div class="sec-body">'+html+'</div>';
+    secoesWrap.appendChild(div);
+  });
+
+  // Show
+  document.getElementById('prontWrap').style.display='block';
+  document.getElementById('actionsBottom').style.display='flex';
+  document.getElementById('selectorCard').scrollIntoView({behavior:'smooth'});
+}
+
+function exportarPDF() {
+  document.title = 'Prontuário — ' + (prontuarioAtual&&prontuarioAtual.paciente.nome||'Paciente');
+  // Open all sections for print
+  document.querySelectorAll('.sec').forEach(function(s){ s.classList.add('open'); });
+  window.print();
+  document.title = 'Prontuário Inteligente — Synapse Core';
+}
+
+function enviarWhatsApp() {
+  if (!prontuarioAtual) return;
+  var nome = prontuarioAtual.paciente.nome;
+  var msg = 'Prontuário Inteligente pré-sessão gerado para: *'+nome+'*\n\n'
+    +'Documento de apoio clínico pronto para revisão antes do atendimento.\n\n'
+    +'_Synapse Core — Evolution Therapy_';
+  // Get therapist phone from profile
+  api('/api/perfil').then(function(p) {
+    var tel = (p.telefone||'').replace(/\D/g,'');
+    if (!tel.startsWith('55')) tel = '55'+tel;
+    window.open('https://wa.me/'+tel+'?text='+encodeURIComponent(msg),'_blank');
+  }).catch(function() {
+    window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
+  });
+}
+
+function novoRelatorio() {
+  document.getElementById('prontWrap').style.display='none';
+  document.getElementById('actionsBottom').style.display='none';
+  document.getElementById('pacSel').value='';
+  document.getElementById('btnGerar').disabled=true;
+  prontuarioAtual=null;
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function escH(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+</script>
+</body>
+</html>

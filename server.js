@@ -7,7 +7,7 @@ const { runMigrations } = require('./db/migrations');
 
 const app     = express();
 const PORT    = process.env.PORT || 3000;
-const VERSION = '3.2.2';
+const VERSION = '3.2.3';
 
 // ── MIDDLEWARE ──
 app.use(cors());
@@ -46,6 +46,8 @@ app.use('/api/intervencoes',require('./routes/intervencoes'));
 app.use('/api/memoria',     require('./routes/memoria'));
 app.use('/api/analise',     require('./routes/analise'));
 app.get('/analise/:pid',    (req, res) => res.sendFile(path.join(__dirname, 'public', 'analise.html')));
+app.use('/api/prontuario',  require('./routes/prontuario'));
+app.get('/prontuario-inteligente', (req, res) => res.sendFile(path.join(__dirname, 'public', 'prontuario.html')));
 
 // ── PAGES ──
 app.get('/',              (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));

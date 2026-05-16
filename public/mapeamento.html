@@ -11,7 +11,7 @@
 <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700,900&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#0B132B;--surface:#1C2541;--s2:rgba(28,37,65,0.75);--accent:#D4AF7F;--adim:rgba(212,175,127,0.1);--abrd:rgba(212,175,127,0.25);--text:#F5F7FA;--muted:#C9D1D9;--dim:rgba(201,209,217,0.4);--brd:rgba(201,209,217,0.1);--fd:'Satoshi',sans-serif;--fb:'Inter',sans-serif;--r:12px;--sw:260px;--th:60px}
+:root{--bg:#0B132B;--surface:#1C2541;--s2:rgba(28,37,65,0.75);--accent:#D4AF7F;--adim:rgba(212,175,127,0.1);--abrd:rgba(212,175,127,0.25);--text:#F5F7FA;--muted:#C9D1D9;--dim:rgba(201,209,217,0.4);--brd:rgba(201,209,217,0.1);--vdim:rgba(124,58,237,.1);--vbrd:rgba(124,58,237,.25);--fd:'Satoshi',sans-serif;--fb:'Inter',sans-serif;--r:12px;--sw:260px;--th:60px}
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 body{font-family:var(--fb);background:var(--bg);color:var(--text);min-height:100vh}
 /* ── TOPBAR ── */
@@ -350,6 +350,7 @@ body{font-family:var(--fb);background:var(--bg);color:var(--text);min-height:100
 <div class="action-bar" id="actionBar" style="display:none">
   <button class="btn btn-ghost btn-sm" onclick="history.back()">&#8592; Voltar</button>
   <button class="btn btn-ghost btn-sm" onclick="confirmarRegerar()" title="Gerar nova versão do mapeamento">&#8635; Regerar</button>
+  <button class="btn btn-ghost btn-sm" id="btnAnalise" onclick="abrirAnalise()" style="background:var(--vdim);border-color:var(--vbrd);color:#c4b5fd" title="Análise Estrutural Clínica">&#129504; Análise</button>
   <button class="btn btn-primary" id="btnEvolucao" onclick="gerarRelatorioEvolucao()" style="flex:1;justify-content:center;background:linear-gradient(135deg,#7c3aed,#3b82f6)">&#9651; Evolução</button>
   <button class="btn btn-ghost btn-sm" id="btnFinalizar" onclick="salvarObservacoes()">&#10003; Salvar</button>
 </div>
@@ -912,6 +913,10 @@ function renderRadarComEvolucao(indicesAtuais) {
   } catch(e){}
 }
 
+
+function abrirAnalise() {
+  window.location.href = '/analise/' + PACIENTE_ID;
+}
 
 // ── PATCH RELATÓRIO EXISTENTE ──
 function patchRelatorio() {

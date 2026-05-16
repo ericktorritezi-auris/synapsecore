@@ -284,7 +284,68 @@ async function runMigrations() {
       )
     `);
 
-    // ── FEEDBACKS DO PACIENTE ──
+    // ══════════════════════════════════════════════
+    // v3.1.0 — ANÁLISE ESTRUTURAL CLÍNICA
+    // ══════════════════════════════════════════════
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS analise_estrutural (
+        id               SERIAL PRIMARY KEY,
+        paciente_id      INTEGER REFERENCES pacientes(id) ON DELETE CASCADE,
+        mapeamento_id    INTEGER REFERENCES mapeamentos(id) ON DELETE SET NULL,
+        versao           INTEGER NOT NULL DEFAULT 1,
+        ativa            BOOLEAN DEFAULT true,
+        resumo_executivo TEXT,
+        conteudo_json    JSONB NOT NULL DEFAULT '{}',
+        hash_contexto    VARCHAR(64),
+        modelo_ia        VARCHAR(60),
+        modo             VARCHAR(20) DEFAULT 'ia',
+        erro_msg         TEXT,
+        gerado_em        TIMESTAMP DEFAULT NOW(),
+        atualizado_em    TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS hipoteses_clinicas (
+        id                       SERIAL PRIMARY KEY,
+        paciente_id              INTEGER REFERENCES pacientes(id) ON DELETE CASCADE,
+        mapeamento_id            INTEGER REFERENCES mapeamentos(id) ON DELETE SET NULL,
+        versao_geracao           INTEGER DEFAULT 1,
+        tipo                     VARCHAR(60),
+        nivel_confianca          NUMERIC(4,1),
+        origem                   VARCHAR(20) DEFAULT 'ia',
+        ativa                    BOOLEAN DEFAULT true,
+        hipotese_ia              TEXT NOT NULL,
+        evidencias_favoraveis    JSONB DEFAULT '[]',
+        evidencias_contrarias    JSONB DEFAULT '[]',
+        perguntas_validacao      JSONB DEFAULT '[]',
+        interpretacao_terapeuta  TEXT,
+        ajuste_clinico           TEXT,
+        status                   VARCHAR(30) DEFAULT 'ativa',
+        criado_em                TIMESTAMP DEFAULT NOW(),
+        atualizado_em            TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS mapa_identidade (
+        id                    SERIAL PRIMARY KEY,
+        paciente_id           INTEGER REFERENCES pacientes(id) ON DELETE CASCADE,
+        mapeamento_id         INTEGER REFERENCES mapeamentos(id) ON DELETE SET NULL,
+        versao                INTEGER NOT NULL DEFAULT 1,
+        ativa                 BOOLEAN DEFAULT true,
+        conteudo_json         JSONB NOT NULL DEFAULT '{}',
+        frase_identitaria     TEXT,
+        praticas_sustentacao  JSONB DEFAULT '[]',
+        hash_contexto         VARCHAR(64),
+        modelo_ia             VARCHAR(60),
+        modo                  VARCHAR(20) DEFAULT 'ia',
+        erro_msg              TEXT,
+        gerado_em             TIMESTAMP DEFAULT NOW(),
+        atualizado_em         TIMESTAMP DEFAULT NOW()
+      )
+    `);
     await client.query(`
       CREATE TABLE IF NOT EXISTS feedbacks_paciente (
         id            SERIAL PRIMARY KEY,

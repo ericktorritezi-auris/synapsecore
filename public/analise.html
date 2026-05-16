@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Análise Estrutural — Synapse Core</title>
+<meta name="theme-color" content="#0B132B">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<link rel="icon" href="/favicon.ico">
+<link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700,900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0B132B;--sf:#1C2541;--s2:rgba(28,37,65,.75);--ac:#D4AF7F;--adim:rgba(212,175,127,.1);--abrd:rgba(212,175,127,.25);--tx:#F5F7FA;--mu:#C9D1D9;--dim:rgba(201,209,217,.4);--brd:rgba(201,209,217,.1);--fd:'Satoshi',sans-serif;--fb:'Inter',sans-serif;--r:12px;--sw:260px;--th:60px;--violet:#7c3aed;--vdim:rgba(124,58,237,.1);--vbrd:rgba(124,58,237,.25)}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--fb);background:var(--bg);color:var(--tx);min-height:100vh}
+.topbar{display:flex;align-items:center;justify-content:space-between;height:calc(var(--th) + env(safe-area-inset-top,0px));padding:env(safe-area-inset-top,0px) 16px 0;background:var(--sf);border-bottom:1px solid var(--brd);position:fixed;top:0;left:0;right:0;z-index:50}
+.topbar img{height:28px}
+.hamburger{background:none;border:none;color:var(--mu);cursor:pointer;padding:8px;border-radius:8px;font-size:20px}
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:40;backdrop-filter:blur(2px)}
+.overlay.open{display:block}
+.sidebar{width:var(--sw);background:var(--sf);border-right:1px solid var(--brd);position:fixed;top:0;left:0;bottom:0;z-index:45;display:flex;flex-direction:column;transform:translateX(-100%);transition:transform .3s cubic-bezier(.4,0,.2,1);overflow-y:auto}
+.sidebar.open{transform:translateX(0)}
+.sb-logo{padding:20px 20px 18px;border-bottom:1px solid var(--brd)}
+.sb-logo img{height:32px}
+.sb-nav{flex:1;padding:12px 10px;overflow-y:auto}
+.nav-section{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--dim);padding:14px 10px 6px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:9px;color:var(--mu);font-size:13.5px;text-decoration:none;transition:all .18s;margin-bottom:1px;border:1px solid transparent}
+.nav-item:hover{background:rgba(255,255,255,.04);color:var(--tx)}
+.nav-item.active{background:var(--adim);color:var(--ac);border-color:var(--abrd)}
+.nav-item .ni{font-size:16px;width:20px;text-align:center;flex-shrink:0}
+.sb-footer{padding:14px 12px;border-top:1px solid var(--brd)}
+.user-pill{display:flex;align-items:center;gap:10px;padding:10px;background:rgba(11,19,43,.5);border-radius:10px;border:1px solid var(--brd)}
+.user-av{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--ac),#b8924e);display:flex;align-items:center;justify-content:center;font-family:var(--fd);font-size:12px;font-weight:700;color:var(--bg);flex-shrink:0}
+.user-name{font-size:12.5px;font-weight:500}
+.user-role{font-size:10px;color:var(--dim)}
+.logout-btn{margin-left:auto;background:none;border:none;color:var(--dim);cursor:pointer;font-size:13px;padding:4px 6px}
+.main{padding:calc(var(--th)+16px+env(safe-area-inset-top,0px)) 16px 60px}
+/* Header */
+.page-header{margin-bottom:16px}
+.page-header-top{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.back-btn{background:none;border:none;color:var(--dim);cursor:pointer;font-size:13px;padding:4px 0;display:flex;align-items:center;gap:4px}
+.pat-nome{font-family:var(--fd);font-size:20px;font-weight:700}
+.pat-sub{font-size:12px;color:var(--dim)}
+/* Tabs */
+.tabs{display:flex;gap:4px;overflow-x:auto;padding-bottom:2px;margin-bottom:20px;-webkit-overflow-scrolling:touch}
+.tabs::-webkit-scrollbar{display:none}
+.tab{padding:8px 16px;border-radius:20px;font-family:var(--fd);font-size:12.5px;font-weight:700;cursor:pointer;border:1px solid var(--brd);color:var(--dim);background:transparent;white-space:nowrap;transition:all .2s}
+.tab:hover{color:var(--mu);border-color:rgba(255,255,255,.15)}
+.tab.active{background:var(--adim);color:var(--ac);border-color:var(--abrd)}
+.tab-panel{display:none}
+.tab-panel.active{display:block}
+/* Btn */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:9px;font-family:var(--fd);font-size:13px;font-weight:700;cursor:pointer;border:none;transition:all .2s;text-decoration:none}
+.btn-primary{background:linear-gradient(135deg,var(--ac),#b8924e);color:var(--bg)}
+.btn-ghost{background:var(--adim);color:var(--ac);border:1px solid var(--abrd)}
+.btn-violet{background:var(--vdim);color:#c4b5fd;border:1px solid var(--vbrd)}
+.btn-sm{padding:6px 12px;font-size:12px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+/* Cards */
+.sec{background:var(--s2);border:1px solid var(--brd);border-radius:var(--r);overflow:hidden;margin-bottom:14px}
+.sec-accent::before{content:'';display:block;height:2px;background:linear-gradient(90deg,var(--ac),transparent)}
+.sec-violet::before{content:'';display:block;height:2px;background:linear-gradient(90deg,#7c3aed,transparent)}
+.sec-green::before{content:'';display:block;height:2px;background:linear-gradient(90deg,#10b981,transparent)}
+.sec-header{padding:14px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer}
+.sec-title{font-family:var(--fd);font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px}
+.sec-arrow{font-size:11px;color:var(--dim);transition:transform .2s}
+.sec.open .sec-arrow{transform:rotate(-180deg)}
+.sec-body{display:none;padding:14px 16px;border-top:1px solid var(--brd)}
+.sec.open .sec-body{display:block}
+/* Field */
+.field-label{font-size:10.5px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.7px;margin-bottom:5px}
+.field-value{font-size:13px;color:var(--mu);line-height:1.65}
+.field-block{margin-bottom:14px}
+/* Tags */
+.tag{display:inline-block;font-size:11.5px;padding:3px 10px;border-radius:20px;font-weight:600;margin:2px}
+.tag-gold{background:rgba(212,175,127,.1);color:var(--ac);border:1px solid rgba(212,175,127,.2)}
+.tag-green{background:rgba(16,185,129,.1);color:#6ee7b7;border:1px solid rgba(16,185,129,.2)}
+.tag-red{background:rgba(239,68,68,.08);color:#fca5a5;border:1px solid rgba(239,68,68,.15)}
+.tag-blue{background:rgba(59,130,246,.08);color:#93c5fd;border:1px solid rgba(59,130,246,.15)}
+.tag-violet{background:rgba(124,58,237,.1);color:#c4b5fd;border:1px solid rgba(124,58,237,.2)}
+/* Hipóteses */
+.hip-card{background:rgba(11,19,43,.5);border:1px solid var(--brd);border-radius:10px;padding:14px;margin-bottom:10px}
+.hip-header{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:10px}
+.hip-tipo{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;padding:2px 8px;border-radius:10px}
+.hip-confianca{font-family:var(--fd);font-size:18px;font-weight:900;color:var(--ac);white-space:nowrap}
+.hip-texto{font-size:13.5px;color:var(--tx);line-height:1.65;font-weight:500;margin-bottom:10px}
+.hip-ev-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.hip-perguntas{background:rgba(212,175,127,.04);border:1px solid rgba(212,175,127,.1);border-radius:8px;padding:10px 12px;margin-top:8px}
+.hip-edit{background:rgba(11,19,43,.6);border:1px solid var(--brd);border-radius:8px;padding:12px;margin-top:10px}
+.hip-edit textarea{width:100%;background:rgba(11,19,43,.5);border:1px solid var(--brd);border-radius:6px;color:var(--tx);font-family:var(--fb);font-size:12.5px;padding:8px 10px;outline:none;resize:vertical;min-height:52px;line-height:1.5}
+.status-sel{background:rgba(11,19,43,.6);border:1px solid var(--brd);border-radius:6px;color:var(--tx);font-family:var(--fb);font-size:12.5px;padding:7px 10px;outline:none;width:100%;margin-bottom:8px}
+/* Identidade */
+.id-card{border-radius:10px;padding:14px;margin-bottom:10px;border:1px solid rgba(255,255,255,.06)}
+.id-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
+.id-value{font-size:13px;line-height:1.65}
+.frase-id{background:linear-gradient(135deg,rgba(212,175,127,.08),rgba(212,175,127,.03));border:1px solid var(--abrd);border-radius:10px;padding:14px 16px;margin-bottom:16px;font-family:var(--fd);font-size:15px;font-weight:700;color:var(--ac);line-height:1.5;font-style:italic;text-align:center}
+/* Visão geral */
+.vg-card{background:rgba(11,19,43,.4);border:1px solid var(--brd);border-radius:10px;padding:14px;margin-bottom:10px}
+.vg-titulo{font-family:var(--fd);font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px}
+.vg-texto{font-size:13px;color:var(--mu);line-height:1.6}
+/* Spin */
+.mini-spin{width:14px;height:14px;border:2px solid var(--adim);border-top-color:var(--ac);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-row{display:flex;align-items:center;gap:8px;padding:16px 0;color:var(--dim);font-size:13px}
+/* History */
+.hist-item{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--brd);font-size:12.5px;color:var(--mu)}
+.hist-item:last-child{border-bottom:none}
+/* Alerta */
+.alerta-box{background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.2);border-radius:8px;padding:9px 12px;font-size:12px;color:#fcd34d;margin-bottom:12px}
+/* Footer */
+.page-footer{text-align:center;padding:20px 0 8px;font-size:10px;color:var(--dim)}
+.page-footer strong{color:rgba(201,209,217,.4)}
+@media(min-width:960px){
+  .topbar{display:none}.overlay{display:none!important}.sidebar{transform:translateX(0)}
+  .main{margin-left:var(--sw);padding-top:32px;padding-left:32px;padding-right:32px}
+}
+@media(min-width:600px){.main{padding-left:24px;padding-right:24px}}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:2px}
+</style>
+</head>
+<body>
+<div class="topbar" id="topbar">
+  <img src="/img/logo-horizontal.png" alt="Synapse Core">
+  <button class="hamburger" onclick="toggleSidebar()">&#9776;</button>
+</div>
+<div class="overlay" id="overlay" onclick="closeSidebar()"></div>
+<aside class="sidebar" id="sidebar">
+  <div class="sb-logo"><img src="/img/logo-horizontal.png" alt="Synapse Core"></div>
+  <nav class="sb-nav">
+    <div class="nav-section">Principal</div>
+    <a href="/dashboard" class="nav-item"><span class="ni">&#9672;</span> Dashboard</a>
+    <a href="/pacientes" class="nav-item"><span class="ni">&#9675;</span> Pacientes</a>
+    <div class="nav-section">Avaliação</div>
+    <a href="/paciente-novo" class="nav-item"><span class="ni">&#9703;</span> Nova Avaliação</a>
+    <div class="nav-section">Clínico</div>
+    <a href="/radar" class="nav-item"><span class="ni">&#128225;</span> Radar Clínico</a>
+    <a href="/programas" class="nav-item"><span class="ni">&#128203;</span> Programas</a>
+    <div class="nav-section">Gestão</div>
+    <a href="/financeiro" class="nav-item"><span class="ni">&#128176;</span> Financeiro</a>
+    <div class="nav-section">Sistema</div>
+    <a href="/perfil" class="nav-item"><span class="ni">&#9715;</span> Configurações</a>
+  </nav>
+  <div class="sb-footer">
+    <div class="user-pill">
+      <div class="user-av" id="userAvatar">ET</div>
+      <div style="overflow:hidden;flex:1"><div class="user-name" id="userName">--</div><div class="user-role">Evolution Therapy</div></div>
+      <button class="logout-btn" onclick="logout()">Sair</button>
+    </div>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="page-header">
+    <div class="page-header-top">
+      <button class="back-btn" id="btnVoltar" onclick="history.back()">&#8592; Mapeamento</button>
+    </div>
+    <div class="pat-nome" id="patNomeHeader">--</div>
+    <div class="pat-sub" id="patSubHeader">Análise Estrutural Clínica · Uso interno</div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="setTab('visao')">&#128202; Visão Geral</button>
+    <button class="tab" onclick="setTab('estrutural')">&#9889; Mapa Estrutural</button>
+    <button class="tab" onclick="setTab('hipoteses')">&#129504; Hipóteses</button>
+    <button class="tab" onclick="setTab('identidade')">&#127775; Identidade</button>
+    <button class="tab" onclick="setTab('historico')">&#128337; Histórico</button>
+  </div>
+
+  <!-- VISÃO GERAL -->
+  <div class="tab-panel active" id="tab-visao">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+      <button class="btn btn-violet btn-sm" onclick="gerarTudo()" id="btnGerarTudo">&#9673; Gerar Análise Completa</button>
+    </div>
+    <div id="vgBody"><div class="loading-row"><div class="mini-spin"></div>Carregando visão geral...</div></div>
+  </div>
+
+  <!-- MAPA ESTRUTURAL -->
+  <div class="tab-panel" id="tab-estrutural">
+    <div style="display:flex;justify-content:flex-end;margin-bottom:12px;gap:8px">
+      <button class="btn btn-ghost btn-sm" onclick="gerarEstrutural(false)" id="btnEstrutural">&#8635; Gerar / Atualizar</button>
+    </div>
+    <div id="estBody"><div class="loading-row"><div class="mini-spin"></div>Carregando mapa estrutural...</div></div>
+  </div>
+
+  <!-- HIPÓTESES -->
+  <div class="tab-panel" id="tab-hipoteses">
+    <div style="display:flex;justify-content:flex-end;margin-bottom:12px;gap:8px">
+      <button class="btn btn-ghost btn-sm" onclick="gerarHipoteses()" id="btnHipoteses">&#8635; Gerar / Atualizar</button>
+    </div>
+    <div id="hipBody"><div class="loading-row"><div class="mini-spin"></div>Carregando hipóteses...</div></div>
+  </div>
+
+  <!-- MAPA DE IDENTIDADE -->
+  <div class="tab-panel" id="tab-identidade">
+    <div style="display:flex;justify-content:flex-end;margin-bottom:12px;gap:8px">
+      <button class="btn btn-ghost btn-sm" onclick="gerarIdentidade(false)" id="btnIdentidade">&#8635; Gerar / Atualizar</button>
+    </div>
+    <div id="idBody"><div class="loading-row"><div class="mini-spin"></div>Carregando mapa de identidade...</div></div>
+  </div>
+
+  <!-- HISTÓRICO -->
+  <div class="tab-panel" id="tab-historico">
+    <div id="histBody"><div class="loading-row"><div class="mini-spin"></div>Carregando histórico...</div></div>
+  </div>
+
+  <div class="page-footer">&copy; 2026 Synapse Core &mdash; <strong>Erick Torritezi</strong> &mdash; Uso interno clínico</div>
+</main>
+
+<script src="/js/shared.js"></script>
+<script>
+checkAuth();
+renderUserPill();
+
+var PACIENTE_ID = window.location.pathname.split('/')[2];
+var TIPO_HIP_COLORS = { emocional:'#fca5a5', cognitiva:'#93c5fd', relacional:'#6ee7b7', existencial:'#fcd34d', comportamental:'#c4b5fd', defesa:'#f97316', identidade:'var(--ac)', risco:'#ef4444' };
+
+window.addEventListener('DOMContentLoaded', function() {
+  // Load patient name
+  api('/api/pacientes/' + PACIENTE_ID).then(function(p) {
+    document.getElementById('patNomeHeader').textContent = p.nome_completo || '--';
+    document.getElementById('patSubHeader').textContent = (p.perfil_tipo||'adulto') + ' · Análise Estrutural · Uso interno';
+  }).catch(function(){});
+  carregarTudo();
+});
+
+function setTab(name) {
+  document.querySelectorAll('.tab').forEach(function(t,i){ t.classList.remove('active'); });
+  document.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.remove('active'); });
+  var tabs = document.querySelectorAll('.tab');
+  var names = ['visao','estrutural','hipoteses','identidade','historico'];
+  tabs[names.indexOf(name)].classList.add('active');
+  document.getElementById('tab-'+name).classList.add('active');
+  if (name==='historico') carregarHistorico();
+}
+
+function carregarTudo() {
+  carregarVisaoGeral();
+  carregarEstrutural();
+  carregarHipoteses();
+  carregarIdentidade();
+}
+
+// ── VISÃO GERAL ──
+function carregarVisaoGeral() {
+  api('/api/analise/' + PACIENTE_ID + '/visao-geral').then(function(d) {
+    var html = '';
+    if (d.analise_estrutural) {
+      html += '<div class="vg-card sec-accent"><div class="vg-titulo">&#9889; Mapa Estrutural</div>'
+        +'<div class="vg-texto">'+escH(d.analise_estrutural.resumo_executivo||'')+'</div>'
+        +'<div style="font-size:11px;color:var(--dim);margin-top:6px">v'+d.analise_estrutural.versao+' · '+formatDate(d.analise_estrutural.gerado_em)+'</div>'
+        +'</div>';
+    } else html += vgEmpty('Mapa Estrutural','Nenhuma análise gerada ainda.');
+    if (d.mapa_identidade && d.mapa_identidade.frase_identitaria) {
+      html += '<div class="vg-card"><div class="vg-titulo">&#127775; Frase Identitária</div>'
+        +'<div style="font-family:var(--fd);font-size:14px;font-weight:700;color:var(--ac);line-height:1.55;font-style:italic">&#8220;'+escH(d.mapa_identidade.frase_identitaria)+'&#8221;</div>'
+        +'</div>';
+    }
+    if (d.hipoteses && d.hipoteses.length) {
+      html += '<div class="vg-card"><div class="vg-titulo">&#129504; Hipóteses Principais ('+d.hipoteses.length+')</div>'
+        +d.hipoteses.slice(0,3).map(function(h){
+          return '<div style="display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid var(--brd)">'
+            +'<span style="font-size:10px;padding:2px 7px;border-radius:8px;background:rgba(255,255,255,.05);color:var(--dim);white-space:nowrap;margin-top:2px">'+escH(h.tipo||'—')+'</span>'
+            +'<span style="font-size:12.5px;color:var(--mu);flex:1;line-height:1.5">'+escH(h.hipotese_ia)+'</span>'
+            +'<span style="font-family:var(--fd);font-size:13px;font-weight:700;color:var(--ac);white-space:nowrap">'+h.nivel_confianca+'</span>'
+          +'</div>';
+        }).join('')
+        +'</div>';
+    }
+    if (!html) html = vgEmpty('Análise Estrutural','Clique em "Gerar Análise Completa" para iniciar.');
+    document.getElementById('vgBody').innerHTML = html;
+  }).catch(function(){ document.getElementById('vgBody').innerHTML = vgEmpty('Análise','Clique em "Gerar Análise Completa" para iniciar.'); });
+}
+
+function vgEmpty(titulo, msg) {
+  return '<div class="vg-card" style="text-align:center;padding:20px">'
+    +'<div style="font-size:12.5px;color:var(--dim)">'+escH(msg)+'</div></div>';
+}
+
+function gerarTudo() {
+  var btn = document.getElementById('btnGerarTudo');
+  btn.disabled=true; btn.textContent='Gerando...';
+  gerarEstrutural(false, function() {
+    gerarHipoteses(function() {
+      gerarIdentidade(false, function() {
+        carregarVisaoGeral();
+        btn.disabled=false; btn.textContent='⊳ Gerar Análise Completa';
+        showToast('Análise completa gerada!','success');
+      });
+    });
+  });
+}
+
+// ── MAPA ESTRUTURAL ──
+function carregarEstrutural() {
+  api('/api/analise/'+PACIENTE_ID+'/estrutural/atual').then(function(d) {
+    if (d) renderEstrutural(d);
+    else document.getElementById('estBody').innerHTML = emptyState('Nenhuma análise estrutural gerada ainda.');
+  }).catch(function(){});
+}
+
+function gerarEstrutural(force, cb) {
+  var btn = document.getElementById('btnEstrutural');
+  btn.disabled=true; btn.textContent='Gerando...';
+  document.getElementById('estBody').innerHTML = loadingRow('Analisando estrutura clínica...');
+  api('/api/analise/'+PACIENTE_ID+'/estrutural/gerar','POST',{force:force===true})
+    .then(function(d) {
+      btn.disabled=false; btn.textContent='↻ Gerar / Atualizar';
+      if (d.sem_mudancas) showToast('Sem alterações desde a última análise.','info');
+      renderEstrutural(d);
+      if (cb) cb();
+    })
+    .catch(function(e){ btn.disabled=false; btn.textContent='↻ Gerar / Atualizar'; document.getElementById('estBody').innerHTML=errState(e.message); if(cb)cb(); });
+}
+
+function renderEstrutural(d) {
+  var j = d.conteudo_json || {};
+  var html = '';
+  if (d.resumo_executivo) {
+    html += '<div style="background:linear-gradient(135deg,rgba(212,175,127,.08),rgba(28,37,65,.5));border:1px solid var(--abrd);border-radius:10px;padding:14px 16px;margin-bottom:16px">'
+      +'<div class="field-label">Síntese executiva</div>'
+      +'<div style="font-size:13.5px;color:var(--tx);line-height:1.65">'+escH(d.resumo_executivo)+'</div>'
+      +'</div>';
+  }
+  var campos = [
+    ['Núcleo Emocional', j.nucleo_emocional, '#fca5a5'],
+    ['Conflito Central', j.conflito_central, '#fcd34d'],
+    ['Padrão de Sabotagem', j.padrao_sabotagem, '#f97316'],
+    ['Estilo Relacional', j.estilo_relacional, '#93c5fd'],
+    ['Eixo Existencial', j.eixo_existencial, '#c4b5fd'],
+    ['Risco de Manutenção', j.risco_manutencao, '#fca5a5'],
+    ['Direção Terapêutica', j.direcao_terapeutica, '#6ee7b7'],
+  ];
+  campos.forEach(function(c) {
+    if (!c[1]) return;
+    html += secCollapse(c[0], '<div style="font-size:13px;color:var(--mu);line-height:1.65">'+escH(c[1])+'</div>', c[2]);
+  });
+  if (j.mecanismos_defesa && j.mecanismos_defesa.length) {
+    html += secCollapse('Mecanismos de Defesa',
+      j.mecanismos_defesa.map(function(m){return '<div style="font-size:13px;color:var(--mu);padding:4px 0;border-bottom:1px solid var(--brd);line-height:1.55">'+escH(m)+'</div>';}).join(''), '#f97316');
+  }
+  if (j.recursos_internos && j.recursos_internos.length) {
+    html += secCollapse('Recursos Internos',
+      '<div style="display:flex;flex-wrap:wrap;gap:6px">'+j.recursos_internos.map(function(r){return '<span class="tag tag-green">'+escH(r)+'</span>';}).join('')+'</div>', '#6ee7b7');
+  }
+  html += '<div style="font-size:11px;color:var(--dim);margin-top:8px;text-align:right">v'+d.versao+' · '+formatDate(d.gerado_em)+' · '+escH(d.modo||'ia')+'</div>';
+  document.getElementById('estBody').innerHTML = html;
+}
+
+// ── HIPÓTESES ──
+function carregarHipoteses() {
+  api('/api/analise/'+PACIENTE_ID+'/hipoteses').then(function(data) {
+    if (data.length) renderHipoteses(data);
+    else document.getElementById('hipBody').innerHTML = emptyState('Nenhuma hipótese clínica gerada ainda.');
+  }).catch(function(){});
+}
+
+function gerarHipoteses(cb) {
+  var btn = document.getElementById('btnHipoteses');
+  btn.disabled=true; btn.textContent='Gerando...';
+  document.getElementById('hipBody').innerHTML = loadingRow('Formulando hipóteses clínicas...');
+  api('/api/analise/'+PACIENTE_ID+'/hipoteses/gerar','POST',{})
+    .then(function(d) {
+      btn.disabled=false; btn.textContent='↻ Gerar / Atualizar';
+      carregarHipoteses();
+      if (cb) cb();
+    })
+    .catch(function(e){ btn.disabled=false; btn.textContent='↻ Gerar / Atualizar'; document.getElementById('hipBody').innerHTML=errState(e.message); if(cb)cb(); });
+}
+
+function renderHipoteses(data) {
+  var html = '';
+  var STATUS_COLORS = { ativa:'#c4b5fd', validada:'#6ee7b7', em_observacao:'#fcd34d', descartada:'rgba(201,209,217,.3)', reformulada:'#f97316' };
+  data.forEach(function(h) {
+    var tipColor = TIPO_HIP_COLORS[h.tipo] || 'var(--dim)';
+    var stColor  = STATUS_COLORS[h.status] || 'var(--dim)';
+    var conf = h.nivel_confianca ? parseFloat(h.nivel_confianca).toFixed(1) : '—';
+    html += '<div class="hip-card" id="hcard_'+h.id+'">'
+      +'<div class="hip-header">'
+        +'<div style="flex:1">'
+          +'<span class="hip-tipo" style="background:'+tipColor+'18;color:'+tipColor+';border:1px solid '+tipColor+'35">'+escH(h.tipo||'geral')+'</span>'
+          +'<span style="font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600;color:'+stColor+';background:rgba(255,255,255,.03);border:1px solid '+stColor+'55;margin-left:5px">'+escH(h.status||'ativa')+'</span>'
+        +'</div>'
+        +'<div class="hip-confianca">'+conf+'<span style="font-size:11px;color:var(--dim)">/10</span></div>'
+      +'</div>'
+      +'<div class="hip-texto">'+escH(h.hipotese_ia)+'</div>';
+
+    var evFav = h.evidencias_favoraveis || [];
+    var evCon = h.evidencias_contrarias || [];
+    var pergs = h.perguntas_validacao || [];
+
+    if (evFav.length || evCon.length) {
+      html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">';
+      if (evFav.length) html += '<div><div class="hip-ev-lbl" style="color:#6ee7b7">Evidências favoráveis</div>'+evFav.map(function(e){return '<div style="font-size:12px;color:var(--mu);padding:2px 0;line-height:1.5">+ '+escH(e)+'</div>';}).join('')+'</div>';
+      if (evCon.length) html += '<div><div class="hip-ev-lbl" style="color:#fca5a5">Evidências contrárias</div>'+evCon.map(function(e){return '<div style="font-size:12px;color:var(--mu);padding:2px 0;line-height:1.5">− '+escH(e)+'</div>';}).join('')+'</div>';
+      html += '</div>';
+    }
+    if (pergs.length) {
+      html += '<div class="hip-perguntas"><div class="hip-ev-lbl" style="color:var(--ac)">Perguntas para sessão</div>'
+        +pergs.map(function(p,i){return '<div style="font-size:12.5px;color:var(--mu);padding:3px 0;line-height:1.5">'+(i+1)+'. '+escH(p)+'</div>';}).join('')+'</div>';
+    }
+
+    // Therapist edit section
+    html += '<div class="hip-edit" id="hedit_'+h.id+'" style="display:none">'
+      +'<select class="status-sel" id="hstatus_'+h.id+'" onchange="salvarHipotese('+h.id+')">'
+      +'<option value="ativa"'+(h.status==='ativa'?' selected':'')+'>Ativa</option>'
+      +'<option value="validada"'+(h.status==='validada'?' selected':'')+'>Validada clinicamente</option>'
+      +'<option value="em_observacao"'+(h.status==='em_observacao'?' selected':'')+'>Em observação</option>'
+      +'<option value="descartada"'+(h.status==='descartada'?' selected':'')+'>Descartada</option>'
+      +'<option value="reformulada"'+(h.status==='reformulada'?' selected':'')+'>Reformulada pelo terapeuta</option>'
+      +'</select>'
+      +'<div style="font-size:10.5px;color:var(--dim);margin-bottom:4px">Interpretação do terapeuta</div>'
+      +'<textarea id="hinterp_'+h.id+'" placeholder="Sua leitura clínica sobre esta hipótese...">'+escH(h.interpretacao_terapeuta||'')+'</textarea>'
+      +'<div style="font-size:10.5px;color:var(--dim);margin:6px 0 4px">Ajuste clínico</div>'
+      +'<textarea id="hajuste_'+h.id+'" placeholder="Como você reformularia ou complementaria esta hipótese...">'+escH(h.ajuste_clinico||'')+'</textarea>'
+      +'<div style="font-size:10px;color:var(--dim);margin-top:6px;font-style:italic">O texto original da IA é preservado permanentemente.</div>'
+      +'<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px">'
+        +'<button onclick="fecharEdit('+h.id+')" class="btn btn-ghost btn-sm">Cancelar</button>'
+        +'<button onclick="salvarHipotese('+h.id+')" class="btn btn-primary btn-sm">Salvar</button>'
+      +'</div>'
+      +'</div>';
+
+    html += '<div style="display:flex;justify-content:flex-end;margin-top:8px">'
+      +'<button onclick="toggleEdit('+h.id+')" class="btn btn-ghost btn-sm" style="font-size:11.5px">&#9998; Editar</button>'
+      +'</div>';
+
+    html += '</div>';
+  });
+  document.getElementById('hipBody').innerHTML = html;
+}
+
+function toggleEdit(id) {
+  var el = document.getElementById('hedit_'+id);
+  el.style.display = el.style.display==='block' ? 'none' : 'block';
+}
+function fecharEdit(id) { document.getElementById('hedit_'+id).style.display='none'; }
+
+function salvarHipotese(id) {
+  var status = document.getElementById('hstatus_'+id).value;
+  var interp = document.getElementById('hinterp_'+id).value;
+  var ajuste = document.getElementById('hajuste_'+id).value;
+  api('/api/analise/'+id+'/hipoteses/atualizar','PUT',{status,interpretacao_terapeuta:interp||null,ajuste_clinico:ajuste||null})
+    .then(function(){ fecharEdit(id); showToast('Hipótese atualizada.','success'); carregarHipoteses(); })
+    .catch(function(e){ showToast(e.message,'error'); });
+}
+
+// ── IDENTIDADE ──
+function carregarIdentidade() {
+  api('/api/analise/'+PACIENTE_ID+'/identidade/atual').then(function(d) {
+    if (d) renderIdentidade(d);
+    else document.getElementById('idBody').innerHTML = emptyState('Nenhum mapa de identidade gerado ainda.');
+  }).catch(function(){});
+}
+
+function gerarIdentidade(force, cb) {
+  var btn = document.getElementById('btnIdentidade');
+  btn.disabled=true; btn.textContent='Gerando...';
+  document.getElementById('idBody').innerHTML = loadingRow('Mapeando estrutura de identidade...');
+  api('/api/analise/'+PACIENTE_ID+'/identidade/gerar','POST',{force:force===true})
+    .then(function(d) {
+      btn.disabled=false; btn.textContent='↻ Gerar / Atualizar';
+      if (d.sem_mudancas) showToast('Sem alterações desde o último mapa.','info');
+      renderIdentidade(d);
+      if (cb) cb();
+    })
+    .catch(function(e){ btn.disabled=false; btn.textContent='↻ Gerar / Atualizar'; document.getElementById('idBody').innerHTML=errState(e.message); if(cb)cb(); });
+}
+
+function renderIdentidade(d) {
+  var j = d.conteudo_json || {};
+  var html = '';
+  if (d.frase_identitaria) {
+    html += '<div class="frase-id">&#8220;'+escH(d.frase_identitaria)+'&#8221;</div>';
+  }
+  var camadas = [
+    ['Identidade Atual', j.identidade_atual, 'rgba(59,130,246,.08)', '#93c5fd', 'Como está funcionando hoje'],
+    ['Identidade Defensiva', j.identidade_defensiva, 'rgba(239,68,68,.06)', '#fca5a5', 'Quem aprendeu a ser para sobreviver'],
+    ['Identidade Desejada', j.identidade_desejada, 'rgba(245,158,11,.06)', '#fcd34d', 'Quem quer ser conscientemente'],
+    ['Identidade Necessária', j.identidade_necessaria, 'rgba(16,185,129,.06)', '#6ee7b7', 'Quem precisa desenvolver'],
+    ['Ruptura Necessária', j.ruptura_necessaria, 'rgba(239,68,68,.08)', '#f97316', 'O que precisa ser abandonado'],
+    ['Movimento de Consolidação', j.movimento_consolidacao, 'rgba(212,175,127,.06)', 'var(--ac)', 'Atitudes que sustentam a nova identidade'],
+  ];
+  camadas.forEach(function(c) {
+    if (!c[1]) return;
+    html += '<div class="id-card" style="background:'+c[2]+';border-color:'+c[3]+'28">'
+      +'<div class="id-label" style="color:'+c[3]+'">'+escH(c[0])+' <span style="font-weight:400;font-style:italic">— '+escH(c[4])+'</span></div>'
+      +'<div class="id-value" style="color:var(--mu)">'+escH(c[1])+'</div>'
+      +'</div>';
+  });
+  if (d.praticas_sustentacao && d.praticas_sustentacao.length) {
+    html += '<div style="margin-top:14px;background:rgba(212,175,127,.04);border:1px solid var(--abrd);border-radius:10px;padding:14px 16px">'
+      +'<div class="field-label" style="color:var(--ac)">Práticas de sustentação</div>'
+      +d.praticas_sustentacao.map(function(p,i){return '<div style="font-size:13px;color:var(--mu);padding:4px 0;line-height:1.55">'+(i+1)+'. '+escH(p)+'</div>';}).join('')
+      +'</div>';
+  }
+  html += '<div style="font-size:11px;color:var(--dim);margin-top:8px;text-align:right">v'+d.versao+' · '+formatDate(d.gerado_em)+'</div>';
+  document.getElementById('idBody').innerHTML = html;
+}
+
+// ── HISTÓRICO ──
+function carregarHistorico() {
+  var html = '<div style="margin-bottom:20px">';
+  Promise.all([
+    api('/api/analise/'+PACIENTE_ID+'/estrutural/historico'),
+    api('/api/analise/'+PACIENTE_ID+'/identidade/historico'),
+  ]).then(function(results) {
+    var ae = results[0], mi = results[1];
+    html += histSection('⚡ Mapa Estrutural', ae);
+    html += histSection('✦ Mapa de Identidade', mi);
+    html += '</div>';
+    document.getElementById('histBody').innerHTML = html;
+  }).catch(function(){ document.getElementById('histBody').innerHTML = errState('Erro ao carregar histórico.'); });
+}
+
+function histSection(titulo, itens) {
+  if (!itens || !itens.length) return '<div style="margin-bottom:16px"><div style="font-family:var(--fd);font-size:13px;font-weight:700;color:var(--dim);margin-bottom:8px">'+escH(titulo)+'</div><div style="font-size:12px;color:var(--dim)">Nenhum histórico ainda.</div></div>';
+  return '<div style="margin-bottom:16px"><div style="font-family:var(--fd);font-size:13px;font-weight:700;color:var(--ac);margin-bottom:8px">'+escH(titulo)+'</div>'
+    +itens.map(function(i){
+      return '<div class="hist-item">'
+        +'<span style="font-family:var(--fd);font-weight:700;color:'+(i.ativa?'var(--ac)':'var(--dim)')+'">v'+i.versao+'</span>'
+        +'<span>'+formatDate(i.gerado_em)+'</span>'
+        +(i.ativa?'<span style="font-size:10px;background:rgba(16,185,129,.1);color:#6ee7b7;padding:1px 7px;border-radius:10px;font-weight:600">Ativa</span>':'')
+        +(i.resumo_executivo||i.frase_identitaria ? '<span style="font-size:11.5px;color:var(--dim);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escH((i.resumo_executivo||i.frase_identitaria||'').substring(0,60))+'…</span>' : '')
+      +'</div>';
+    }).join('')+'</div>';
+}
+
+// ── HELPERS ──
+function secCollapse(titulo, htmlInner, cor) {
+  var id = 'sc_'+Math.random().toString(36).slice(2,7);
+  return '<div class="sec sec-accent" id="'+id+'" onclick="toggleSec(\''+id+'\')"><div class="sec-header"><div class="sec-title" style="color:'+cor+'">'+escH(titulo)+'</div><span class="sec-arrow">▾</span></div><div class="sec-body">'+htmlInner+'</div></div>';
+}
+function toggleSec(id){ document.getElementById(id).classList.toggle('open'); }
+function loadingRow(txt){ return '<div class="loading-row"><div class="mini-spin"></div>'+escH(txt)+'</div>'; }
+function emptyState(txt){ return '<div style="text-align:center;padding:32px 0;color:var(--dim);font-size:13px">'+escH(txt)+'</div>'; }
+function errState(txt){ return '<div style="color:#fca5a5;font-size:13px;padding:12px 0">Erro: '+escH(txt)+'</div>'; }
+function escH(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+</script>
+</body>
+</html>

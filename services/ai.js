@@ -377,7 +377,7 @@ NÃO diagnostique. Use linguagem de hipóteses ("sugere", "indica", "observa-se 
   return { relatorio, programa: prog };
 }
 
-module.exports = { calcularIndices, detectarFlags, gerarMapeamento, FLAG_LABELS, sugerirPrograma, sugerirProgramaLocal, gerarResumoClinico, gerarEvolucao, sugerirCIDs, registrarAuditoria, gerarBriefingSessao, gerarIntervencoes, atualizarMemoriaTerapeutica };
+module.exports = { calcularIndices, detectarFlags, gerarMapeamento, FLAG_LABELS, sugerirPrograma, sugerirProgramaLocal, gerarResumoClinico, gerarEvolucao, sugerirCIDs, registrarAuditoria, gerarBriefingSessao, gerarIntervencoes, atualizarMemoriaTerapeutica, gerarAnaliseEstrutural, gerarHipotesesClinicas, gerarMapaIdentidade };
 
 // ══════════════════════════════════════════════
 // v3.0.0 — INTELIGÊNCIA CLÍNICA INTEGRATIVA
@@ -891,4 +891,204 @@ Retorne APENAS o texto do resumo, sem JSON, sem títulos, sem marcadores.`;
   if (!resp.ok) throw new Error('Anthropic API error: ' + resp.status);
   const data = await resp.json();
   return data.content?.[0]?.text || 'Resumo não gerado.';
+}
+
+// ══════════════════════════════════════════════
+// v3.1.0 — ANÁLISE ESTRUTURAL CLÍNICA
+// ══════════════════════════════════════════════
+
+// ── MAPA ESTRUTURAL ──
+async function gerarAnaliseEstrutural({ db, paciente, mapeamento, sessoes, feedbacks, resumoAtual, memoriaAtual }) {
+  const inicio = Date.now();
+  const flags  = mapeamento ? (mapeamento.flags_json || []) : [];
+  const ind    = mapeamento ? (mapeamento.indices_json || {}) : {};
+  const proto  = mapeamento ? (mapeamento.protocolo_json || {}) : {};
+  const FLAG_L = { risco_depressivo:'Risco Depressivo', burnout_provavel:'Burnout Provável', ansiedade_elevada:'Ansiedade Elevada', trauma_indicado:'Trauma Indicado', isolamento_social:'Isolamento Social', instabilidade_emocional:'Instabilidade Emocional', conflito_relacional:'Conflito Relacional', baixa_autoestima:'Baixa Autoestima', neurodivergencia:'Neurodivergência', crise_existencial:'Crise Existencial', ideacao_suicida:'Ideação Suicida' };
+  const sessStr = sessoes.slice(-5).map(s=>`S${s.sessao_numero}: ${s.resumo_terapeuta||'sem resumo'}`).join('\n');
+  const feedStr = feedbacks.slice(-4).map(f=>`${new Date(f.data_feedback).toLocaleDateString('pt-BR')}: ${f.conteudo}`).join('\n');
+
+  const prompt = `Você é o motor de análise clínica estrutural do Synapse Core — Evolution Therapy.
+Terapeuta: Erick Torritezi — Psicanalista, Psicoterapeuta Integrativo, Master Hipnoterapeuta, especialista em PNL Terapêutica e Logoterapia.
+
+PACIENTE: ${paciente.nome_completo} | ${paciente.perfil_tipo||'adulto'}
+FLAGS CLÍNICAS: ${flags.map(f=>FLAG_L[f]||f).join(', ')||'Nenhuma'}
+ÍNDICES: Emocional=${ind.D1||'N/D'} Cognitivo=${ind.D2||'N/D'} Relacional=${ind.D3||'N/D'} Existencial=${ind.D4||'N/D'} Corporal=${ind.D5||'N/D'}
+
+RESUMO CLÍNICO ATUAL:
+${resumoAtual||'Não disponível'}
+
+ÚLTIMAS SESSÕES:
+${sessStr||'Sem sessões registradas'}
+
+FEEDBACKS RECENTES:
+${feedStr||'Sem feedbacks'}
+
+${memoriaAtual ? 'MEMÓRIA TERAPÊUTICA:\n'+memoriaAtual+'\n' : ''}
+
+ABORDAGEM INTEGRATIVA:
+- Psicanálise → estrutura, defesa, dinâmica inconsciente, funcionamento emocional
+- Logoterapia → eixo existencial, vazio, direção, sentido, responsabilidade
+- PNL → padrões cognitivos/comportamentais, metaprogramas, filtros perceptivos
+- Hipnose Ericksoniana → resistência indireta, padrões de resposta emocional, flexibilidade
+- Neurociência emocional → regulação, hiperativação, exaustão, funcionamento adaptativo
+
+Gere o Mapa Estrutural deste paciente respondendo: "Como este paciente funciona emocionalmente, relacionalmente e defensivamente?"
+
+USE LINGUAGEM DE HIPÓTESE E FUNCIONAMENTO. Nunca linguagem diagnóstica ou de verdade absoluta.
+Seja clínico, sofisticado e operacionalmente útil durante uma sessão.
+
+Retorne APENAS JSON válido:
+{
+  "resumo_executivo": "síntese clínica em 2-3 frases — rápida leitura antes da sessão",
+  "nucleo_emocional": "emoção ou estado predominante que organiza o funcionamento",
+  "conflito_central": "tensão nuclear que move o sofrimento ou resistência",
+  "mecanismos_defesa": ["defesa 1 com breve descrição funcional", "defesa 2"],
+  "padrao_sabotagem": "como o paciente tende a sabotar avanços ou mudanças",
+  "estilo_relacional": "padrão de vinculação e funcionamento relacional",
+  "eixo_existencial": "questão de sentido, vazio ou direção predominante",
+  "recursos_internos": ["recurso 1", "recurso 2", "recurso 3"],
+  "risco_manutencao": "o que pode manter o padrão atual e dificultar a transformação",
+  "direcao_terapeutica": "direção clínica sugerida com base na leitura estrutural"
+}`;
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST', headers:{'Content-Type':'application/json','x-api-key':process.env.ANTHROPIC_API_KEY,'anthropic-version':'2023-06-01'},
+      body:JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:2000, messages:[{role:'user',content:prompt}] })
+    });
+    if (!resp.ok) throw new Error('Anthropic error: '+resp.status);
+    const data = await resp.json();
+    const text = data.content?.[0]?.text||'{}';
+    const clean = text.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
+    const m = clean.match(/\{[\s\S]*\}/);
+    const json = m ? JSON.parse(m[0]) : {};
+    const duracao = Date.now()-inicio;
+    await registrarAuditoria(db,{paciente_id:paciente.id,modulo:'analise_estrutural',referencia_tipo:'mapeamento',referencia_id:mapeamento?.id,prompt_resumo:prompt,input_hash:crypto.createHash('md5').update(prompt).digest('hex'),output_resumo:text,tokens_usados:data.usage?.output_tokens,duracao_ms:duracao,sucesso:true,modelo:'claude-sonnet-4-20250514',modo:'ia'});
+    return { json, resumo_executivo: json.resumo_executivo||'', modo:'ia', modelo:'claude-sonnet-4-20250514' };
+  } catch(e) {
+    await registrarAuditoria(db,{paciente_id:paciente.id,modulo:'analise_estrutural',sucesso:false,erro_msg:e.message,modo:'fallback'});
+    throw e;
+  }
+}
+
+// ── HIPÓTESES CLÍNICAS ──
+async function gerarHipotesesClinicas({ db, paciente, mapeamento, sessoes, resumoAtual, analiseEstrutural }) {
+  const inicio = Date.now();
+  const flags  = mapeamento ? (mapeamento.flags_json||[]) : [];
+  const ind    = mapeamento ? (mapeamento.indices_json||{}) : {};
+  const FLAG_L = { risco_depressivo:'Risco Depressivo', burnout_provavel:'Burnout Provável', ansiedade_elevada:'Ansiedade Elevada', trauma_indicado:'Trauma Indicado', isolamento_social:'Isolamento Social', instabilidade_emocional:'Instabilidade Emocional', conflito_relacional:'Conflito Relacional', baixa_autoestima:'Baixa Autoestima', neurodivergencia:'Neurodivergência', crise_existencial:'Crise Existencial', ideacao_suicida:'Ideação Suicida' };
+
+  const prompt = `Você é o motor de hipóteses clínicas do Synapse Core — Evolution Therapy.
+Terapeuta: Erick Torritezi — Psicanalista, Psicoterapeuta Integrativo, Master Hipnoterapeuta.
+
+PACIENTE: ${paciente.nome_completo} | ${paciente.perfil_tipo||'adulto'}
+FLAGS: ${flags.map(f=>FLAG_L[f]||f).join(', ')||'Nenhuma'}
+ÍNDICES: D1=${ind.D1||'N/D'} D2=${ind.D2||'N/D'} D3=${ind.D3||'N/D'} D4=${ind.D4||'N/D'} D5=${ind.D5||'N/D'}
+
+RESUMO CLÍNICO:
+${resumoAtual||'Não disponível'}
+
+${analiseEstrutural ? 'MAPA ESTRUTURAL:\n'+JSON.stringify(analiseEstrutural)+'\n' : ''}
+
+ÚLTIMAS SESSÕES:
+${sessoes.slice(-3).map(s=>`S${s.sessao_numero}: ${s.resumo_terapeuta||'sem resumo'}`).join('\n')||'Sem sessões'}
+
+Gere de 4 a 7 hipóteses clínicas sobre o funcionamento deste paciente.
+Tipos disponíveis: emocional, cognitiva, relacional, existencial, comportamental, defesa, identidade, risco.
+
+REGRAS:
+- Use linguagem de hipótese (provável, sugere, pode indicar, parece operar)
+- Nunca diagnóstico
+- Cada hipótese deve ter nível de confiança (0-10) baseado nas evidências disponíveis
+- Inclua evidências favoráveis, contrárias e perguntas para validação em sessão
+- As perguntas devem ser usáveis diretamente pelo terapeuta durante a sessão
+
+Retorne APENAS JSON válido:
+{
+  "hipoteses": [
+    {
+      "tipo": "tipo da hipótese",
+      "nivel_confianca": 7.5,
+      "hipotese": "enunciado da hipótese em linguagem clínica de funcionamento",
+      "evidencias_favoraveis": ["evidência 1", "evidência 2"],
+      "evidencias_contrarias": ["possível contra-evidência"],
+      "perguntas_validacao": ["pergunta direta para a sessão 1", "pergunta 2"]
+    }
+  ]
+}`;
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST', headers:{'Content-Type':'application/json','x-api-key':process.env.ANTHROPIC_API_KEY,'anthropic-version':'2023-06-01'},
+      body:JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:2500, messages:[{role:'user',content:prompt}] })
+    });
+    if (!resp.ok) throw new Error('Anthropic error: '+resp.status);
+    const data = await resp.json();
+    const text = data.content?.[0]?.text||'{}';
+    const clean = text.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
+    const m = clean.match(/\{[\s\S]*\}/);
+    const json = m ? JSON.parse(m[0]) : { hipoteses:[] };
+    const duracao = Date.now()-inicio;
+    await registrarAuditoria(db,{paciente_id:paciente.id,modulo:'hipoteses_clinicas',referencia_tipo:'mapeamento',referencia_id:mapeamento?.id,prompt_resumo:prompt,input_hash:crypto.createHash('md5').update(prompt).digest('hex'),output_resumo:text,tokens_usados:data.usage?.output_tokens,duracao_ms:duracao,sucesso:true,modelo:'claude-sonnet-4-20250514',modo:'ia'});
+    return { hipoteses: json.hipoteses||[], modo:'ia' };
+  } catch(e) {
+    await registrarAuditoria(db,{paciente_id:paciente.id,modulo:'hipoteses_clinicas',sucesso:false,erro_msg:e.message,modo:'fallback'});
+    throw e;
+  }
+}
+
+// ── MAPA DE IDENTIDADE ──
+async function gerarMapaIdentidade({ db, paciente, mapeamento, resumoAtual, analiseEstrutural }) {
+  const inicio = Date.now();
+  const proto  = mapeamento ? (mapeamento.protocolo_json||{}) : {};
+
+  const prompt = `Você é o motor de análise de identidade do Synapse Core — Evolution Therapy.
+Terapeuta: Erick Torritezi — especialista em Protocolo ESSÊNCIA, metodologia 4F e reorganização identitária.
+
+PACIENTE: ${paciente.nome_completo} | ${paciente.perfil_tipo||'adulto'}
+
+RESUMO CLÍNICO:
+${resumoAtual||'Não disponível'}
+
+${analiseEstrutural ? 'MAPA ESTRUTURAL:\nNúcleo emocional: '+(analiseEstrutural.nucleo_emocional||'')
+  +'\nConflito central: '+(analiseEstrutural.conflito_central||'')
+  +'\nEstilo relacional: '+(analiseEstrutural.estilo_relacional||'')
+  +'\nEixo existencial: '+(analiseEstrutural.eixo_existencial||'')+'\n' : ''}
+
+METODOLOGIA:
+O Protocolo ESSÊNCIA e a metodologia 4F trabalham com destravamento emocional, consolidação identitária e sustentação de mudança.
+Este mapa deve responder: "Quem é este paciente hoje, quem ele aprendeu a ser para sobreviver, quem ele quer ser e quem ele precisa desenvolver?"
+
+LINGUAGEM: Profundidade clínica com clareza prática. Sem linguagem motivacional ou autoajuda.
+
+Retorne APENAS JSON válido:
+{
+  "identidade_atual": "como o paciente está funcionando e se apresentando hoje",
+  "identidade_defensiva": "quem ele aprendeu a ser para sobreviver emocionalmente — o personagem de proteção",
+  "identidade_desejada": "quem ele gostaria de ser conscientemente — o ideal declarado",
+  "identidade_necessaria": "quem ele precisa desenvolver para sustentar a transformação real",
+  "ruptura_necessaria": "o padrão, personagem ou funcionamento que precisa ser reconhecido e abandonado",
+  "movimento_consolidacao": "atitudes, práticas e posicionamentos que sustentam a nova identidade",
+  "frase_identitaria": "uma frase clínica que capture a essência do movimento identitário deste paciente — usável em sessão",
+  "praticas_sustentacao": ["prática concreta 1", "prática concreta 2", "prática concreta 3"]
+}`;
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST', headers:{'Content-Type':'application/json','x-api-key':process.env.ANTHROPIC_API_KEY,'anthropic-version':'2023-06-01'},
+      body:JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:2000, messages:[{role:'user',content:prompt}] })
+    });
+    if (!resp.ok) throw new Error('Anthropic error: '+resp.status);
+    const data = await resp.json();
+    const text = data.content?.[0]?.text||'{}';
+    const clean = text.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
+    const m = clean.match(/\{[\s\S]*\}/);
+    const json = m ? JSON.parse(m[0]) : {};
+    const duracao = Date.now()-inicio;
+    await registrarAuditoria(db,{paciente_id:paciente.id,modulo:'mapa_identidade',referencia_tipo:'mapeamento',referencia_id:mapeamento?.id,prompt_resumo:prompt,input_hash:crypto.createHash('md5').update(prompt).digest('hex'),output_resumo:text,tokens_usados:data.usage?.output_tokens,duracao_ms:duracao,sucesso:true,modelo:'claude-sonnet-4-20250514',modo:'ia'});
+    return { json, frase_identitaria: json.frase_identitaria||'', praticas_sustentacao: json.praticas_sustentacao||[], modo:'ia', modelo:'claude-sonnet-4-20250514' };
+  } catch(e) {
+    await registrarAuditoria(db,{paciente_id:paciente.id,modulo:'mapa_identidade',sucesso:false,erro_msg:e.message,modo:'fallback'});
+    throw e;
+  }
 }

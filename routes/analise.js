@@ -22,6 +22,41 @@ async function loadContexto(pid) {
   return { paciente: pac.rows[0], mapeamento: map.rows[0]||null, sessoes: sess.rows, feedbacks: feedRows, resumoAtual, resumoVersao, memoriaAtual };
 }
 
+// ═══ DIAGNÓSTICO (sem chamar IA) ═══
+router.get('/:pid/diagnostico', verifyToken, async (req, res) => {
+  const pid = req.params.pid;
+  const result = { pid, tabelas: {}, contexto: {}, erro: null };
+  try {
+    // Test each table individually
+    const tables = ['pacientes','mapeamentos','sessoes','resumos_clinicos','feedbacks_paciente','memoria_terapeutica','analise_estrutural','hipoteses_clinicas','mapa_identidade','ia_auditoria'];
+    for (const t of tables) {
+      try {
+        const r = await db.query('SELECT COUNT(*) FROM ' + t + ' WHERE paciente_id=$1',[pid]);
+        result.tabelas[t] = parseInt(r.rows[0].count) + ' registros';
+      } catch(e) {
+        result.tabelas[t] = 'ERRO: ' + e.message;
+      }
+    }
+    // Test loadContexto
+    try {
+      const ctx = await loadContexto(pid);
+      result.contexto = {
+        paciente: ctx.paciente ? ctx.paciente.nome_completo : 'NULL',
+        mapeamento: ctx.mapeamento ? 'id=' + ctx.mapeamento.id + ' versao=' + ctx.mapeamento.versao : 'NULL',
+        sessoes: ctx.sessoes.length,
+        feedbacks: ctx.feedbacks.length,
+        resumo_versao: ctx.resumoVersao,
+        memoria: ctx.memoriaAtual ? 'existe (' + ctx.memoriaAtual.length + ' chars)' : 'null',
+      };
+    } catch(e) {
+      result.erro = 'loadContexto falhou: ' + e.message;
+    }
+    res.json(result);
+  } catch(e) {
+    res.status(500).json({ erro: e.message });
+  }
+});
+
 // ═══ ANALISE ESTRUTURAL ═══
 
 router.get('/:pid/estrutural/atual', verifyToken, async (req, res) => {

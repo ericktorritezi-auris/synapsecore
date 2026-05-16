@@ -7,13 +7,21 @@ const { runMigrations } = require('./db/migrations');
 
 const app     = express();
 const PORT    = process.env.PORT || 3000;
-const VERSION = '3.1.6';
+const VERSION = '3.1.7';
 
 // ── MIDDLEWARE ──
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Disable caching for all API routes
+app.use('/api', function(req, res, next) {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  next();
+});
 
 // ── API ROUTES ──
 app.use('/api/auth',      require('./routes/auth'));

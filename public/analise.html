@@ -279,12 +279,24 @@ function vgEmpty(titulo, msg) {
 function gerarTudo() {
   var btn = document.getElementById('btnGerarTudo');
   btn.disabled=true; btn.textContent='Gerando...';
-  gerarEstrutural(false, function() {
-    gerarHipoteses(function() {
-      gerarIdentidade(false, function() {
+  document.getElementById('vgBody').innerHTML = loadingRow('Gerando análise completa...');
+
+  gerarEstrutural(false, function(errEst) {
+    if (errEst) {
+      btn.disabled=false; btn.textContent='⊳ Gerar Análise Completa';
+      document.getElementById('vgBody').innerHTML =
+        '<div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:9px;padding:14px 16px;color:#fca5a5;font-size:13px;line-height:1.6">'
+        +'<strong>Erro ao gerar análise:</strong><br>'+escH(errEst)+'<br><br>'
+        +'<span style="font-size:12px;color:var(--dim)">Abra a aba Network no DevTools e verifique a resposta do endpoint que falhou para mais detalhes.</span>'
+        +'</div>';
+      return;
+    }
+    gerarHipoteses(function(errHip) {
+      gerarIdentidade(false, function(errId) {
         carregarVisaoGeral();
         btn.disabled=false; btn.textContent='⊳ Gerar Análise Completa';
-        showToast('Análise completa gerada!','success');
+        if (errHip || errId) showToast('Análise gerada com erros parciais.','info');
+        else showToast('Análise completa gerada!','success');
       });
     });
   });
@@ -307,9 +319,9 @@ function gerarEstrutural(force, cb) {
       btn.disabled=false; btn.textContent='↻ Gerar / Atualizar';
       if (d.sem_mudancas) showToast('Sem alterações desde a última análise.','info');
       renderEstrutural(d);
-      if (cb) cb();
+      if (cb) cb(null);
     })
-    .catch(function(e){ btn.disabled=false; btn.textContent='↻ Gerar / Atualizar'; document.getElementById('estBody').innerHTML=errState(e.message); if(cb)cb(); });
+    .catch(function(e){ btn.disabled=false; btn.textContent='↻ Gerar / Atualizar'; document.getElementById('estBody').innerHTML=errState(e.message); if(cb) cb(e.message); });
 }
 
 function renderEstrutural(d) {
@@ -362,9 +374,9 @@ function gerarHipoteses(cb) {
     .then(function(d) {
       btn.disabled=false; btn.textContent='↻ Gerar / Atualizar';
       carregarHipoteses();
-      if (cb) cb();
+      if (cb) cb(null);
     })
-    .catch(function(e){ btn.disabled=false; btn.textContent='↻ Gerar / Atualizar'; document.getElementById('hipBody').innerHTML=errState(e.message); if(cb)cb(); });
+    .catch(function(e){ btn.disabled=false; btn.textContent='↻ Gerar / Atualizar'; document.getElementById('hipBody').innerHTML=errState(e.message); if(cb) cb(e.message); });
 }
 
 function renderHipoteses(data) {
@@ -460,9 +472,9 @@ function gerarIdentidade(force, cb) {
       btn.disabled=false; btn.textContent='↻ Gerar / Atualizar';
       if (d.sem_mudancas) showToast('Sem alterações desde o último mapa.','info');
       renderIdentidade(d);
-      if (cb) cb();
+      if (cb) cb(null);
     })
-    .catch(function(e){ btn.disabled=false; btn.textContent='↻ Gerar / Atualizar'; document.getElementById('idBody').innerHTML=errState(e.message); if(cb)cb(); });
+    .catch(function(e){ btn.disabled=false; btn.textContent='↻ Gerar / Atualizar'; document.getElementById('idBody').innerHTML=errState(e.message); if(cb) cb(e.message); });
 }
 
 function renderIdentidade(d) {

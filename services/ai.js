@@ -905,8 +905,20 @@ async function gerarAnaliseEstrutural({ db, paciente, mapeamento, sessoes, feedb
   const ind    = mapeamento ? (mapeamento.indices_json || {}) : {};
   const proto  = mapeamento ? (mapeamento.protocolo_json || {}) : {};
   const FLAG_L = { risco_depressivo:'Risco Depressivo', burnout_provavel:'Burnout Provável', ansiedade_elevada:'Ansiedade Elevada', trauma_indicado:'Trauma Indicado', isolamento_social:'Isolamento Social', instabilidade_emocional:'Instabilidade Emocional', conflito_relacional:'Conflito Relacional', baixa_autoestima:'Baixa Autoestima', neurodivergencia:'Neurodivergência', crise_existencial:'Crise Existencial', ideacao_suicida:'Ideação Suicida' };
-  const sessStr = sessoes.slice(-5).map(s=>`S${s.sessao_numero}: ${s.resumo_terapeuta||'sem resumo'}`).join('\n');
-  const feedStr = feedbacks.slice(-4).map(f=>`${new Date(f.data_feedback).toLocaleDateString('pt-BR')}: ${f.conteudo}`).join('\n');
+  const sessStr = sessoes.slice(-5).map(function(s){ return 'S'+s.sessao_numero+': '+(s.resumo_terapeuta||'sem resumo'); }).join('\n');
+  const feedStr = feedbacks.slice(-4).map(function(f){ return new Date(f.data_feedback).toLocaleDateString('pt-BR')+': '+f.conteudo; }).join('\n');
+  // Sanitize memoriaAtual — remove control chars that could cause Anthropic 400
+  var memoriaStr = '';
+  if (memoriaAtual) {
+    try {
+      var mObj = typeof memoriaAtual === 'string' ? JSON.parse(memoriaAtual) : memoriaAtual;
+      var parts = [];
+      if (mObj.temas_recorrentes && mObj.temas_recorrentes.length) parts.push('Temas: '+mObj.temas_recorrentes.join(', '));
+      if (mObj.padroes_identificados && mObj.padroes_identificados.length) parts.push('Padrões: '+mObj.padroes_identificados.join(', '));
+      if (mObj.movimento_terapeutico) parts.push('Movimento: '+mObj.movimento_terapeutico);
+      memoriaStr = parts.join('\n');
+    } catch(e) { memoriaStr = ''; }
+  }
 
   const prompt = `Você é o motor de análise clínica estrutural do Synapse Core — Evolution Therapy.
 Terapeuta: Erick Torritezi — Psicanalista, Psicoterapeuta Integrativo, Master Hipnoterapeuta, especialista em PNL Terapêutica e Logoterapia.
@@ -924,7 +936,7 @@ ${sessStr||'Sem sessões registradas'}
 FEEDBACKS RECENTES:
 ${feedStr||'Sem feedbacks'}
 
-${memoriaAtual ? 'MEMÓRIA TERAPÊUTICA:\n'+memoriaAtual+'\n' : ''}
+${memoriaStr ? 'MEMÓRIA TERAPÊUTICA:\n'+memoriaStr+'\n' : ''}
 
 ABORDAGEM INTEGRATIVA:
 - Psicanálise → estrutura, defesa, dinâmica inconsciente, funcionamento emocional
@@ -957,7 +969,7 @@ Retorne APENAS JSON válido:
       method:'POST', headers:{'Content-Type':'application/json','x-api-key':process.env.ANTHROPIC_API_KEY,'anthropic-version':'2023-06-01'},
       body:JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:2000, messages:[{role:'user',content:prompt}] })
     });
-    if (!resp.ok) throw new Error('Anthropic error: '+resp.status);
+    if (!resp.ok) { const errTxt = await resp.text().catch(function(){return '';}); throw new Error('Anthropic 400: '+errTxt.substring(0,400)); }
     const data = await resp.json();
     const text = data.content && data.content[0] && data.content[0].text||'{}';
     const clean = text.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
@@ -989,7 +1001,7 @@ FLAGS: ${flags.map(f=>FLAG_L[f]||f).join(', ')||'Nenhuma'}
 RESUMO CLÍNICO:
 ${resumoAtual||'Não disponível'}
 
-${analiseEstrutural ? 'MAPA ESTRUTURAL:\n'+JSON.stringify(analiseEstrutural)+'\n' : ''}
+${analiseEstrutural ? 'MAPA ESTRUTURAL:\nNúcleo: '+(analiseEstrutural.nucleo_emocional||'')+'\nConflito: '+(analiseEstrutural.conflito_central||'')+'\nEstilo: '+(analiseEstrutural.estilo_relacional||'')+'\n' : ''}
 
 ÚLTIMAS SESSÕES:
 ${sessoes.slice(-3).map(s=>`S${s.sessao_numero}: ${s.resumo_terapeuta||'sem resumo'}`).join('\n')||'Sem sessões'}
@@ -1023,7 +1035,7 @@ Retorne APENAS JSON válido:
       method:'POST', headers:{'Content-Type':'application/json','x-api-key':process.env.ANTHROPIC_API_KEY,'anthropic-version':'2023-06-01'},
       body:JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:2500, messages:[{role:'user',content:prompt}] })
     });
-    if (!resp.ok) throw new Error('Anthropic error: '+resp.status);
+    if (!resp.ok) { const errTxt = await resp.text().catch(function(){return '';}); throw new Error('Anthropic 400: '+errTxt.substring(0,400)); }
     const data = await resp.json();
     const text = data.content && data.content[0] && data.content[0].text||'{}';
     const clean = text.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
@@ -1079,7 +1091,7 @@ Retorne APENAS JSON válido:
       method:'POST', headers:{'Content-Type':'application/json','x-api-key':process.env.ANTHROPIC_API_KEY,'anthropic-version':'2023-06-01'},
       body:JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:2000, messages:[{role:'user',content:prompt}] })
     });
-    if (!resp.ok) throw new Error('Anthropic error: '+resp.status);
+    if (!resp.ok) { const errTxt = await resp.text().catch(function(){return '';}); throw new Error('Anthropic 400: '+errTxt.substring(0,400)); }
     const data = await resp.json();
     const text = data.content && data.content[0] && data.content[0].text||'{}';
     const clean = text.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();

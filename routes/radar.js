@@ -30,11 +30,14 @@ router.get('/', verifyToken, async (req, res) => {
 
     // CIDs confirmados
     const cids = await db.query(`
-      SELECT cid_codigo, cid_nome,
+      SELECT cid_codigo,
+             (SELECT cid_nome FROM cids_paciente cp2
+              WHERE cp2.cid_codigo = cp.cid_codigo AND cp2.confirmado = true
+              GROUP BY cid_nome ORDER BY COUNT(*) DESC LIMIT 1) AS cid_nome,
              COUNT(DISTINCT paciente_id) AS count
-      FROM cids_paciente
+      FROM cids_paciente cp
       WHERE confirmado = true
-      GROUP BY cid_codigo, cid_nome
+      GROUP BY cid_codigo
       ORDER BY count DESC LIMIT 10
     `);
 
@@ -84,7 +87,11 @@ router.get('/', verifyToken, async (req, res) => {
       conflito_relacional:'Conflito Relacional', baixa_autoestima:'Baixa Autoestima',
       neurodivergencia:'Neurodivergência', crise_existencial:'Crise Existencial',
       abuso_substancias:'Abuso de Substâncias', ideacao_suicida:'Ideação Suicida',
-      transtorno_alimentar:'Transtorno Alimentar', disfuncao_sexual:'Disfunção Sexual'
+      transtorno_alimentar:'Transtorno Alimentar', disfuncao_sexual:'Disfunção Sexual',
+      avaliacao_psiquiatrica:'Avaliação Psiquiátrica', vulnerabilidade_relacional:'Vulnerabilidade Relacional',
+      risco_suicida:'Risco Suicida', luto_complicado:'Luto Complicado',
+      ansiedade_funcional:'Ansiedade Funcional', apego_ansioso:'Apego Ansioso',
+      neurodivergencia_provavel:'Neurodivergência Provável', burnout_emocional:'Burnout Emocional'
     };
 
     res.json({

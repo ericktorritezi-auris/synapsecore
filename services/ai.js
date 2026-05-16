@@ -218,9 +218,10 @@ Retorne APENAS JSON válido:
   });
   if (!resp.ok) throw new Error('Anthropic API error: ' + resp.status);
   const data  = await resp.json();
-  const text  = data.content?.[0]?.text || '{}';
+  const text  = (data.content && data.content[0] && data.content[0].text) || '{}';
   const clean = text.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
-  const json  = JSON.parse(clean.match(/\{[\s\S]*\}/)?.[0] || '{}');
+  const m223  = clean.match(/\{[\s\S]*\}/);
+  const json  = m223 ? JSON.parse(m223[0]) : {};
 
   const idx = (parseInt(json.programa_id) || 1) - 1;
   const prog = pacotes[Math.min(Math.max(idx, 0), pacotes.length-1)];
@@ -283,7 +284,7 @@ const FLAG_LABELS = {
 // ── GERA MAPEAMENTO VIA ANTHROPIC ──
 async function gerarMapeamento({ paciente, respostas, indices, flags, pacotes, riscoNivel }) {
   const prog = sugerirPrograma(paciente.perfil_tipo, indices, flags, pacotes);
-  const flagLabels = flags.map(f => FLAG_LABELS[f]?.l || f).join(', ') || 'Nenhuma';
+  const flagLabels = flags.map(f => FLAG_LABELS[f] && FLAG_LABELS[f].l || f).join(', ') || 'Nenhuma';
 
   // Respostas abertas
   const ra82 = respostas.Q82 || 'Não informado';
@@ -360,7 +361,7 @@ NÃO diagnostique. Use linguagem de hipóteses ("sugere", "indica", "observa-se 
   }
 
   const data  = await resp.json();
-  const texto = data.content?.[0]?.text || '';
+  const texto = data.content && data.content[0] && data.content[0].text || '';
 
   // Parse JSON from response
   const clean = texto.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
@@ -466,19 +467,19 @@ Retorne APENAS JSON válido:
       body:JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:1200, messages:[{role:'user',content:prompt}] })
     });
     const data = await resp.json();
-    const text = data.content?.[0]?.text || '{}';
+    const text = data.content && data.content[0] && data.content[0].text || '{}';
     const clean = text.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
     const m = clean.match(/\{[\s\S]*\}/);
     const json = m ? JSON.parse(m[0]) : {};
     const duracao = Date.now() - inicio;
-    await registrarAuditoria(db, { paciente_id: paciente.id, modulo:'briefing', referencia_tipo:'paciente', referencia_id: paciente.id, prompt_resumo: prompt, input_hash: crypto.createHash('md5').update(prompt).digest('hex'), output_resumo: text, tokens_usados: data.usage?.output_tokens, duracao_ms: duracao, sucesso: true, modo:'ia' });
+    await registrarAuditoria(db, { paciente_id: paciente.id, modulo:'briefing', referencia_tipo:'paciente', referencia_id: paciente.id, prompt_resumo: prompt, input_hash: crypto.createHash('md5').update(prompt).digest('hex'), output_resumo: text, tokens_usados: data.usage && data.usage.output_tokens, duracao_ms: duracao, sucesso: true, modo:'ia' });
     return { json, texto: text, modo: 'ia' };
   } catch(e) {
     await registrarAuditoria(db, { paciente_id: paciente.id, modulo:'briefing', sucesso: false, erro_msg: e.message, modo:'fallback' });
     // Fallback local
     const fb = {
       estado_atual: `${paciente.nome_completo} está em acompanhamento com ${totalSessoes} sessões realizadas. ${flags.length ? 'Flags ativas: ' + flags.map(f=>flagLabels[f]||f).join(', ') + '.' : 'Sem flags críticas no momento.'}`,
-      ultima_sessao: { tema: 'Consultar registro da última sessão', emocao: '—', ponto_trabalhado: ultimaSessao?.resumo_terapeuta || '—', resistencia: '—', tarefa: '—' },
+      ultima_sessao: { tema: 'Consultar registro da última sessão', emocao: '—', ponto_trabalhado: (ultimaSessao && ultimaSessao.resumo_terapeuta) || '—', resistencia: '—', tarefa: '—' },
       desde_ultima_sessao: feedbacks.length ? feedbacks.slice(-1)[0].conteudo.substring(0,150) : 'Sem feedbacks recentes.',
       pontos_atencao: flags.slice(0,3).map(f=>flagLabels[f]||f),
       sugestoes_conducao: ['Consultar resumo clínico atualizado', 'Verificar feedbacks recentes', 'Revisar última sessão registrada'],
@@ -544,12 +545,12 @@ Retorne APENAS JSON válido:
       body:JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:2000, messages:[{role:'user',content:prompt}] })
     });
     const data = await resp.json();
-    const text = data.content?.[0]?.text || '{}';
+    const text = data.content && data.content[0] && data.content[0].text || '{}';
     const clean = text.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
     const m = clean.match(/\{[\s\S]*\}/);
     const json = m ? JSON.parse(m[0]) : { intervencoes: [] };
     const duracao = Date.now() - inicio;
-    await registrarAuditoria(db, { paciente_id: paciente.id, modulo:'intervencoes', referencia_tipo:'mapeamento', referencia_id: mapeamento?.id, prompt_resumo: prompt, input_hash: crypto.createHash('md5').update(prompt).digest('hex'), output_resumo: text, tokens_usados: data.usage?.output_tokens, duracao_ms: duracao, sucesso: true, modo:'ia' });
+    await registrarAuditoria(db, { paciente_id: paciente.id, modulo:'intervencoes', referencia_tipo:'mapeamento', referencia_id: mapeamento && mapeamento.id, prompt_resumo: prompt, input_hash: crypto.createHash('md5').update(prompt).digest('hex'), output_resumo: text, tokens_usados: data.usage && data.usage.output_tokens, duracao_ms: duracao, sucesso: true, modo:'ia' });
     return { intervencoes: (json.intervencoes||[]).map(i=>({...i, publico_alvo: paciente.perfil_tipo||'adulto'})), modo: 'ia' };
   } catch(e) {
     await registrarAuditoria(db, { paciente_id: paciente.id, modulo:'intervencoes', sucesso:false, erro_msg:e.message, modo:'fallback' });
@@ -603,22 +604,22 @@ Retorne APENAS JSON válido:
       body:JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:1500, messages:[{role:'user',content:prompt}] })
     });
     const data = await resp.json();
-    const text = data.content?.[0]?.text || '{}';
+    const text = data.content && data.content[0] && data.content[0].text || '{}';
     const clean = text.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
     const m = clean.match(/\{[\s\S]*\}/);
     const json = m ? JSON.parse(m[0]) : {};
     const duracao = Date.now() - inicio;
-    await registrarAuditoria(db, { paciente_id: paciente.id, modulo:'memoria', referencia_tipo:'paciente', referencia_id: paciente.id, prompt_resumo: prompt, input_hash: crypto.createHash('md5').update(prompt).digest('hex'), output_resumo: text, tokens_usados: data.usage?.output_tokens, duracao_ms: duracao, sucesso: true, modo:'ia' });
+    await registrarAuditoria(db, { paciente_id: paciente.id, modulo:'memoria', referencia_tipo:'paciente', referencia_id: paciente.id, prompt_resumo: prompt, input_hash: crypto.createHash('md5').update(prompt).digest('hex'), output_resumo: text, tokens_usados: data.usage && data.usage.output_tokens, duracao_ms: duracao, sucesso: true, modo:'ia' });
     return { json, texto: text, modo: 'ia' };
   } catch(e) {
     await registrarAuditoria(db, { paciente_id: paciente.id, modulo:'memoria', sucesso:false, erro_msg:e.message, modo:'fallback' });
-    return { json: { temas_recorrentes:[], padroes_identificados:[], pontos_de_atencao:[], recursos_identificados:[], movimento_terapeutico:'', proximos_focos:[], resumo_processo: resumoAtual?.substring(0,200)||'' }, texto:'', modo:'fallback', api_erro:e.message };
+    return { json: { temas_recorrentes:[], padroes_identificados:[], pontos_de_atencao:[], recursos_identificados:[], movimento_terapeutico:'', proximos_focos:[], resumo_processo: (resumoAtual && resumoAtual.substring(0,200))||'' }, texto:'', modo:'fallback', api_erro:e.message };
   }
 }
 
 // ── SUGERE CIDs (ICD-10) ──
 async function sugerirCIDs({ paciente, respostas, indices, flags }) {
-  const flagLabels = flags.map(f => FLAG_LABELS[f]?.l || f).join(', ') || 'Nenhuma';
+  const flagLabels = flags.map(f => FLAG_LABELS[f] && FLAG_LABELS[f].l || f).join(', ') || 'Nenhuma';
   const ra82 = respostas.Q82 || '';
   const ra84 = respostas.Q84 || '';
   const sent = {
@@ -677,7 +678,7 @@ Retorne APENAS JSON válido, sem texto antes ou depois:
 
   if (!resp.ok) throw new Error('Anthropic API error: ' + resp.status);
   const data  = await resp.json();
-  const texto = data.content?.[0]?.text || '[]';
+  const texto = data.content && data.content[0] && data.content[0].text || '[]';
   const clean = texto.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
   try {
     const arr = JSON.parse(clean);
@@ -691,20 +692,20 @@ Retorne APENAS JSON válido, sem texto antes ou depois:
 
 // ── GERA RELATÓRIO DE EVOLUÇÃO ──
 async function gerarEvolucao({ paciente, mapeamento, sessoes, resumoClinico, pacote }) {
-  const indicesIniciais = mapeamento?.dimensoes_json || mapeamento?.indices_json?.dimensoes || {};
-  const proto = mapeamento?.protocolo_json || {};
+  const indicesIniciais = (mapeamento && mapeamento.dimensoes_json) || (mapeamento && mapeamento.indices_json && mapeamento.indices_json.dimensoes) || {};
+  const proto = mapeamento && mapeamento.protocolo_json || {};
 
   const objetivosText  = proto.objetivos_iniciais || proto.objetivos || 'Não definidos';
   const protocoloText  = proto.protocolo_sugerido  || 'Não definido';
   const obsText        = proto.obs_terapeuta        || '';
-  const flagsText      = (mapeamento?.flags_json || []).join(', ') || 'Nenhuma';
+  const flagsText      = ((mapeamento && mapeamento.flags_json) || []).join(', ') || 'Nenhuma';
 
   const sessoesStr = sessoes.map(s =>
     'Sessão ' + s.sessao_numero + ' (' + new Date(s.data_sessao).toLocaleDateString('pt-BR') + '): ' + (s.resumo_terapeuta || 'Sem resumo.')
   ).join('\n');
 
   const totalSessoes = sessoes.length;
-  const totalPrograma = pacote?.qtd_sessoes || null;
+  const totalPrograma = (pacote && pacote.qtd_sessoes) || null;
 
   const prompt = `Você é um assistente de inteligência clínica do Synapse Core — Evolution Therapy.
 Terapeuta: Erick Torritezi — Psicanalista e Psicoterapeuta Estratégico Integrativo.
@@ -758,7 +759,7 @@ Regras: indices_atuais devem refletir a evolução observada nas sessões (podem
 
   if (!resp.ok) throw new Error('Anthropic API error: ' + resp.status);
   const data  = await resp.json();
-  const texto = data.content?.[0]?.text || '';
+  const texto = data.content && data.content[0] && data.content[0].text || '';
   const clean = texto.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
   try {
     return JSON.parse(clean);
@@ -795,7 +796,7 @@ Este é o PRIMEIRO resumo analítico — baseado exclusivamente nos dados do for
     });
     if (!resp.ok) throw new Error('Anthropic error: ' + resp.status);
     const d = await resp.json();
-    return d.content?.[0]?.text || 'Resumo inicial não gerado.';
+    return (d.content && d.content[0] && d.content[0].text) || 'Resumo inicial não gerado.';
   }
 
   // ── REGERAÇÃO INCREMENTAL: só passa o que é novo ──
@@ -831,11 +832,11 @@ Atualize o resumo clínico incorporando essas novidades. Mantenha o que já esta
     });
     if (!resp.ok) throw new Error('Anthropic error: ' + resp.status);
     const d = await resp.json();
-    return d.content?.[0]?.text || resumoAtual;
+    return (d.content && d.content[0] && d.content[0].text) || resumoAtual;
   }
 
   // ── REGERAÇÃO COMPLETA (fallback): usa tudo ──
-  const proto = mapeamento?.protocolo_json || {};
+  const proto = mapeamento && mapeamento.protocolo_json || {};
   const obsBlock = [
     proto.obs_terapeuta      ? 'Observações: ' + proto.obs_terapeuta : '',
     proto.objetivos_iniciais ? 'Objetivos: ' + proto.objetivos_iniciais : '',
@@ -890,7 +891,7 @@ Retorne APENAS o texto do resumo, sem JSON, sem títulos, sem marcadores.`;
 
   if (!resp.ok) throw new Error('Anthropic API error: ' + resp.status);
   const data = await resp.json();
-  return data.content?.[0]?.text || 'Resumo não gerado.';
+  return data.content && data.content[0] && data.content[0].text || 'Resumo não gerado.';
 }
 
 // ══════════════════════════════════════════════
@@ -958,12 +959,12 @@ Retorne APENAS JSON válido:
     });
     if (!resp.ok) throw new Error('Anthropic error: '+resp.status);
     const data = await resp.json();
-    const text = data.content?.[0]?.text||'{}';
+    const text = data.content && data.content[0] && data.content[0].text||'{}';
     const clean = text.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
     const m = clean.match(/\{[\s\S]*\}/);
     const json = m ? JSON.parse(m[0]) : {};
     const duracao = Date.now()-inicio;
-    await registrarAuditoria(db,{paciente_id:paciente.id,modulo:'analise_estrutural',referencia_tipo:'mapeamento',referencia_id:mapeamento?.id,prompt_resumo:prompt,input_hash:crypto.createHash('md5').update(prompt).digest('hex'),output_resumo:text,tokens_usados:data.usage?.output_tokens,duracao_ms:duracao,sucesso:true,modelo:'claude-sonnet-4-20250514',modo:'ia'});
+    await registrarAuditoria(db,{paciente_id:paciente.id,modulo:'analise_estrutural',referencia_tipo:'mapeamento',referencia_id:mapeamento && mapeamento.id,prompt_resumo:prompt,input_hash:crypto.createHash('md5').update(prompt).digest('hex'),output_resumo:text,tokens_usados:data.usage && data.usage.output_tokens,duracao_ms:duracao,sucesso:true,modelo:'claude-sonnet-4-20250514',modo:'ia'});
     return { json, resumo_executivo: json.resumo_executivo||'', modo:'ia', modelo:'claude-sonnet-4-20250514' };
   } catch(e) {
     await registrarAuditoria(db,{paciente_id:paciente.id,modulo:'analise_estrutural',sucesso:false,erro_msg:e.message,modo:'fallback'});
@@ -1024,12 +1025,12 @@ Retorne APENAS JSON válido:
     });
     if (!resp.ok) throw new Error('Anthropic error: '+resp.status);
     const data = await resp.json();
-    const text = data.content?.[0]?.text||'{}';
+    const text = data.content && data.content[0] && data.content[0].text||'{}';
     const clean = text.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
     const m = clean.match(/\{[\s\S]*\}/);
     const json = m ? JSON.parse(m[0]) : { hipoteses:[] };
     const duracao = Date.now()-inicio;
-    await registrarAuditoria(db,{paciente_id:paciente.id,modulo:'hipoteses_clinicas',referencia_tipo:'mapeamento',referencia_id:mapeamento?.id,prompt_resumo:prompt,input_hash:crypto.createHash('md5').update(prompt).digest('hex'),output_resumo:text,tokens_usados:data.usage?.output_tokens,duracao_ms:duracao,sucesso:true,modelo:'claude-sonnet-4-20250514',modo:'ia'});
+    await registrarAuditoria(db,{paciente_id:paciente.id,modulo:'hipoteses_clinicas',referencia_tipo:'mapeamento',referencia_id:mapeamento && mapeamento.id,prompt_resumo:prompt,input_hash:crypto.createHash('md5').update(prompt).digest('hex'),output_resumo:text,tokens_usados:data.usage && data.usage.output_tokens,duracao_ms:duracao,sucesso:true,modelo:'claude-sonnet-4-20250514',modo:'ia'});
     return { hipoteses: json.hipoteses||[], modo:'ia' };
   } catch(e) {
     await registrarAuditoria(db,{paciente_id:paciente.id,modulo:'hipoteses_clinicas',sucesso:false,erro_msg:e.message,modo:'fallback'});
@@ -1080,12 +1081,12 @@ Retorne APENAS JSON válido:
     });
     if (!resp.ok) throw new Error('Anthropic error: '+resp.status);
     const data = await resp.json();
-    const text = data.content?.[0]?.text||'{}';
+    const text = data.content && data.content[0] && data.content[0].text||'{}';
     const clean = text.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
     const m = clean.match(/\{[\s\S]*\}/);
     const json = m ? JSON.parse(m[0]) : {};
     const duracao = Date.now()-inicio;
-    await registrarAuditoria(db,{paciente_id:paciente.id,modulo:'mapa_identidade',referencia_tipo:'mapeamento',referencia_id:mapeamento?.id,prompt_resumo:prompt,input_hash:crypto.createHash('md5').update(prompt).digest('hex'),output_resumo:text,tokens_usados:data.usage?.output_tokens,duracao_ms:duracao,sucesso:true,modelo:'claude-sonnet-4-20250514',modo:'ia'});
+    await registrarAuditoria(db,{paciente_id:paciente.id,modulo:'mapa_identidade',referencia_tipo:'mapeamento',referencia_id:mapeamento && mapeamento.id,prompt_resumo:prompt,input_hash:crypto.createHash('md5').update(prompt).digest('hex'),output_resumo:text,tokens_usados:data.usage && data.usage.output_tokens,duracao_ms:duracao,sucesso:true,modelo:'claude-sonnet-4-20250514',modo:'ia'});
     return { json, frase_identitaria: json.frase_identitaria||'', praticas_sustentacao: json.praticas_sustentacao||[], modo:'ia', modelo:'claude-sonnet-4-20250514' };
   } catch(e) {
     await registrarAuditoria(db,{paciente_id:paciente.id,modulo:'mapa_identidade',sucesso:false,erro_msg:e.message,modo:'fallback'});

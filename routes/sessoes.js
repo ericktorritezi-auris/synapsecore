@@ -1,7 +1,7 @@
 const express = require('express');
 const db      = require('../db');
 const { verifyToken } = require('../middleware/auth');
-const { gerarResumoClinico } = require('../services/ai');
+const { gerarResumoClinico, gerarSnapshotEvolutivoLeve, calcularScoreRiscoBasico } = require('../services/ai');
 const router  = express.Router();
 
 // GET /api/sessoes/:paciente_id
@@ -74,6 +74,8 @@ router.post('/:paciente_id', verifyToken, async (req, res) => {
     // Generate clinical summary in background (don't block response)
     if (resumo_terapeuta && resumo_terapeuta.trim()) {
       gerarEAtualizarResumo(paciente_id).catch(e => console.error('Resumo IA erro:', e.message));
+      // v3.2.0 — snapshot leve + score básico de risco (sem IA)
+      gerarSnapshotLeve(paciente_id, res.rows[0].id).catch(e => console.error('Snapshot leve erro:', e.message));
     }
 
     res.status(201).json(sessao);
@@ -212,6 +214,46 @@ router.delete('/:paciente_id/excluir', verifyToken, async (req, res) => {
     res.status(500).json({ message: 'Erro ao excluir: ' + err.message });
   }
 });
+
+// ── v3.2.0: Snapshot leve após registrar sessão (sem IA) ──
+async function gerarSnapshotLeve(paciente_id, sessao_id) {
+  try {
+    const pacRes  = await db.query('SELECT * FROM pacientes WHERE id=$1',[paciente_id]);
+    const mapRes  = await db.query('SELECT * FROM mapeamentos WHERE paciente_id=$1 ORDER BY versao DESC LIMIT 1',[paciente_id]);
+    const sessRes = await db.query('SELECT * FROM sessoes WHERE paciente_id=$1 AND status=$2 ORDER BY sessao_numero ASC',[paciente_id,'realizada']);
+    const feedRes = await db.query('SELECT * FROM feedbacks_paciente WHERE paciente_id=$1 ORDER BY data_feedback ASC',[paciente_id]).catch(()=>({rows:[]}));
+
+    const paciente  = pacRes.rows[0];
+    const mapeamento = mapRes.rows[0]||null;
+    const sessoes   = sessRes.rows;
+    const feedbacks = feedRes.rows;
+
+    const lastSnap = await db.query('SELECT * FROM linha_evolutiva WHERE paciente_id=$1 ORDER BY gerado_em DESC LIMIT 1',[paciente_id]);
+    const snapshotAnterior = lastSnap.rows[0]||null;
+    const versao = (snapshotAnterior&&snapshotAnterior.versao||0)+1;
+
+    const snap = gerarSnapshotEvolutivoLeve({mapeamento,sessoes,feedbacks,snapshotAnterior});
+    const hash = require('crypto').createHash('md5').update(paciente_id+'|'+sessoes.map(s=>s.id).join(',')+'|'+(mapeamento&&mapeamento.id||0)).digest('hex');
+
+    if (snapshotAnterior && snapshotAnterior.hash_contexto===hash) return; // no change
+
+    await db.query(
+      `INSERT INTO linha_evolutiva (paciente_id,versao,tipo_origem,origem_id,hash_contexto,nivel_confianca,eventos_considerados_json,scores_estruturais_json,tendencia,modelo_ia)
+       VALUES ($1,$2,'sessao',$3,$4,$5,$6,$7,$8,'calculado')`,
+      [paciente_id,versao,sessao_id,hash,snap.nivel_confianca,JSON.stringify([{tipo:'sessao',id:sessao_id}]),JSON.stringify(snap.scores_estruturais),snap.tendencia]
+    );
+
+    // Update basic risk score
+    const basic = calcularScoreRiscoBasico({sessoes,feedbacks,paciente});
+    const lastRisco = await db.query('SELECT id FROM risco_abandono WHERE paciente_id=$1 ORDER BY gerado_em DESC LIMIT 1',[paciente_id]);
+    if (lastRisco.rows.length) {
+      await db.query('UPDATE risco_abandono SET score_basico=$1, nivel=CASE WHEN $1>=60 THEN \'critico\' WHEN $1>=40 THEN \'alto\' WHEN $1>=20 THEN \'moderado\' ELSE \'baixo\' END, ultima_analise_leve=NOW() WHERE id=$2',
+        [basic.score, lastRisco.rows[0].id]);
+    }
+  } catch(e) {
+    console.error('gerarSnapshotLeve:', e.message);
+  }
+}
 
 // ── HELPER: gera e salva resumo clínico (com detecção de mudanças) ──
 async function gerarEAtualizarResumo(paciente_id, forceRegenerate) {

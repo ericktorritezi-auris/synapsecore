@@ -378,7 +378,7 @@ NÃO diagnostique. Use linguagem de hipóteses ("sugere", "indica", "observa-se 
   return { relatorio, programa: prog };
 }
 
-module.exports = { calcularIndices, detectarFlags, gerarMapeamento, FLAG_LABELS, sugerirPrograma, sugerirProgramaLocal, gerarResumoClinico, gerarEvolucao, sugerirCIDs, registrarAuditoria, gerarBriefingSessao, gerarIntervencoes, atualizarMemoriaTerapeutica, gerarAnaliseEstrutural, gerarHipotesesClinicas, gerarMapaIdentidade };
+module.exports = { calcularIndices, detectarFlags, gerarMapeamento, FLAG_LABELS, sugerirPrograma, sugerirProgramaLocal, gerarResumoClinico, gerarEvolucao, sugerirCIDs, registrarAuditoria, gerarBriefingSessao, gerarIntervencoes, atualizarMemoriaTerapeutica, gerarAnaliseEstrutural, gerarHipotesesClinicas, gerarMapaIdentidade, gerarSnapshotEvolutivoLeve, calcularScoreRiscoBasico, gerarRiscoAbandonoClinico, gerarEvolucaoPreditiva };
 
 // ══════════════════════════════════════════════
 // v3.0.0 — INTELIGÊNCIA CLÍNICA INTEGRATIVA
@@ -1102,6 +1102,268 @@ Retorne APENAS JSON válido:
     return { json, frase_identitaria: json.frase_identitaria||'', praticas_sustentacao: json.praticas_sustentacao||[], modo:'ia', modelo:'claude-sonnet-4-20250514' };
   } catch(e) {
     await registrarAuditoria(db,{paciente_id:paciente.id,modulo:'mapa_identidade',sucesso:false,erro_msg:e.message,modo:'fallback'});
+    throw e;
+  }
+}
+
+// ══════════════════════════════════════════════
+// v3.2.0 — EVOLUÇÃO LONGITUDINAL E PREDIÇÃO
+// ══════════════════════════════════════════════
+
+// ── SNAPSHOT LEVE — sem IA (trigger de sessão/feedback) ──
+function gerarSnapshotEvolutivoLeve({ mapeamento, sessoes, feedbacks, snapshotAnterior }) {
+  const ind = (mapeamento && mapeamento.indices_json) || {};
+  const se = {
+    D1: parseFloat(ind.D1)||0, D2: parseFloat(ind.D2)||0, D3: parseFloat(ind.D3)||0,
+    D4: parseFloat(ind.D4)||0, D5: parseFloat(ind.D5)||0, D6: parseFloat(ind.D6)||0,
+    D7: parseFloat(ind.D7)||0
+  };
+  const vals = Object.values(se).filter(v => v > 0);
+  se.score_global = vals.length ? Math.round(vals.reduce(function(a,b){return a+b;},0)/vals.length) : 0;
+
+  // Tendência por comparação com snapshot anterior
+  var tendencia = 'estavel';
+  if (snapshotAnterior && snapshotAnterior.scores_estruturais_json) {
+    var prev = snapshotAnterior.scores_estruturais_json;
+    var delta = se.score_global - (prev.score_global||0);
+    if (delta >= 8) tendencia = 'melhora_sustentada';
+    else if (delta >= 3) tendencia = 'melhora_leve';
+    else if (delta <= -8) tendencia = 'regressao';
+    else if (delta <= -3) tendencia = 'regressao_leve';
+    else tendencia = 'estagnacao';
+  }
+
+  return { scores_estruturais: se, tendencia, nivel_confianca: 'quantitativo', modo: 'leve' };
+}
+
+// ── SCORE BÁSICO DE RISCO — sem IA ──
+function calcularScoreRiscoBasico({ sessoes, feedbacks, paciente }) {
+  var score = 0;
+  var fatores = [];
+  if (!sessoes || !sessoes.length) return { score: 0, nivel: 'baixo', fatores: [] };
+
+  // 1. Espaçamento crescente entre sessões
+  if (sessoes.length >= 3) {
+    var datas = sessoes.slice(-4).map(function(s){return new Date(s.data_sessao);});
+    var gaps = [];
+    for (var i=1;i<datas.length;i++) gaps.push((datas[i]-datas[i-1])/(1000*60*60*24));
+    if (gaps.length >= 2) {
+      var tendGap = gaps[gaps.length-1] - gaps[0];
+      if (tendGap > 14) { score += 25; fatores.push('espaçamento_crescente_significativo'); }
+      else if (tendGap > 7) { score += 12; fatores.push('espaçamento_aumentando'); }
+    }
+  }
+
+  // 2. Dias desde última sessão
+  if (sessoes.length) {
+    var diasUltima = (Date.now()-new Date(sessoes[sessoes.length-1].data_sessao))/(1000*60*60*24);
+    if (diasUltima > 30) { score += 25; fatores.push('mais_30_dias_sem_sessao'); }
+    else if (diasUltima > 21) { score += 12; fatores.push('mais_21_dias_sem_sessao'); }
+  }
+
+  // 3. Sessões sem resumo do terapeuta
+  var semResumo = sessoes.filter(function(s){return !s.resumo_terapeuta||s.resumo_terapeuta.trim().length<15;}).length;
+  if (sessoes.length > 0 && semResumo/sessoes.length > 0.6) { score += 15; fatores.push('baixo_registro_clinico'); }
+
+  // 4. Ausência total de feedbacks externos
+  if ((!feedbacks||!feedbacks.length) && sessoes.length > 4) { score += 15; fatores.push('sem_contato_externo'); }
+
+  // 5. Vínculo em consolidação (poucas sessões)
+  if (sessoes.length <= 3) { score += 8; fatores.push('vinculo_em_consolidacao'); }
+
+  // Nível
+  var nivel = score >= 60 ? 'critico' : score >= 40 ? 'alto' : score >= 20 ? 'moderado' : 'baixo';
+  return { score: Math.min(100, Math.round(score)), nivel, fatores };
+}
+
+// ── RISCO DE ABANDONO CLÍNICO — com IA ──
+async function gerarRiscoAbandonoClinico({ db, paciente, sessoes, feedbacks, mapeamento, analiseEstrutural, resumoAtual }) {
+  const inicio = Date.now();
+  const flags = (mapeamento && mapeamento.flags_json)||[];
+  const FLAG_L = {risco_depressivo:'Risco Depressivo',burnout_provavel:'Burnout',ansiedade_elevada:'Ansiedade Elevada',trauma_indicado:'Trauma',isolamento_social:'Isolamento Social',instabilidade_emocional:'Instabilidade Emocional',conflito_relacional:'Conflito Relacional',baixa_autoestima:'Baixa Autoestima',crise_existencial:'Crise Existencial'};
+
+  const sessStr = sessoes.slice(-5).map(function(s,i){
+    return 'S'+s.sessao_numero+' ('+new Date(s.data_sessao).toLocaleDateString('pt-BR')+'): '+(s.resumo_terapeuta||'sem resumo registrado');
+  }).join('\n');
+
+  const feedStr = feedbacks.slice(-5).map(function(f){
+    return new Date(f.data_feedback).toLocaleDateString('pt-BR')+': '+f.conteudo;
+  }).join('\n');
+
+  // Gap médio entre sessões
+  var gapMedio = 0;
+  if (sessoes.length >= 2) {
+    var totalGap = 0;
+    for (var i=1;i<sessoes.length;i++) totalGap += (new Date(sessoes[i].data_sessao)-new Date(sessoes[i-1].data_sessao))/(1000*60*60*24);
+    gapMedio = Math.round(totalGap/(sessoes.length-1));
+  }
+
+  var aeStr = '';
+  if (analiseEstrutural) {
+    aeStr = 'Padrão de sabotagem: '+(analiseEstrutural.padrao_sabotagem||'')
+      +'\nMecanismos de defesa: '+((analiseEstrutural.mecanismos_defesa||[]).slice(0,2).join(', '))
+      +'\nRisco de manutenção: '+(analiseEstrutural.risco_manutencao||'');
+  }
+
+  const prompt = `Você é o motor de inteligência clínica do Synapse Core — Evolution Therapy.
+Papel: detectar risco de abandono terapêutico com base em leitura clínica integrada.
+
+PACIENTE: ${paciente.nome_completo} | ${paciente.perfil_tipo||'adulto'} | ${sessoes.length} sessões registradas
+FLAGS: ${flags.map(function(f){return FLAG_L[f]||f;}).join(', ')||'Nenhuma'}
+FREQUÊNCIA MÉDIA: uma sessão a cada ${gapMedio||'N/D'} dias
+
+ÚLTIMAS SESSÕES:
+${sessStr||'Sem sessões registradas'}
+
+FEEDBACKS EXTERNOS:
+${feedStr||'Nenhum feedback registrado'}
+
+RESUMO CLÍNICO ATUAL:
+${resumoAtual||'Não disponível'}
+
+${aeStr ? 'LEITURA ESTRUTURAL:\n'+aeStr+'\n' : ''}
+
+FATORES CLÍNICOS A ANALISAR (avalie cada um com base nos dados disponíveis):
+- Oscilação entre insight e ação
+- Distanciamento emocional gradual
+- Queda silenciosa de engajamento
+- Estagnação prolongada
+- Expectativa irreal de resultado rápido
+- Resistência indireta (intelectualização, concordância excessiva, mudança de foco)
+- Espaçamento crescente entre sessões
+- Quebra de tarefas e combinados
+- Vínculo terapêutico fragilizado
+
+IMPORTANTE: O risco é HIPÓTESE OPERACIONAL, não verdade absoluta. Use linguagem de possibilidade.
+
+Retorne APENAS JSON válido:
+{
+  "score": <0-100>,
+  "nivel": "baixo|moderado|alto|critico",
+  "nivel_confianca": "basico|moderado|clinico",
+  "fatores": ["fator identificado 1", "fator 2"],
+  "explicacao": "leitura clínica integrada em 2-3 frases",
+  "sugestao_estrategica": "orientação terapêutica estratégica",
+  "acao_recomendada": "ação concreta sugerida para a próxima sessão"
+}`;
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST', headers:{'Content-Type':'application/json','x-api-key':process.env.ANTHROPIC_API_KEY,'anthropic-version':'2023-06-01'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:prompt}]})
+    });
+    if (!resp.ok) { const e=await resp.text().catch(function(){return '';}); throw new Error('Anthropic 400: '+e.substring(0,300)); }
+    const data = await resp.json();
+    const text = (data.content&&data.content[0]&&data.content[0].text)||'{}';
+    const clean = text.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
+    const m = clean.match(/\{[\s\S]*\}/);
+    const json = m ? JSON.parse(m[0]) : {};
+    const duracao = Date.now()-inicio;
+    await registrarAuditoria(db,{paciente_id:paciente.id,modulo:'risco_abandono',referencia_tipo:'paciente',referencia_id:paciente.id,prompt_resumo:prompt,input_hash:crypto.createHash('md5').update(prompt).digest('hex'),output_resumo:text,tokens_usados:data.usage&&data.usage.output_tokens,duracao_ms:duracao,sucesso:true,modelo:'claude-sonnet-4-20250514',modo:'clinico'});
+    return { score:parseInt(json.score)||0, nivel:json.nivel||'baixo', nivel_confianca:json.nivel_confianca||'moderado', fatores:json.fatores||[], explicacao:json.explicacao||'', sugestao_estrategica:json.sugestao_estrategica||'', acao_recomendada:json.acao_recomendada||'', modo:'clinico' };
+  } catch(e) {
+    await registrarAuditoria(db,{paciente_id:paciente.id,modulo:'risco_abandono',sucesso:false,erro_msg:e.message,modo:'fallback'});
+    throw e;
+  }
+}
+
+// ── EVOLUÇÃO PREDITIVA — com IA ──
+async function gerarEvolucaoPreditiva({ db, paciente, sessoes, snapshots, riscoAtual, mapeamento, analiseEstrutural, memoria, resumoAtual, feedbacks, horizonte }) {
+  const inicio = Date.now();
+  const numSessoes = sessoes.length + (parseInt(paciente.sessoes_anteriores)||0);
+  const horizSessoes = horizonte || 6;
+
+  // Determine confidence level
+  var nivelDados, nivelConfianca;
+  const temAnalise = analiseEstrutural && analiseEstrutural.nucleo_emocional;
+  const temMapeamento = mapeamento && mapeamento.indices_json;
+
+  if (numSessoes < 5 && !temAnalise) {
+    nivelDados = 'insuficiente'; nivelConfianca = 'insuficiente';
+  } else if (numSessoes < 5 && (temAnalise || temMapeamento)) {
+    nivelDados = 'inicial_baixa_confianca'; nivelConfianca = 'baixa';
+  } else {
+    nivelDados = 'moderada_alta_confianca'; nivelConfianca = snapshots.length >= 5 ? 'alta' : 'moderada';
+  }
+
+  if (nivelDados === 'insuficiente') {
+    return { nivel_dados: 'insuficiente', nivel_confianca: 'insuficiente', tendencia_predominante: 'Dados insuficientes para uma leitura prospectiva confiável. São necessárias pelo menos 5 sessões ou dados clínicos mais robustos.', modo:'insuficiente' };
+  }
+
+  const snapshotStr = snapshots.slice(-6).map(function(s,i){
+    var se = s.scores_estruturais_json||{};
+    return 'Snapshot '+(i+1)+' ('+new Date(s.gerado_em).toLocaleDateString('pt-BR')+'): global='+se.score_global+' tendência='+s.tendencia;
+  }).join('\n');
+
+  var aeStr = '';
+  if (analiseEstrutural) {
+    aeStr = 'Núcleo emocional: '+(analiseEstrutural.nucleo_emocional||'')
+      +'\nConflito central: '+(analiseEstrutural.conflito_central||'')
+      +'\nDireção terapêutica: '+(analiseEstrutural.direcao_terapeutica||'');
+  }
+
+  var memoriaStr = '';
+  if (memoria) {
+    try {
+      var mObj = typeof memoria === 'string' ? JSON.parse(memoria) : memoria;
+      if (mObj.movimento_terapeutico) memoriaStr = 'Movimento atual: '+mObj.movimento_terapeutico;
+    } catch(e) {}
+  }
+
+  const riscoStr = riscoAtual ? 'Nível: '+riscoAtual.nivel+' ('+riscoAtual.score+'). '+riscoAtual.explicacao : 'Não avaliado';
+
+  const prompt = `Você é o motor de inteligência preditiva do Synapse Core — Evolution Therapy.
+Papel: leitura prospectiva clínica do processo terapêutico. Não é previsão determinística — é hipótese estratégica.
+
+PACIENTE: ${paciente.nome_completo} | ${paciente.perfil_tipo||'adulto'} | ${numSessoes} sessões totais
+NÍVEL DE CONFIANÇA DOS DADOS: ${nivelConfianca}
+HORIZONTE: próximas ${horizSessoes} sessões
+
+LINHA EVOLUTIVA (snapshots recentes):
+${snapshotStr||'Sem snapshots disponíveis'}
+
+RESUMO CLÍNICO ATUAL:
+${resumoAtual||'Não disponível'}
+
+${aeStr ? 'MAPA ESTRUTURAL:\n'+aeStr+'\n' : ''}
+${memoriaStr ? 'MEMÓRIA TERAPÊUTICA:\n'+memoriaStr+'\n' : ''}
+RISCO DE ABANDONO: ${riscoStr}
+
+FEEDBACKS RECENTES: ${feedbacks.slice(-3).map(function(f){return f.conteudo.substring(0,80);}).join(' | ')||'Nenhum'}
+
+SAÍDAS POSSÍVEIS DE TENDÊNCIA:
+melhora_sustentada | melhora_parcial | oscilacao_persistente | estagnacao_provavel | regressao_emocional | dependencia_terapeutica | necessidade_ajuste_estrategico | risco_ruptura_processo | potencial_consolidacao_identitaria
+
+LINGUAGEM OBRIGATÓRIA: hipótese, tendência provável, possibilidade clínica. NUNCA certeza ou promessa.
+${nivelConfianca==='baixa'?'ATENÇÃO: dados ainda limitados — explicite incerteza na análise.':''}
+
+Retorne APENAS JSON válido:
+{
+  "tendencia_predominante": "saída + explicação em 2-3 frases",
+  "fatores_favoraveis": ["fator 1", "fator 2"],
+  "fatores_risco": ["fator 1", "fator 2"],
+  "dimensoes_frageis": ["dimensão frágil 1"],
+  "dimensoes_fortalecidas": ["dimensão fortalecida 1"],
+  "proximos_focos": ["foco 1", "foco 2"],
+  "ajustes_recomendados": ["ajuste 1", "ajuste 2"]
+}`;
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST', headers:{'Content-Type':'application/json','x-api-key':process.env.ANTHROPIC_API_KEY,'anthropic-version':'2023-06-01'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1500,messages:[{role:'user',content:prompt}]})
+    });
+    if (!resp.ok) { const e=await resp.text().catch(function(){return '';}); throw new Error('Anthropic 400: '+e.substring(0,300)); }
+    const data = await resp.json();
+    const text = (data.content&&data.content[0]&&data.content[0].text)||'{}';
+    const clean = text.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
+    const m = clean.match(/\{[\s\S]*\}/);
+    const json = m ? JSON.parse(m[0]) : {};
+    const duracao = Date.now()-inicio;
+    await registrarAuditoria(db,{paciente_id:paciente.id,modulo:'evolucao_preditiva',referencia_tipo:'paciente',referencia_id:paciente.id,prompt_resumo:prompt,input_hash:crypto.createHash('md5').update(prompt).digest('hex'),output_resumo:text,tokens_usados:data.usage&&data.usage.output_tokens,duracao_ms:duracao,sucesso:true,modelo:'claude-sonnet-4-20250514',modo:'ia'});
+    return { nivel_dados:nivelDados, nivel_confianca:nivelConfianca, horizonte_sessoes:horizSessoes, tendencia_predominante:json.tendencia_predominante||'', fatores_favoraveis:json.fatores_favoraveis||[], fatores_risco:json.fatores_risco||[], dimensoes_frageis:json.dimensoes_frageis||[], dimensoes_fortalecidas:json.dimensoes_fortalecidas||[], proximos_focos:json.proximos_focos||[], ajustes_recomendados:json.ajustes_recomendados||[], modo:'ia' };
+  } catch(e) {
+    await registrarAuditoria(db,{paciente_id:paciente.id,modulo:'evolucao_preditiva',sucesso:false,erro_msg:e.message,modo:'fallback'});
     throw e;
   }
 }

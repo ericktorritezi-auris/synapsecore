@@ -164,6 +164,7 @@ body{font-family:var(--fb);background:var(--bg);color:var(--tx);min-height:100vh
     <button class="tab" onclick="setTab('hipoteses')">&#129504; Hipóteses</button>
     <button class="tab" onclick="setTab('identidade')">&#127775; Identidade</button>
     <button class="tab" onclick="setTab('historico')">&#128337; Histórico</button>
+    <button class="tab" onclick="setTab('longitudinal')">&#128200; Evolução</button>
   </div>
 
   <!-- VISÃO GERAL -->
@@ -203,9 +204,72 @@ body{font-family:var(--fb);background:var(--bg);color:var(--tx);min-height:100vh
     <div id="histBody"><div class="loading-row"><div class="mini-spin"></div>Carregando histórico...</div></div>
   </div>
 
+  <!-- EVOLUÇÃO LONGITUDINAL -->
+  <div class="tab-panel" id="tab-longitudinal">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+      <button class="btn btn-violet btn-sm" onclick="gerarLinhaEvolutiva()" id="btnLinhaEv">&#8635; Atualizar Linha</button>
+      <button class="btn btn-ghost btn-sm" onclick="gerarRiscoAbandonoUI()" id="btnRisco" style="background:rgba(239,68,68,.06);border-color:rgba(239,68,68,.2);color:#fca5a5">&#9888; Analisar Risco</button>
+      <select id="selHorizonte" style="background:var(--s2);border:1px solid var(--brd);border-radius:8px;color:var(--tx);font-size:12px;padding:5px 10px;outline:none">
+        <option value="4">Próximas 4 sessões</option>
+        <option value="6" selected>Próximas 6 sessões</option>
+        <option value="8">Próximas 8 sessões</option>
+      </select>
+      <button class="btn btn-ghost btn-sm" onclick="gerarPredicaoUI()" id="btnPreditiva">&#128302; Tendência Prospectiva</button>
+    </div>
+
+    <!-- Linha Evolutiva -->
+    <div class="sec sec-accent" style="margin-bottom:14px">
+      <div class="sec-header" onclick="toggleSec('secLinhaEv')">
+        <div class="sec-title" style="color:var(--ac)">&#128200; Linha Evolutiva Emocional</div>
+        <span class="sec-arrow">▾</span>
+      </div>
+      <div class="sec-body" id="secLinhaEv" style="display:block">
+        <div id="linhaEvChart">
+          <div class="loading-row"><div class="mini-spin"></div>Carregando linha evolutiva...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Risco de Abandono -->
+    <div class="sec" style="margin-bottom:14px;border-color:rgba(239,68,68,.2)">
+      <div style="height:2px;background:linear-gradient(90deg,#ef4444,transparent)"></div>
+      <div class="sec-header" onclick="toggleSec('secRisco')">
+        <div class="sec-title" style="color:#fca5a5">&#9888; Risco de Abandono</div>
+        <span class="sec-arrow">▾</span>
+      </div>
+      <div class="sec-body" id="secRisco">
+        <div id="riscoBody"><div class="loading-row"><div class="mini-spin"></div>Carregando risco...</div></div>
+      </div>
+    </div>
+
+    <!-- Tendência Prospectiva -->
+    <div class="sec" style="margin-bottom:14px;border-color:rgba(99,102,241,.25)">
+      <div style="height:2px;background:linear-gradient(90deg,#6366f1,transparent)"></div>
+      <div class="sec-header" onclick="toggleSec('secPreditiva')">
+        <div class="sec-title" style="color:#a5b4fc">&#128302; Tendência Prospectiva</div>
+        <span class="sec-arrow">▾</span>
+      </div>
+      <div class="sec-body" id="secPreditiva">
+        <div id="preditivaBody"><div class="loading-row"><div class="mini-spin"></div>Carregando tendência...</div></div>
+      </div>
+    </div>
+
+    <!-- Histórico de Tendências -->
+    <div class="sec" style="margin-bottom:14px">
+      <div class="sec-header" onclick="toggleSec('secHistLong');if(!this.parentElement.classList.contains('open'))carregarHistLongitudinal()">
+        <div class="sec-title" style="color:var(--dim)">&#128337; Histórico de Tendências</div>
+        <span class="sec-arrow">▾</span>
+      </div>
+      <div class="sec-body" id="secHistLong">
+        <div id="histLongBody"><div style="font-size:12.5px;color:var(--dim)">Clique para expandir</div></div>
+      </div>
+    </div>
+  </div>
+
   <div class="page-footer">&copy; 2026 Synapse Core &mdash; <strong>Erick Torritezi</strong> &mdash; Uso interno clínico</div>
 </main>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="/js/shared.js"></script>
 <script>
 checkAuth();
@@ -224,13 +288,16 @@ window.addEventListener('DOMContentLoaded', function() {
 });
 
 function setTab(name) {
-  document.querySelectorAll('.tab').forEach(function(t,i){ t.classList.remove('active'); });
+  document.querySelectorAll('.tab').forEach(function(t){ t.classList.remove('active'); });
   document.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.remove('active'); });
+  var names = ['visao','estrutural','hipoteses','identidade','historico','longitudinal'];
   var tabs = document.querySelectorAll('.tab');
-  var names = ['visao','estrutural','hipoteses','identidade','historico'];
-  tabs[names.indexOf(name)].classList.add('active');
-  document.getElementById('tab-'+name).classList.add('active');
+  var idx = names.indexOf(name);
+  if (idx >= 0 && tabs[idx]) tabs[idx].classList.add('active');
+  var panel = document.getElementById('tab-'+name);
+  if (panel) panel.classList.add('active');
   if (name==='historico') carregarHistorico();
+  if (name==='longitudinal') carregarLongitudinal();
 }
 
 function carregarTudo() {
@@ -534,6 +601,239 @@ function histSection(titulo, itens) {
         +(i.resumo_executivo||i.frase_identitaria ? '<span style="font-size:11.5px;color:var(--dim);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escH((i.resumo_executivo||i.frase_identitaria||'').substring(0,60))+'…</span>' : '')
       +'</div>';
     }).join('')+'</div>';
+}
+
+// ══════════════════════════════════════
+// v3.2.0 — EVOLUÇÃO LONGITUDINAL
+// ══════════════════════════════════════
+
+var linhaChart = null;
+
+function carregarLongitudinal() {
+  carregarLinhaEvolutiva();
+  carregarRisco();
+  carregarPreditiva();
+}
+
+// ── LINHA EVOLUTIVA ──
+function carregarLinhaEvolutiva() {
+  api('/api/analise/'+PACIENTE_ID+'/linha-evolutiva').then(function(data) {
+    if (!data.length) {
+      document.getElementById('linhaEvChart').innerHTML = emptyState('Nenhum snapshot ainda. Clique em "↻ Atualizar Linha" para gerar o primeiro.');
+      return;
+    }
+    renderLinhaChart(data);
+  }).catch(function(){});
+}
+
+function gerarLinhaEvolutiva() {
+  var btn = document.getElementById('btnLinhaEv');
+  btn.disabled=true; btn.textContent='Gerando...';
+  api('/api/analise/'+PACIENTE_ID+'/linha-evolutiva/gerar','POST',{force:true})
+    .then(function(){ btn.disabled=false; btn.textContent='↻ Atualizar Linha'; carregarLinhaEvolutiva(); showToast('Linha evolutiva atualizada!','success'); })
+    .catch(function(e){ btn.disabled=false; btn.textContent='↻ Atualizar Linha'; showToast(e.message,'error'); });
+}
+
+function renderLinhaChart(data) {
+  var wrap = document.getElementById('linhaEvChart');
+  // Labels = dates
+  var labels = data.map(function(d){ return formatDate(d.gerado_em); });
+  var scores = data.map(function(d){ return (d.scores_estruturais_json&&d.scores_estruturais_json.score_global)||0; });
+  var D1 = data.map(function(d){ return (d.scores_estruturais_json&&d.scores_estruturais_json.D1)||0; });
+  var D3 = data.map(function(d){ return (d.scores_estruturais_json&&d.scores_estruturais_json.D3)||0; });
+  var D4 = data.map(function(d){ return (d.scores_estruturais_json&&d.scores_estruturais_json.D4)||0; });
+
+  wrap.innerHTML = '<canvas id="chartLinhaEv" style="max-height:280px"></canvas>';
+  if (linhaChart) { linhaChart.destroy(); linhaChart=null; }
+  var ctx = document.getElementById('chartLinhaEv').getContext('2d');
+  linhaChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [
+        { label:'Global', data:scores, borderColor:'#D4AF7F', backgroundColor:'rgba(212,175,127,.1)', borderWidth:2.5, pointRadius:4, tension:.3 },
+        { label:'Emocional (D1)', data:D1, borderColor:'#fca5a5', backgroundColor:'transparent', borderWidth:1.5, pointRadius:2, tension:.3 },
+        { label:'Relacional (D3)', data:D3, borderColor:'#93c5fd', backgroundColor:'transparent', borderWidth:1.5, pointRadius:2, tension:.3 },
+        { label:'Existencial (D4)', data:D4, borderColor:'#c4b5fd', backgroundColor:'transparent', borderWidth:1.5, pointRadius:2, tension:.3 },
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:true,
+      plugins:{ legend:{ labels:{ color:'#C9D1D9', font:{size:11} } } },
+      scales:{
+        x:{ ticks:{color:'rgba(201,209,217,.5)',font:{size:10}}, grid:{color:'rgba(255,255,255,.04)'} },
+        y:{ min:0, max:100, ticks:{color:'rgba(201,209,217,.5)',font:{size:10}}, grid:{color:'rgba(255,255,255,.04)'} }
+      }
+    }
+  });
+
+  // Tendência do último snapshot
+  var ultimo = data[data.length-1];
+  if (ultimo && ultimo.tendencia) {
+    var tCores = {melhora_sustentada:'#6ee7b7',melhora_leve:'#86efac',estagnacao:'#fcd34d',regressao_leve:'#fdba74',regressao:'#fca5a5',estavel:'var(--dim)'};
+    var tLabels = {melhora_sustentada:'Melhora sustentada',melhora_leve:'Melhora leve',estagnacao:'Estagnação',regressao_leve:'Regressão leve',regressao:'Regressão',estavel:'Estável'};
+    var cor = tCores[ultimo.tendencia]||'var(--dim)';
+    var tWrap = document.createElement('div');
+    tWrap.style.cssText='display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding:8px 12px;background:rgba(255,255,255,.03);border-radius:8px';
+    tWrap.innerHTML='<span style="font-size:12px;color:var(--dim)">'+data.length+' snapshots registrados</span>'
+      +'<span style="font-size:12px;font-weight:600;color:'+cor+'">Tendência: '+(tLabels[ultimo.tendencia]||ultimo.tendencia)+'</span>';
+    wrap.appendChild(tWrap);
+  }
+}
+
+// ── RISCO DE ABANDONO ──
+function carregarRisco() {
+  api('/api/analise/'+PACIENTE_ID+'/risco-abandono/atual').then(function(d) {
+    if (d) renderRisco(d);
+    else document.getElementById('riscoBody').innerHTML = emptyState('Risco não avaliado ainda. Clique em "⚠ Analisar Risco".');
+  }).catch(function(){});
+}
+
+function gerarRiscoAbandonoUI() {
+  var btn = document.getElementById('btnRisco');
+  btn.disabled=true; btn.textContent='Analisando...';
+  document.getElementById('riscoBody').innerHTML = loadingRow('Analisando risco clínico de abandono...');
+  api('/api/analise/'+PACIENTE_ID+'/risco-abandono/gerar','POST',{})
+    .then(function(d){ btn.disabled=false; btn.textContent='⚠ Analisar Risco'; renderRisco(d); showToast('Risco analisado!','success'); })
+    .catch(function(e){ btn.disabled=false; btn.textContent='⚠ Analisar Risco'; document.getElementById('riscoBody').innerHTML=errState(e.message); });
+}
+
+function renderRisco(d) {
+  var nivelCores = {baixo:'#6ee7b7',moderado:'#fcd34d',alto:'#fdba74',critico:'#fca5a5'};
+  var nivelBgs   = {baixo:'rgba(16,185,129,.06)',moderado:'rgba(245,158,11,.06)',alto:'rgba(249,115,22,.06)',critico:'rgba(239,68,68,.06)'};
+  var cor = nivelCores[d.nivel]||'var(--dim)';
+  var bg  = nivelBgs[d.nivel]||'rgba(255,255,255,.03)';
+  var fatores = d.fatores_json||[];
+
+  var html = '<div style="background:'+bg+';border:1px solid '+cor+'33;border-radius:10px;padding:14px 16px;margin-bottom:12px">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'
+      +'<span style="font-family:var(--fd);font-size:22px;font-weight:900;color:'+cor+'">'+Math.round(d.score_clinico||d.score_basico||0)+'<span style="font-size:13px;color:var(--dim)">/100</span></span>'
+      +'<span style="font-size:12px;font-weight:700;padding:4px 12px;border-radius:20px;background:'+cor+'22;color:'+cor+';border:1px solid '+cor+'44;text-transform:uppercase;letter-spacing:.5px">'+escH(d.nivel)+'</span>'
+    +'</div>'
+    +(d.explicacao?'<div style="font-size:13px;color:var(--mu);line-height:1.65;margin-bottom:10px">'+escH(d.explicacao)+'</div>':'');
+
+  if (fatores.length) {
+    html += '<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px">'
+      +fatores.map(function(f){return '<span style="font-size:11px;padding:2px 9px;border-radius:20px;background:'+cor+'11;color:'+cor+';border:1px solid '+cor+'33">'+escH(f.replace(/_/g,' '))+'</span>';}).join('')+'</div>';
+  }
+
+  if (d.sugestao_estrategica) html += '<div style="margin-bottom:6px"><span style="font-size:10.5px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.5px">Sugestão estratégica</span><div style="font-size:12.5px;color:var(--mu);margin-top:3px;line-height:1.55">'+escH(d.sugestao_estrategica)+'</div></div>';
+  if (d.acao_recomendada) html += '<div style="background:rgba(212,175,127,.05);border:1px solid var(--abrd);border-radius:8px;padding:8px 12px;margin-top:8px"><span style="font-size:10.5px;font-weight:700;color:var(--ac);text-transform:uppercase;letter-spacing:.5px">Ação recomendada</span><div style="font-size:12.5px;color:var(--mu);margin-top:3px">'+escH(d.acao_recomendada)+'</div></div>';
+  html += '</div>';
+
+  html += '<div style="display:flex;gap:8px;flex-wrap:wrap">'
+    +'<span style="font-size:11px;color:var(--dim)">Analisado: '+formatDate(d.gerado_em)+'</span>'
+    +(d.nivel_confianca?'<span style="font-size:11px;color:var(--dim)">· Confiança: '+escH(d.nivel_confianca)+'</span>':'')
+    +(d.resolvido?'<span style="font-size:11px;color:#6ee7b7">· ✓ Resolvido</span>':'')
+    +'</div>';
+
+  if (!d.resolvido) {
+    html += '<button onclick="resolverRisco('+d.id+')" style="margin-top:10px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);color:#6ee7b7;border-radius:7px;padding:6px 12px;font-size:12px;cursor:pointer;width:100%">&#10003; Marcar como trabalhado/estabilizado</button>';
+  }
+
+  document.getElementById('riscoBody').innerHTML = html;
+}
+
+function resolverRisco(id) {
+  var obs = prompt('Observação clínica (opcional):');
+  api('/api/analise/'+id+'/risco-abandono/resolver','PUT',{resolvido:true,observacao_terapeuta:obs||null})
+    .then(function(){ carregarRisco(); showToast('Risco marcado como resolvido.','success'); })
+    .catch(function(e){ showToast(e.message,'error'); });
+}
+
+// ── EVOLUÇÃO PREDITIVA ──
+function carregarPreditiva() {
+  api('/api/analise/'+PACIENTE_ID+'/preditiva/atual').then(function(d) {
+    if (d) renderPreditiva(d);
+    else document.getElementById('preditivaBody').innerHTML = emptyState('Tendência não gerada ainda. Clique em "↓ Tendência Prospectiva".');
+  }).catch(function(){});
+}
+
+function gerarPredicaoUI() {
+  var btn = document.getElementById('btnPreditiva');
+  var horizonte = document.getElementById('selHorizonte').value;
+  btn.disabled=true; btn.textContent='Gerando...';
+  document.getElementById('preditivaBody').innerHTML = loadingRow('Gerando leitura prospectiva...');
+  api('/api/analise/'+PACIENTE_ID+'/preditiva/gerar','POST',{horizonte:parseInt(horizonte)})
+    .then(function(d){ btn.disabled=false; btn.textContent='↓ Tendência Prospectiva'; renderPreditiva(d); showToast('Tendência prospectiva gerada!','success'); })
+    .catch(function(e){ btn.disabled=false; btn.textContent='↓ Tendência Prospectiva'; document.getElementById('preditivaBody').innerHTML=errState(e.message); });
+}
+
+function renderPreditiva(d) {
+  var confCores = {insuficiente:'var(--dim)',baixa:'#fcd34d',moderada:'#93c5fd',alta:'#6ee7b7'};
+  var cor = confCores[d.nivel_confianca]||'var(--dim)';
+  var html = '';
+
+  // Confidence badge
+  html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">'
+    +'<span style="font-size:11px;padding:3px 10px;border-radius:20px;font-weight:600;background:'+cor+'18;color:'+cor+';border:1px solid '+cor+'44">Confiança: '+escH(d.nivel_confianca||'—')+'</span>'
+    +'<span style="font-size:11px;color:var(--dim)">'+escH(d.nivel_dados||'')+'</span>'
+    +'<span style="font-size:11px;color:var(--dim)">· Horizonte: '+d.horizonte_sessoes+' sessões</span>'
+    +'</div>';
+
+  if (d.tendencia_predominante) {
+    html += '<div style="background:rgba(99,102,241,.06);border:1px solid rgba(99,102,241,.2);border-radius:10px;padding:14px 16px;margin-bottom:12px">'
+      +'<div style="font-size:10.5px;font-weight:700;color:#a5b4fc;text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px">Tendência Predominante</div>'
+      +'<div style="font-size:13.5px;color:var(--tx);line-height:1.65;font-style:italic">'+escH(d.tendencia_predominante)+'</div>'
+      +'</div>';
+  }
+
+  var sections = [
+    ['Fatores Favoráveis', d.fatores_favoraveis, '#6ee7b7'],
+    ['Fatores de Risco', d.fatores_risco, '#fca5a5'],
+    ['Dimensões Frágeis', d.dimensoes_frageis, '#fdba74'],
+    ['Dimensões Fortalecidas', d.dimensoes_fortalecidas, '#86efac'],
+    ['Próximos Focos', d.proximos_focos, '#c4b5fd'],
+    ['Ajustes Recomendados', d.ajustes_recomendados, 'var(--ac)'],
+  ];
+
+  sections.forEach(function(s) {
+    var items = s[1]||[];
+    if (!items.length) return;
+    html += '<div style="margin-bottom:10px"><div style="font-size:10.5px;font-weight:700;color:'+s[2]+';text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px">'+escH(s[0])+'</div>'
+      +items.map(function(i){return '<div style="font-size:12.5px;color:var(--mu);padding:2px 0;line-height:1.5">• '+escH(i)+'</div>';}).join('')+'</div>';
+  });
+
+  html += '<div style="font-size:11px;color:var(--dim);margin-top:10px">Gerado: '+formatDate(d.gerado_em)+(d.resolvido?'  · ✓ Arquivado':'')+'</div>';
+  html += '<div style="font-size:10px;color:var(--dim);margin-top:6px;font-style:italic">Esta é uma leitura prospectiva clínica — não uma previsão determinística.</div>';
+
+  document.getElementById('preditivaBody').innerHTML = html;
+}
+
+// ── HISTÓRICO LONGITUDINAL ──
+function carregarHistLongitudinal() {
+  Promise.all([
+    api('/api/analise/'+PACIENTE_ID+'/risco-abandono/historico'),
+    api('/api/analise/'+PACIENTE_ID+'/linha-evolutiva'),
+  ]).then(function(results) {
+    var riscos = results[0], snaps = results[1];
+    var html = '';
+    if (riscos.length) {
+      html += '<div style="margin-bottom:16px"><div style="font-family:var(--fd);font-size:12px;font-weight:700;color:#fca5a5;text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px">Histórico de Risco</div>'
+        +riscos.map(function(r){
+          var cor={baixo:'#6ee7b7',moderado:'#fcd34d',alto:'#fdba74',critico:'#fca5a5'}[r.nivel]||'var(--dim)';
+          return '<div class="hist-item"><span style="font-family:var(--fd);font-weight:700;color:'+cor+'">'+escH(r.nivel)+'</span>'
+            +'<span>'+Math.round(r.score_clinico||r.score_basico||0)+'/100</span>'
+            +'<span>'+formatDate(r.gerado_em)+'</span>'
+            +(r.resolvido?'<span style="font-size:10px;background:rgba(16,185,129,.1);color:#6ee7b7;padding:1px 7px;border-radius:10px">Resolvido</span>':'')+'</div>';
+        }).join('')+'</div>';
+    }
+    if (snaps.length) {
+      html += '<div><div style="font-family:var(--fd);font-size:12px;font-weight:700;color:var(--ac);text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px">Snapshots Evolutivos ('+snaps.length+')</div>'
+        +snaps.slice(-10).reverse().map(function(s){
+          var tCores={melhora_sustentada:'#6ee7b7',melhora_leve:'#86efac',estagnacao:'#fcd34d',regressao_leve:'#fdba74',regressao:'#fca5a5',estavel:'var(--dim)'};
+          var cor=tCores[s.tendencia]||'var(--dim)';
+          return '<div class="hist-item">'
+            +'<span style="font-size:11px;color:var(--dim)">'+escH(s.tipo_origem)+'</span>'
+            +'<span style="font-family:var(--fd);font-weight:700;color:var(--ac)">'+(s.scores_estruturais_json&&s.scores_estruturais_json.score_global||0)+'</span>'
+            +'<span style="color:'+cor+';font-size:11px">'+escH(s.tendencia||'—')+'</span>'
+            +'<span>'+formatDate(s.gerado_em)+'</span></div>';
+        }).join('')+'</div>';
+    }
+    if (!html) html = '<div style="font-size:12.5px;color:var(--dim)">Sem histórico ainda.</div>';
+    document.getElementById('histLongBody').innerHTML = html;
+    document.getElementById('secHistLong').parentElement.classList.add('open');
+  }).catch(function(){});
 }
 
 // ── HELPERS ──

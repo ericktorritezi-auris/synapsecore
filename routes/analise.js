@@ -2,7 +2,7 @@ const express = require('express');
 const db      = require('../db');
 const crypto  = require('crypto');
 const { verifyToken } = require('../middleware/auth');
-const { gerarAnaliseEstrutural, gerarHipotesesClinicas, gerarMapaIdentidade } = require('../services/ai');
+const { gerarAnaliseEstrutural, gerarHipotesesClinicas, gerarMapaIdentidade, gerarSnapshotEvolutivoLeve, calcularScoreRiscoBasico, gerarRiscoAbandonoClinico, gerarEvolucaoPreditiva } = require('../services/ai');
 const router  = express.Router();
 
 function buildHash(paciente_id, mapId, resumoV, sessIds, feedIds) {
@@ -200,6 +200,140 @@ router.get('/:pid/visao-geral', verifyToken, async (req, res) => {
       db.query('SELECT frase_identitaria, versao, gerado_em FROM mapa_identidade WHERE paciente_id=$1 AND ativa=true ORDER BY versao DESC LIMIT 1',[pid]),
     ]);
     res.json({ analise_estrutural: ae.rows[0]||null, hipoteses: hip.rows, mapa_identidade: mi.rows[0]||null });
+  } catch(e){ res.status(500).json({message:e.message}); }
+});
+
+// ═══ LINHA EVOLUTIVA ═══
+
+router.get('/:pid/linha-evolutiva', verifyToken, async (req, res) => {
+  try {
+    const r = await db.query('SELECT * FROM linha_evolutiva WHERE paciente_id=$1 ORDER BY gerado_em ASC',[req.params.pid]);
+    res.json(r.rows);
+  } catch(e){ res.status(500).json({message:e.message}); }
+});
+
+router.post('/:pid/linha-evolutiva/gerar', verifyToken, async (req, res) => {
+  try {
+    const pid = req.params.pid;
+    const ctx = await loadContexto(pid);
+    if (!ctx.paciente) return res.status(404).json({message:'Paciente não encontrado.'});
+
+    const lastRes = await db.query('SELECT * FROM linha_evolutiva WHERE paciente_id=$1 ORDER BY gerado_em DESC LIMIT 1',[pid]);
+    const snapshotAnterior = lastRes.rows[0]||null;
+    const versao = (snapshotAnterior&&snapshotAnterior.versao||0)+1;
+    const sessIds = ctx.sessoes.map(function(s){return s.id;}).join(',');
+    const hash = crypto.createHash('md5').update(pid+'|'+sessIds+'|'+(ctx.mapeamento&&ctx.mapeamento.id||0)).digest('hex');
+    if (snapshotAnterior && snapshotAnterior.hash_contexto===hash && !req.body.force) {
+      return res.json({...snapshotAnterior, sem_mudancas:true});
+    }
+    const snap = gerarSnapshotEvolutivoLeve({mapeamento:ctx.mapeamento, sessoes:ctx.sessoes, feedbacks:ctx.feedbacks, snapshotAnterior});
+    const eventos = [{tipo:'manual',ts:new Date().toISOString()}];
+    if (ctx.sessoes.length) eventos.push({tipo:'sessoes',count:ctx.sessoes.length});
+    if (ctx.feedbacks.length) eventos.push({tipo:'feedbacks',count:ctx.feedbacks.length});
+
+    const saved = await db.query(
+      `INSERT INTO linha_evolutiva (paciente_id,versao,tipo_origem,origem_id,hash_contexto,nivel_confianca,eventos_considerados_json,scores_estruturais_json,tendencia,modelo_ia)
+       VALUES ($1,$2,'manual',NULL,$3,$4,$5,$6,$7,'calculado') RETURNING *`,
+      [pid,versao,hash,snap.nivel_confianca,JSON.stringify(eventos),JSON.stringify(snap.scores_estruturais),snap.tendencia]
+    );
+    res.json({...saved.rows[0], sem_mudancas:false});
+  } catch(e){ console.error('linha-evolutiva/gerar:',e.message); res.status(500).json({message:e.message}); }
+});
+
+// ═══ RISCO DE ABANDONO ═══
+
+router.get('/:pid/risco-abandono/atual', verifyToken, async (req, res) => {
+  try {
+    const r = await db.query('SELECT * FROM risco_abandono WHERE paciente_id=$1 ORDER BY gerado_em DESC LIMIT 1',[req.params.pid]);
+    res.json(r.rows[0]||null);
+  } catch(e){ res.status(500).json({message:e.message}); }
+});
+
+router.get('/:pid/risco-abandono/historico', verifyToken, async (req, res) => {
+  try {
+    const r = await db.query('SELECT id,versao,nivel,score_basico,score_clinico,nivel_confianca,resolvido,gerado_em FROM risco_abandono WHERE paciente_id=$1 ORDER BY gerado_em DESC',[req.params.pid]);
+    res.json(r.rows);
+  } catch(e){ res.status(500).json({message:e.message}); }
+});
+
+router.post('/:pid/risco-abandono/gerar', verifyToken, async (req, res) => {
+  try {
+    const pid = req.params.pid;
+    const ctx = await loadContexto(pid);
+    if (!ctx.paciente) return res.status(404).json({message:'Paciente não encontrado.'});
+
+    // Basic score (always)
+    const basic = calcularScoreRiscoBasico({sessoes:ctx.sessoes,feedbacks:ctx.feedbacks,paciente:ctx.paciente});
+
+    // Clinical AI score
+    const aeRes = await db.query('SELECT conteudo_json FROM analise_estrutural WHERE paciente_id=$1 AND ativa=true ORDER BY versao DESC LIMIT 1',[pid]);
+    const analiseEstrutural = (aeRes.rows[0]&&aeRes.rows[0].conteudo_json)||null;
+
+    const clinico = await gerarRiscoAbandonoClinico({db, paciente:ctx.paciente, sessoes:ctx.sessoes, feedbacks:ctx.feedbacks, mapeamento:ctx.mapeamento, analiseEstrutural, resumoAtual:ctx.resumoAtual});
+
+    const lastVer = await db.query('SELECT MAX(versao) AS v FROM risco_abandono WHERE paciente_id=$1',[pid]);
+    const versao = ((lastVer.rows[0]&&lastVer.rows[0].v)||0)+1;
+    const hash = crypto.createHash('md5').update(pid+'|'+ctx.sessoes.map(function(s){return s.id;}).join(',')+'|'+ctx.feedbacks.length).digest('hex');
+
+    const saved = await db.query(
+      `INSERT INTO risco_abandono (paciente_id,versao,hash_contexto,score_basico,score_clinico,nivel,nivel_confianca,fatores_json,explicacao,sugestao_estrategica,acao_recomendada,ultima_analise_leve,ultima_analise_completa,modelo_ia)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,NOW(),NOW(),'claude-sonnet-4-20250514') RETURNING *`,
+      [pid,versao,hash,basic.score,clinico.score,clinico.nivel,clinico.nivel_confianca,JSON.stringify(clinico.fatores),clinico.explicacao,clinico.sugestao_estrategica,clinico.acao_recomendada]
+    );
+    res.json(saved.rows[0]);
+  } catch(e){ console.error('risco-abandono/gerar:',e.message); res.status(500).json({message:e.message}); }
+});
+
+router.put('/:rid/risco-abandono/resolver', verifyToken, async (req, res) => {
+  try {
+    const { observacao_terapeuta, resolvido } = req.body;
+    await db.query('UPDATE risco_abandono SET resolvido=$1, status=$2, observacao_terapeuta=COALESCE($3,observacao_terapeuta) WHERE id=$4',
+      [resolvido!==false, resolvido!==false?'resolvido':'ativo', observacao_terapeuta||null, req.params.rid]);
+    res.json({message:'Risco atualizado.'});
+  } catch(e){ res.status(500).json({message:e.message}); }
+});
+
+// ═══ EVOLUÇÃO PREDITIVA ═══
+
+router.get('/:pid/preditiva/atual', verifyToken, async (req, res) => {
+  try {
+    const r = await db.query('SELECT * FROM evolucao_preditiva WHERE paciente_id=$1 ORDER BY gerado_em DESC LIMIT 1',[req.params.pid]);
+    res.json(r.rows[0]||null);
+  } catch(e){ res.status(500).json({message:e.message}); }
+});
+
+router.post('/:pid/preditiva/gerar', verifyToken, async (req, res) => {
+  try {
+    const pid = req.params.pid;
+    const horizonte = parseInt(req.body.horizonte)||6;
+    const ctx = await loadContexto(pid);
+    if (!ctx.paciente) return res.status(404).json({message:'Paciente não encontrado.'});
+
+    const snaps = await db.query('SELECT * FROM linha_evolutiva WHERE paciente_id=$1 ORDER BY gerado_em ASC',[pid]);
+    const aeRes = await db.query('SELECT conteudo_json FROM analise_estrutural WHERE paciente_id=$1 AND ativa=true ORDER BY versao DESC LIMIT 1',[pid]);
+    const analiseEstrutural = (aeRes.rows[0]&&aeRes.rows[0].conteudo_json)||null;
+    const riscoRes = await db.query('SELECT * FROM risco_abandono WHERE paciente_id=$1 ORDER BY gerado_em DESC LIMIT 1',[pid]);
+    const riscoAtual = riscoRes.rows[0]||null;
+
+    const result = await gerarEvolucaoPreditiva({db, paciente:ctx.paciente, sessoes:ctx.sessoes, snapshots:snaps.rows, riscoAtual, mapeamento:ctx.mapeamento, analiseEstrutural, memoria:ctx.memoriaAtual, resumoAtual:ctx.resumoAtual, feedbacks:ctx.feedbacks, horizonte});
+
+    const lastVer = await db.query('SELECT MAX(versao) AS v FROM evolucao_preditiva WHERE paciente_id=$1',[pid]);
+    const versao = ((lastVer.rows[0]&&lastVer.rows[0].v)||0)+1;
+    const hash = crypto.createHash('md5').update(pid+'|'+snaps.rows.length+'|'+(riscoAtual&&riscoAtual.nivel||'')).digest('hex');
+
+    const saved = await db.query(
+      `INSERT INTO evolucao_preditiva (paciente_id,versao,hash_contexto,nivel_dados,nivel_confianca,horizonte_sessoes,tendencia_predominante,fatores_favoraveis,fatores_risco,dimensoes_frageis,dimensoes_fortalecidas,proximos_focos,ajustes_recomendados,modelo_ia)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,'claude-sonnet-4-20250514') RETURNING *`,
+      [pid,versao,hash,result.nivel_dados,result.nivel_confianca,horizonte,result.tendencia_predominante,JSON.stringify(result.fatores_favoraveis),JSON.stringify(result.fatores_risco),JSON.stringify(result.dimensoes_frageis),JSON.stringify(result.dimensoes_fortalecidas),JSON.stringify(result.proximos_focos),JSON.stringify(result.ajustes_recomendados)]
+    );
+    res.json(saved.rows[0]);
+  } catch(e){ console.error('preditiva/gerar:',e.message); res.status(500).json({message:e.message}); }
+});
+
+router.put('/:eid/preditiva/observacao', verifyToken, async (req, res) => {
+  try {
+    await db.query('UPDATE evolucao_preditiva SET observacao_terapeuta=$1 WHERE id=$2',[req.body.observacao_terapeuta||null,req.params.eid]);
+    res.json({message:'Observação salva.'});
   } catch(e){ res.status(500).json({message:e.message}); }
 });
 

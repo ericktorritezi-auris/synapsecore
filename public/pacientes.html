@@ -349,6 +349,8 @@ function renderList(patients) {
       var totalFeitas = ant + reg;
       metaParts.push('Sessão ' + reg + '/' + totalFeitas);
     }
+    // Risk badge — loaded async
+    var riskBadgeId = 'risk_'+p.id;
 
     var meta = document.createElement('div');
     meta.className = 'pt-meta';
@@ -356,6 +358,28 @@ function renderList(patients) {
 
     var badges = document.createElement('div');
     badges.className = 'pt-badges';
+
+    // Risk badge — async loaded
+    var riskSpan = document.createElement('span');
+    riskSpan.id = 'risk_'+p.id;
+    riskSpan.style.cssText = 'display:none;font-size:10px;padding:2px 8px;border-radius:20px;font-weight:600;margin-left:6px';
+    meta.appendChild(riskSpan);
+    // Load risk async without blocking render
+    (function(pid, span) {
+      api('/api/analise/'+pid+'/risco-abandono/atual').then(function(d) {
+        if (!d || d.nivel==='baixo') return;
+        var cores = {moderado:'#fcd34d',alto:'#fdba74',critico:'#fca5a5'};
+        var bgs   = {moderado:'rgba(245,158,11,.08)',alto:'rgba(249,115,22,.08)',critico:'rgba(239,68,68,.08)'};
+        var labels= {moderado:'Risco moderado',alto:'Risco alto',critico:'Risco crítico'};
+        if (cores[d.nivel]) {
+          span.style.color = cores[d.nivel];
+          span.style.background = bgs[d.nivel];
+          span.style.border = '1px solid '+cores[d.nivel]+'44';
+          span.style.display = 'inline';
+          span.textContent = '⚠ '+labels[d.nivel];
+        }
+      }).catch(function(){});
+    })(p.id, riskSpan);
 
     var typeBadge = document.createElement('span');
     typeBadge.className = 'badge';

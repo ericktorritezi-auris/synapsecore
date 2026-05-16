@@ -608,6 +608,78 @@ async function runMigrations() {
       )
     `);
 
+    // ══════════════════════════════════════════════
+    // v3.2.0 — EVOLUÇÃO LONGITUDINAL E PREDIÇÃO
+    // ══════════════════════════════════════════════
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS linha_evolutiva (
+        id                          SERIAL PRIMARY KEY,
+        paciente_id                 INTEGER REFERENCES pacientes(id) ON DELETE CASCADE,
+        versao                      INTEGER NOT NULL DEFAULT 1,
+        tipo_origem                 VARCHAR(40) NOT NULL,
+        origem_id                   INTEGER,
+        hash_contexto               VARCHAR(64),
+        nivel_confianca             VARCHAR(30) DEFAULT 'quantitativo',
+        eventos_considerados_json   JSONB DEFAULT '[]',
+        scores_estruturais_json     JSONB DEFAULT '{}',
+        scores_interpretativos_json JSONB DEFAULT '{}',
+        tendencia                   VARCHAR(40),
+        observacao_ia               TEXT,
+        modelo_ia                   VARCHAR(60),
+        gerado_em                   TIMESTAMP DEFAULT NOW(),
+        atualizado_em               TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS risco_abandono (
+        id                       SERIAL PRIMARY KEY,
+        paciente_id              INTEGER REFERENCES pacientes(id) ON DELETE CASCADE,
+        versao                   INTEGER NOT NULL DEFAULT 1,
+        hash_contexto            VARCHAR(64),
+        score_basico             NUMERIC(5,1) DEFAULT 0,
+        score_clinico            NUMERIC(5,1),
+        nivel                    VARCHAR(20) DEFAULT 'baixo',
+        nivel_confianca          VARCHAR(20) DEFAULT 'basico',
+        status                   VARCHAR(30) DEFAULT 'ativo',
+        resolvido                BOOLEAN DEFAULT false,
+        fatores_json             JSONB DEFAULT '[]',
+        explicacao               TEXT,
+        sugestao_estrategica     TEXT,
+        acao_recomendada         TEXT,
+        observacao_terapeuta     TEXT,
+        ultima_analise_leve      TIMESTAMP DEFAULT NOW(),
+        ultima_analise_completa  TIMESTAMP,
+        gerado_em                TIMESTAMP DEFAULT NOW(),
+        modelo_ia                VARCHAR(60)
+      )
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS evolucao_preditiva (
+        id                       SERIAL PRIMARY KEY,
+        paciente_id              INTEGER REFERENCES pacientes(id) ON DELETE CASCADE,
+        versao                   INTEGER NOT NULL DEFAULT 1,
+        hash_contexto            VARCHAR(64),
+        nivel_dados              VARCHAR(30) DEFAULT 'insuficiente',
+        nivel_confianca          VARCHAR(20) DEFAULT 'baixa',
+        horizonte_sessoes        INTEGER DEFAULT 6,
+        tendencia_predominante   TEXT,
+        fatores_favoraveis       JSONB DEFAULT '[]',
+        fatores_risco            JSONB DEFAULT '[]',
+        dimensoes_frageis        JSONB DEFAULT '[]',
+        dimensoes_fortalecidas   JSONB DEFAULT '[]',
+        proximos_focos           JSONB DEFAULT '[]',
+        ajustes_recomendados     JSONB DEFAULT '[]',
+        status                   VARCHAR(30) DEFAULT 'ativa',
+        observacao_terapeuta     TEXT,
+        comparacao_futura_json   JSONB DEFAULT '{}',
+        gerado_em                TIMESTAMP DEFAULT NOW(),
+        modelo_ia                VARCHAR(60)
+      )
+    `);
+
     console.log('✅ Banco de dados pronto');
   } catch (err) {
     console.error('❌ Erro nas migrations:', err.message);

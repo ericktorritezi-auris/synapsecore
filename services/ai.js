@@ -554,7 +554,7 @@ Retorne APENAS JSON válido:
     return { intervencoes: (json.intervencoes||[]).map(i=>({...i, publico_alvo: paciente.perfil_tipo||'adulto'})), modo: 'ia' };
   } catch(e) {
     await registrarAuditoria(db, { paciente_id: paciente.id, modulo:'intervencoes', sucesso:false, erro_msg:e.message, modo:'fallback' });
-    return { intervencoes: [], modo:'fallback', api_erro: e.message };
+    throw new Error('API indisponível: ' + e.message);
   }
 }
 
@@ -613,7 +613,7 @@ Retorne APENAS JSON válido:
     return { json, texto: text, modo: 'ia' };
   } catch(e) {
     await registrarAuditoria(db, { paciente_id: paciente.id, modulo:'memoria', sucesso:false, erro_msg:e.message, modo:'fallback' });
-    return { json: { temas_recorrentes:[], padroes_identificados:[], pontos_de_atencao:[], recursos_identificados:[], movimento_terapeutico:'', proximos_focos:[], resumo_processo: (resumoAtual && resumoAtual.substring(0,200))||'' }, texto:'', modo:'fallback', api_erro:e.message };
+    throw new Error('API indisponível: ' + e.message);
   }
 }
 

@@ -10,20 +10,16 @@ function buildHash(paciente_id, mapId, resumoV, sessIds, feedIds) {
 }
 
 async function loadContexto(pid) {
-  const [pac, map, sess, feed, res, mem] = await Promise.all([
-    db.query('SELECT * FROM pacientes WHERE id=$1',[pid]),
-    db.query('SELECT * FROM mapeamentos WHERE paciente_id=$1 ORDER BY versao DESC LIMIT 1',[pid]),
-    db.query('SELECT * FROM sessoes WHERE paciente_id=$1 AND status=$2 ORDER BY sessao_numero ASC',[pid,'realizada']),
-    db.query('SELECT * FROM feedbacks_paciente WHERE paciente_id=$1 ORDER BY data_feedback ASC',[pid]),
-    db.query('SELECT conteudo_ia, versao FROM resumos_clinicos WHERE paciente_id=$1 ORDER BY versao DESC LIMIT 1',[pid]),
-    db.query('SELECT conteudo_json FROM memoria_terapeutica WHERE paciente_id=$1 AND ativa=true ORDER BY versao DESC LIMIT 1',[pid]),
-  ]);
-  return {
-    paciente: pac.rows[0], mapeamento: map.rows[0]||null,
-    sessoes: sess.rows, feedbacks: feed.rows,
-    resumoAtual: (res.rows[0] && res.rows[0].conteudo_ia) || null, resumoVersao: (res.rows[0] && res.rows[0].versao) || 0,
-    memoriaAtual: mem.rows[0] ? JSON.stringify(mem.rows[0].conteudo_json) : null
-  };
+  const pac  = await db.query('SELECT * FROM pacientes WHERE id=$1',[pid]);
+  const map  = await db.query('SELECT * FROM mapeamentos WHERE paciente_id=$1 ORDER BY versao DESC LIMIT 1',[pid]);
+  const sess = await db.query('SELECT * FROM sessoes WHERE paciente_id=$1 AND status=$2 ORDER BY sessao_numero ASC',[pid,'realizada']);
+  let feedRows = [];
+  try { const f = await db.query('SELECT * FROM feedbacks_paciente WHERE paciente_id=$1 ORDER BY data_feedback ASC',[pid]); feedRows = f.rows; } catch(e){ console.warn('feedbacks query:',e.message); }
+  let resumoAtual = null, resumoVersao = 0;
+  try { const r = await db.query('SELECT conteudo_ia, versao FROM resumos_clinicos WHERE paciente_id=$1 ORDER BY versao DESC LIMIT 1',[pid]); resumoAtual=(r.rows[0]&&r.rows[0].conteudo_ia)||null; resumoVersao=(r.rows[0]&&r.rows[0].versao)||0; } catch(e){ console.warn('resumos query:',e.message); }
+  let memoriaAtual = null;
+  try { const m = await db.query('SELECT conteudo_json FROM memoria_terapeutica WHERE paciente_id=$1 AND ativa=true ORDER BY versao DESC LIMIT 1',[pid]); memoriaAtual=(m.rows[0]&&m.rows[0].conteudo_json)?JSON.stringify(m.rows[0].conteudo_json):null; } catch(e){ console.warn('memoria query:',e.message); }
+  return { paciente: pac.rows[0], mapeamento: map.rows[0]||null, sessoes: sess.rows, feedbacks: feedRows, resumoAtual, resumoVersao, memoriaAtual };
 }
 
 // ═══ ANALISE ESTRUTURAL ═══

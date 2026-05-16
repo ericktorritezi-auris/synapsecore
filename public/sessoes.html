@@ -763,7 +763,11 @@ function gerarIntervencoesSess() {
       }
       showToast('Intervenções geradas!', 'success');
     })
-    .catch(function(e){ btn.disabled=false; btn.textContent='⊳ Gerar'; showToast(e.message,'error'); });
+    .catch(function(e){
+      btn.disabled=false; btn.textContent='⊳ Gerar';
+      document.getElementById('intervList').innerHTML='<div style="color:#fca5a5;font-size:13px;padding:8px 0">Erro: '+escH(e.message||'API indisponível. Tente novamente.')+'</div>';
+      showToast(e.message||'Erro ao gerar intervenções.','error');
+    });
 }
 
 function carregarIntervencoes() {
@@ -811,7 +815,11 @@ function gerarMemoriaSess() {
       renderMemoriaResumo(d);
       showToast('Memória terapêutica atualizada!','success');
     })
-    .catch(function(e){ btn.disabled=false; btn.textContent='↻ Atualizar'; showToast(e.message,'error'); });
+    .catch(function(e){
+      btn.disabled=false; btn.textContent='↻ Atualizar';
+      document.getElementById('memoriaResumo').innerHTML='<div style="color:#fca5a5;font-size:13px;padding:8px 0">Erro: '+escH(e.message||'API indisponível. Tente novamente.')+'</div>';
+      showToast(e.message||'Erro ao gerar memória.','error');
+    });
 }
 
 function carregarMemoria() {

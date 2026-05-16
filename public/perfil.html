@@ -336,12 +336,39 @@ body{font-family:var(--fb);background:var(--bg);color:var(--tx);min-height:100vh
       <div class="manual-topic" onclick="toggleTopic(this)">
         <div class="manual-topic-hdr">📅 5. Registro de sessões</div>
         <div class="manual-topic-body">
-          Acesse <strong>Sessões</strong> pelo card do paciente. Registre cada sessão com data, número, duração, valor cobrado, forma de pagamento e observações clínicas. Após salvar, a IA gera automaticamente um <strong>resumo clínico</strong> integrando suas observações com o protocolo do mapeamento. O resumo pode ser regerado a qualquer momento. A barra de progresso no topo mostra o avanço no programa terapêutico. Sessões com risco elevado entram na <strong>Zona de Atenção</strong> destacada em vermelho.
+          Acesse <strong>Sessões</strong> pelo card do paciente. Registre cada sessão com data, número, duração, valor cobrado, forma de pagamento e observações clínicas. O checkbox <strong>"Sessão paga"</strong> registra o pagamento diretamente no cadastro. Para pacientes migrados de outro sistema, informe as <strong>sessões anteriores</strong> e a data da primeira sessão no cadastro — o sistema soma corretamente o total.<br><br>
+          Após salvar, a IA detecta automaticamente o que mudou e <strong>regera o resumo clínico de forma incremental</strong> — sessões novas, feedbacks e alterações nas observações. Se nada mudou, exibe aviso amarelo com opção de forçar regeração.<br><br>
+          <strong>Feedbacks do Paciente:</strong> registre mensagens recebidas fora da sessão (WhatsApp, ligações) com data e texto livre. São considerados no resumo clínico e na memória terapêutica.<br><br>
+          A barra de progresso mostra o avanço no programa. Cada sessão exibe badge clicável <em>✓ Pago / ○ Em aberto</em> para toggle imediato de pagamento.
         </div>
       </div>
 
       <div class="manual-topic" onclick="toggleTopic(this)">
-        <div class="manual-topic-hdr">📈 6. Relatório de evolução e Linha do Tempo</div>
+        <div class="manual-topic-hdr">🤖 6. Inteligência Pré-Sessão (v3.0)</div>
+        <div class="manual-topic-body">
+          Três módulos de inteligência clínica disponíveis na tela de Sessões e no card do paciente:<br><br>
+          <strong>📋 Briefing Pré-Sessão:</strong> clique em <em>📋 Briefing</em> no card do paciente ou no bloco expansível no topo da tela de sessões. A IA analisa o histórico e gera uma síntese clínica para preparar a sessão: estado atual do paciente, o que foi trabalhado na última sessão, feedbacks recentes, pontos de atenção e sugestões de condução. Detecta mudanças — se nada mudou, reutiliza o último briefing sem chamar a IA.<br><br>
+          <strong>⚡ Intervenções Clínicas:</strong> clique em <em>⊳ Gerar</em> na seção de Intervenções. A IA sugere 4 a 6 intervenções adequadas ao perfil do paciente (hipnótica ericksoniana, reestruturação cognitiva, regulação emocional, relacional, tarefa, pergunta estratégica, etc.). Cada intervenção pode ser marcada como: <em>✓ Usar, ✕ Descartar, ⭐ Favorita</em>, e avaliada após uso: <em>Funcionou / Parcial / Não funcionou</em>. Todas são salvas permanentemente.<br>
+          <strong>Segurança:</strong> se o risco for vermelho/alto, o sistema bloqueia as intervenções e exibe <em>Alerta de Manejo Clínico</em>.<br><br>
+          <strong>🧠 Memória Terapêutica:</strong> card resumido na tela de sessões com temas recorrentes, pontos de atenção e movimento terapêutico. Clique em <em>Ver completa ↗</em> para o modal completo com todas as 6 seções e histórico de versões. Clique em <em>↻ Atualizar</em> para gerar nova versão considerando sessões, feedbacks e intervenções avaliadas. Nunca sobrescreve versões anteriores.
+        </div>
+      </div>
+
+      <div class="manual-topic" onclick="toggleTopic(this)">
+        <div class="manual-topic-hdr">🔬 7. Análise Estrutural Clínica (v3.1)</div>
+        <div class="manual-topic-body">
+          Acesse pelo botão <strong>🧠 Análise</strong> na barra inferior do mapeamento do paciente. Página exclusiva de uso interno — nunca exibida ao paciente. Organizada em 5 abas:<br><br>
+          <strong>Visão Geral:</strong> síntese dos 3 módulos + botão <em>"Gerar Análise Completa"</em> que executa os 3 em sequência.<br><br>
+          <strong>⚡ Mapa Estrutural:</strong> responde "Como este paciente funciona emocionalmente, relacionalmente e defensivamente?" com 9 campos — núcleo emocional, conflito central, mecanismos de defesa, padrão de sabotagem, estilo relacional, eixo existencial, recursos internos, risco de manutenção e direção terapêutica. Linguagem integrativa: Psicanálise + Logoterapia + PNL + Hipnose Ericksoniana + Neurociência.<br><br>
+          <strong>🧠 Hipóteses Clínicas:</strong> 4 a 7 hipóteses com tipo, nível de confiança (0-10), evidências favoráveis/contrárias e perguntas para usar diretamente em sessão. Cada hipótese pode ser editada: adicione interpretação do terapeuta, ajuste clínico e status (ativa, validada, em observação, descartada, reformulada). O <strong>texto original da IA é permanente e imutável</strong>.<br><br>
+          <strong>✦ Mapa de Identidade:</strong> 6 camadas — identidade atual, defensiva, desejada, necessária, ruptura necessária e movimento de consolidação. Inclui <strong>frase identitária</strong> (usável em sessão) e práticas de sustentação.<br><br>
+          <strong>🕐 Histórico:</strong> todas as versões anteriores preservadas permanentemente. Nunca sobrescreve análises antigas.<br><br>
+          <strong>Quando gerar:</strong> após 3 a 5 sessões novas, em viradas do processo, ou antes de gerar novo relatório de evolução. O sistema detecta mudanças e não regera desnecessariamente.
+        </div>
+      </div>
+
+      <div class="manual-topic" onclick="toggleTopic(this)">
+        <div class="manual-topic-hdr">📈 8. Relatório de evolução e Linha do Tempo</div>
         <div class="manual-topic-body">
           No mapeamento do paciente, acesse o card <strong>Relatório de Evolução</strong>. A IA compara o estado inicial com o progresso nas sessões e gera um relatório visual com radar comparativo, conquistas, objetivos e narrativa motivadora para o paciente. O link é válido por <strong>7 dias</strong> — ao expirar, os dados de evolução ficam registrados permanentemente. Um novo relatório pode ser gerado após atualizar o resumo clínico.<br><br>
           A <strong>Linha do Tempo da Evolução</strong> — visível no mapeamento logo após gerar o primeiro relatório — mostra toda a progressão do paciente: pontuação inicial, cada evolução gerada com data e delta por dimensão, e o score atual. O score global e o radar no cabeçalho do mapeamento são atualizados automaticamente com os valores da última evolução.
@@ -349,7 +376,7 @@ body{font-family:var(--fb);background:var(--bg);color:var(--tx);min-height:100vh
       </div>
 
       <div class="manual-topic" onclick="toggleTopic(this)">
-        <div class="manual-topic-hdr">📄 7. Documentos clínicos</div>
+        <div class="manual-topic-hdr">📄 9. Documentos clínicos</div>
         <div class="manual-topic-body">
           Acesse <strong>📄 Docs</strong> no card do paciente. Cinco tipos disponíveis:<br><br>
           <strong>Recibo de Sessão</strong> — individual, com dados completos da sessão.<br>
@@ -362,7 +389,7 @@ body{font-family:var(--fb);background:var(--bg);color:var(--tx);min-height:100vh
       </div>
 
       <div class="manual-topic" onclick="toggleTopic(this)">
-        <div class="manual-topic-hdr">📋 8. Programas terapêuticos</div>
+        <div class="manual-topic-hdr">📋 10. Programas terapêuticos</div>
         <div class="manual-topic-body">
           Acesse <strong>📋 Programas</strong> no menu lateral. Esta tela centraliza a gestão de todos os seus programas terapêuticos — os que a IA usa para recomendar no mapeamento de cada paciente.<br><br>
           Cada programa tem: <strong>nome</strong>, <strong>público-alvo</strong> (adulto, casal, adolescente, neurodivergente ou atleta), <strong>descrição clínica</strong> (lida pela IA na sugestão), <strong>quantidade de sessões</strong>, <strong>valores</strong> (à vista e parcelado) e um <strong>plano sessão a sessão</strong> com título e descrição de cada encontro.<br><br>
@@ -377,7 +404,7 @@ body{font-family:var(--fb);background:var(--bg);color:var(--tx);min-height:100vh
       </div>
 
       <div class="manual-topic" onclick="toggleTopic(this)">
-        <div class="manual-topic-hdr">💰 9. Financeiro</div>
+        <div class="manual-topic-hdr">💰 11. Financeiro</div>
         <div class="manual-topic-body">
           Acesse <strong>💰 Financeiro</strong> no menu lateral. Painel completo de controle financeiro do consultório.<br><br>
           <strong>Filtros:</strong> selecione ano e mês para visualizar o período desejado. Sem filtro, mostra todos os períodos.<br><br>
@@ -394,7 +421,7 @@ body{font-family:var(--fb);background:var(--bg);color:var(--tx);min-height:100vh
       </div>
 
       <div class="manual-topic" onclick="toggleTopic(this)">
-        <div class="manual-topic-hdr">📡 10. Radar Clínico</div>
+        <div class="manual-topic-hdr">📡 12. Radar Clínico</div>
         <div class="manual-topic-body">
           Acesse <strong>📡 Radar Clínico</strong> no menu lateral. O painel mostra seus números clínicos em tempo real:<br><br>
           <strong>Resumo</strong> — total de pacientes, em acompanhamento, sessões realizadas e score médio de bem-estar.<br>
@@ -408,7 +435,7 @@ body{font-family:var(--fb);background:var(--bg);color:var(--tx);min-height:100vh
       </div>
 
       <div class="manual-topic" onclick="toggleTopic(this)">
-        <div class="manual-topic-hdr">🔔 11. Notificações push (PWA)</div>
+        <div class="manual-topic-hdr">🔔 13. Notificações push (PWA)</div>
         <div class="manual-topic-body">
           Com o Synapse Core instalado como PWA no celular (Android ou iOS 16.4+), você recebe notificações em tempo real quando um paciente preencher o formulário. Para ativar: acesse <strong>Notificações Push</strong> nesta tela e toque em <strong>🔔 Ativar Notificações</strong>.<br><br>
           Se parar de receber notificações, use <strong>↻ Reconectar Push</strong> — isso cancela a assinatura atual, cria uma nova e envia um push de teste para confirmar. Se a permissão estiver bloqueada: no <strong>Android</strong>, acesse os 3 pontos do Chrome → Configurações do site → Notificações → Permitir. No <strong>iOS</strong>, acesse Ajustes → Safari → Configurações de Sites → Notificações → Permitir.
@@ -416,7 +443,7 @@ body{font-family:var(--fb);background:var(--bg);color:var(--tx);min-height:100vh
       </div>
 
       <div class="manual-topic" onclick="toggleTopic(this)">
-        <div class="manual-topic-hdr">⚙️ 12. Perfil e configurações</div>
+        <div class="manual-topic-hdr">⚙️ 14. Perfil e configurações</div>
         <div class="manual-topic-body">
           Nesta tela você gerencia todas as suas configurações:<br><br>
           <strong>Identidade Visual</strong> — foto de perfil (aparece no relatório de evolução) e logo da clínica (aparece nos documentos). Formatos: PNG ou JPG, até 1MB.<br>
@@ -429,7 +456,7 @@ body{font-family:var(--fb);background:var(--bg);color:var(--tx);min-height:100vh
       </div>
 
       <div class="manual-topic" onclick="toggleTopic(this)">
-        <div class="manual-topic-hdr">📱 13. PWA — Instalação no celular</div>
+        <div class="manual-topic-hdr">📱 15. PWA — Instalação no celular</div>
         <div class="manual-topic-body">
           O Synapse Core funciona como um aplicativo instalado no celular — sem precisar de App Store ou Play Store.<br><br>
           <strong>Android (Chrome):</strong> acesse o site, toque nos 3 pontos → <em>Adicionar à tela inicial</em>.<br>
@@ -439,7 +466,7 @@ body{font-family:var(--fb);background:var(--bg);color:var(--tx);min-height:100vh
       </div>
 
       <div class="manual-topic" onclick="toggleTopic(this)">
-        <div class="manual-topic-hdr">🔄 14. Fluxo completo do atendimento</div>
+        <div class="manual-topic-hdr">🔄 16. Fluxo completo do atendimento</div>
         <div class="manual-topic-body">
           O fluxo recomendado de uso do sistema:<br><br>
           <strong>1.</strong> Cadastrar paciente → gerar link do formulário → enviar ao paciente<br>
@@ -451,8 +478,12 @@ body{font-family:var(--fb);background:var(--bg);color:var(--tx);min-height:100vh
           <strong>6.</strong> Acompanhar a Linha do Tempo no mapeamento para ver a evolução acumulada<br>
           <strong>7.</strong> Gerar documentos conforme necessidade (recibos, laudos, declarações)<br>
           <strong>8.</strong> Ao encerrar o processo → gerar Relatório de Alta<br>
-          <strong>9.</strong> Consultar o Radar Clínico periodicamente para insights sobre o consultório<br>
-          <strong>10.</strong> Acompanhar o Financeiro mensalmente para controle de pagamentos e recebimentos
+          <strong>9.</strong> Usar Briefing Pré-Sessão antes de cada atendimento<br>
+          <strong>10.</strong> Gerar Intervenções Clínicas e avaliá-las após uso<br>
+          <strong>11.</strong> Atualizar Memória Terapêutica a cada 4-6 sessões ou em viradas do processo<br>
+          <strong>12.</strong> Gerar Análise Estrutural após 3-5 sessões e em momentos de aprofundamento clínico<br>
+          <strong>13.</strong> Consultar o Radar Clínico periodicamente para insights sobre o consultório<br>
+          <strong>14.</strong> Acompanhar o Financeiro mensalmente para controle de pagamentos e recebimentos
         </div>
       </div>
 

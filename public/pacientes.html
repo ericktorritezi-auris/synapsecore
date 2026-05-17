@@ -680,7 +680,7 @@ function escH(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;'
 function ativarPaciente(id, nome) {
   if (!confirm('Ativar ' + nome + ' como paciente?')) return;
   api('/api/pacientes/' + id, 'PUT', { status: 'ativo' })
-    .then(function() { showToast(nome + ' ativado!', 'success'); carregarPacientes(); })
+    .then(function() { showToast(nome + ' ativado!', 'success'); loadPatients('', currentFilter); })
     .catch(function(e) { showToast(e.message, 'error'); });
 }
 

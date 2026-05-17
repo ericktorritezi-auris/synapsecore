@@ -232,13 +232,15 @@ checkAuth();
 renderUserPill();
 
 var currentFilter = '';
-var searchTimer = null;
+var filtroAtual   = 'ativo';
+var searchTimer   = null;
 var currentLink = '';
 
 // filter chips
 document.querySelectorAll('.chip').forEach(function(chip) {
   chip.addEventListener('click', function() {
     currentFilter = this.dataset.filter;
+    filtroAtual   = currentFilter;
     document.querySelectorAll('.chip').forEach(function(c) { c.classList.remove('active'); });
     this.classList.add('active');
     loadPatients(document.getElementById('searchInput').value, currentFilter);
@@ -259,8 +261,8 @@ function loadPatients(search, tipo) {
   if (search) url += 'search=' + encodeURIComponent(search) + '&';
   if (tipo === 'inativo') {
     url += 'status=inativo';
-    } else if (filtroAtual === 'pendente') {
-      url += 'status=pendente';
+  } else if (tipo === 'pendente') {
+    url += 'status=pendente';
   } else {
     if (tipo) url += 'tipo=' + encodeURIComponent(tipo);
   }

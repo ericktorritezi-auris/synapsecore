@@ -84,7 +84,6 @@ router.post('/', async (req, res) => {
 
 async function notificarTerapeuta(nome, pacienteId) {
   try {
-    // Busca subscriptions do terapeuta
     const subs = await db.query('SELECT * FROM push_subscriptions LIMIT 5');
     if (!subs.rows.length) return;
 
@@ -103,7 +102,15 @@ async function notificarTerapeuta(nome, pacienteId) {
 
     for (var sub of subs.rows) {
       try {
-        await webpush.sendNotification(JSON.parse(sub.subscription), payload);
+        // Build subscription object from individual columns
+        var subscriptionObj = {
+          endpoint: sub.endpoint,
+          keys: {
+            p256dh: sub.p256dh,
+            auth: sub.auth
+          }
+        };
+        await webpush.sendNotification(subscriptionObj, payload);
       } catch(e) {
         console.warn('Push sub falhou:', e.message);
       }

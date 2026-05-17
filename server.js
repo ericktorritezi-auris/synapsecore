@@ -7,7 +7,7 @@ const { runMigrations } = require('./db/migrations');
 
 const app     = express();
 const PORT    = process.env.PORT || 3000;
-const VERSION = '3.2.4';
+const VERSION = '3.2.5';
 
 // ── MIDDLEWARE ──
 app.use(cors());
@@ -48,6 +48,9 @@ app.use('/api/analise',     require('./routes/analise'));
 app.get('/analise/:pid',    (req, res) => res.sendFile(path.join(__dirname, 'public', 'analise.html')));
 app.use('/api/prontuario',  require('./routes/prontuario'));
 app.get('/prontuario-inteligente', (req, res) => res.sendFile(path.join(__dirname, 'public', 'prontuario.html')));
+// ── CADASTRO PÚBLICO (sem auth) ──
+app.use('/api/cadastro',   require('./routes/cadastro'));
+app.get('/cadastro',       (req, res) => res.sendFile(path.join(__dirname, 'public', 'cadastro.html')));
 
 // ── PAGES ──
 app.get('/',              (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));

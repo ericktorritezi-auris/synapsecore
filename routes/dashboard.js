@@ -56,6 +56,15 @@ router.get('/aniversariantes', verifyToken, async (req, res) => {
 // ── GET /api/dashboard/atividade ── últimas ações do sistema
 router.get('/atividade', verifyToken, async (req, res) => {
   try {
+    // Novos cadastros (status pendente — via formulário público)
+    const cadastros = await db.query(`
+      SELECT 'cadastro' AS tipo, nome_completo, id AS paciente_id,
+             created_at AS data_acao
+      FROM pacientes
+      WHERE status = 'pendente'
+      ORDER BY created_at DESC LIMIT 5
+    `);
+
     // Formulários preenchidos
     const forms = await db.query(`
       SELECT 'formulario' AS tipo, p.nome_completo, p.id AS paciente_id,
@@ -86,6 +95,7 @@ router.get('/atividade', verifyToken, async (req, res) => {
 
     // Merge and sort by date
     const all = [
+      ...cadastros.rows.map(r => ({ ...r, data_acao: r.data_acao })),
       ...forms.rows.map(r => ({ ...r, data_acao: r.data_acao })),
       ...maps.rows.map(r => ({ ...r, data_acao: r.data_acao })),
       ...sess.rows.map(r => ({ ...r, data_acao: r.data_acao }))

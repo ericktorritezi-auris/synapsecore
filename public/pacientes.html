@@ -124,6 +124,7 @@ body{font-family:var(--f-b);background:var(--bg);color:var(--text);min-height:10
     <div class="chip" data-filter="adolescente">Adolescente</div>
     <div class="chip" data-filter="neurodivergente">Neurodivergente</div>
     <div class="chip" data-filter="atleta">Atleta</div>
+    <div class="chip" data-filter="pendente" style="border-color:rgba(245,158,11,.3);color:#fcd34d">Pendentes</div>
     <div class="chip" data-filter="inativo" style="border-color:rgba(239,68,68,.3);color:#fca5a5">Inativos</div>
   </div>
   <div id="listWrap">
@@ -258,6 +259,8 @@ function loadPatients(search, tipo) {
   if (search) url += 'search=' + encodeURIComponent(search) + '&';
   if (tipo === 'inativo') {
     url += 'status=inativo';
+    } else if (filtroAtual === 'pendente') {
+      url += 'status=pendente';
   } else {
     if (tipo) url += 'tipo=' + encodeURIComponent(tipo);
   }
@@ -449,6 +452,28 @@ function renderList(patients) {
     btnDoc.href = '/documentos/' + p.id;
     btnDoc.textContent = '📄 Docs';
     actions.appendChild(btnDoc);
+
+    // Pendente: novo cadastro via formulário público
+    if (p.status === 'pendente') {
+      var pendBadge = document.createElement('span');
+      pendBadge.style.cssText = 'font-size:10px;padding:2px 9px;border-radius:20px;font-weight:700;background:rgba(245,158,11,.1);color:#fcd34d;border:1px solid rgba(245,158,11,.25);margin-left:8px';
+      pendBadge.textContent = '🆕 Pendente';
+      meta.appendChild(pendBadge);
+      // Replace actions with Ativar + Excluir
+      actions.innerHTML = '';
+      var btnAtivar = document.createElement('button');
+      btnAtivar.className = 'btn btn-ghost btn-sm';
+      btnAtivar.style.cssText = 'color:#6ee7b7;border-color:rgba(16,185,129,.3)';
+      btnAtivar.textContent = '✓ Ativar';
+      btnAtivar.onclick = function(){ ativarPaciente(p.id, p.nome_completo.split(' ')[0]); };
+      var btnExcl = document.createElement('button');
+      btnExcl.className = 'btn btn-ghost btn-sm';
+      btnExcl.style.cssText = 'color:#fca5a5;border-color:rgba(239,68,68,.2)';
+      btnExcl.textContent = '✕ Excluir';
+      btnExcl.onclick = function(){ excluirPaciente(p.id, p.nome_completo); };
+      actions.appendChild(btnAtivar);
+      actions.appendChild(btnExcl);
+    }
 
     // Inativo: show reativar + excluir instead
     if (p.status === 'inativo') {
@@ -649,6 +674,13 @@ function secBriefing(titulo, texto) {
 }
 
 function escH(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function ativarPaciente(id, nome) {
+  if (!confirm('Ativar ' + nome + ' como paciente?')) return;
+  api('/api/pacientes/' + id, 'PUT', { status: 'ativo' })
+    .then(function() { showToast(nome + ' ativado!', 'success'); carregarPacientes(); })
+    .catch(function(e) { showToast(e.message, 'error'); });
+}
 
 function reativarPaciente(id, nome) {
   if (!confirm('Reativar ' + nome + '?\nEle voltará para a lista ativa.')) return;

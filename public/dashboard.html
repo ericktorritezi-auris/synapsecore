@@ -584,9 +584,9 @@ async function loadAtividade() {
       return;
     }
 
-    var ICONS = { formulario: '📋', mapeamento: '🧠', sessao: '📅' };
-    var COLORS = { formulario: '#93c5fd', mapeamento: '#c4b5fd', sessao: '#6ee7b7' };
-    var LABELS = { formulario: 'preencheu o formulário', mapeamento: 'mapeamento gerado', sessao: 'sessão registrada' };
+    var ICONS  = { cadastro: '🆕', formulario: '📋', mapeamento: '🧠', sessao: '📅' };
+    var COLORS = { cadastro: '#fcd34d', formulario: '#93c5fd', mapeamento: '#c4b5fd', sessao: '#6ee7b7' };
+    var LABELS = { cadastro: 'novo cadastro recebido', formulario: 'preencheu o formulário', mapeamento: 'mapeamento gerado', sessao: 'sessão registrada' };
 
     wrap.innerHTML = '';
     data.forEach(function(item, idx) {

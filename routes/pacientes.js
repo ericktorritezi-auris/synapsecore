@@ -133,7 +133,8 @@ router.put('/:id', verifyToken, async (req, res) => {
   try {
     const fields = ['nome_completo','data_nascimento','genero','email','telefone','cpf','rg','pais',
       'endereco_completo','cidade','cep','foto_url','perfil_tipo','eh_neurodivergente',
-      'diagnostico_neurodiv','motivo_busca','pacote_id','observacoes','sessoes_anteriores','data_primeira_sessao'];
+      'diagnostico_neurodiv','motivo_busca','pacote_id','observacoes','sessoes_anteriores',
+      'data_primeira_sessao','status'];
     const updates = []; const values = [];
     fields.forEach(f => {
       if (req.body[f] !== undefined) { values.push(req.body[f]); updates.push(`${f} = $${values.length}`); }

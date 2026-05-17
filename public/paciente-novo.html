@@ -463,15 +463,15 @@ function enviarFormCadastro() {
   fecharModalCadastro();
 }
 
-async function handleSubmit(e) {
+function handleSubmit(e) {
   e.preventDefault();
-  const banner = document.getElementById('errorBanner');
+  var banner = document.getElementById('errorBanner');
   banner.style.display = 'none';
 
-  const nome = document.getElementById('nome_completo').value.trim();
+  var nome = document.getElementById('nome_completo').value.trim();
   if (!nome) { showFieldError('errorBanner', 'Nome completo é obrigatório.'); return; }
 
-  const email = document.getElementById('email').value.trim();
+  var email = document.getElementById('email').value.trim();
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     showFieldError('errorBanner', 'Email inválido.'); return;
   }
@@ -484,53 +484,53 @@ async function handleSubmit(e) {
   }
 
   setLoading(true);
-  try {
-    const endereco = selectedCountry === 'Brasil'
-      ? document.getElementById('endereco').value
-      : document.getElementById('endereco_intl').value;
 
-    const payload = {
-      nome_completo:        nome,
-      data_nascimento:      document.getElementById('data_nascimento').value || null,
-      genero:               document.getElementById('genero').value || null,
-      email:                email || null,
-      telefone:             document.getElementById('telefone').value || null,
-      cpf:                  selectedCountry==='Brasil' ? (document.getElementById('cpf').value||null) : null,
-      rg:                   selectedCountry==='Brasil' ? (document.getElementById('rg').value||null) : null,
-      pais:                 selectedCountry,
-      endereco_completo:    endereco || null,
-      cidade:               selectedCountry==='Brasil' ? (document.getElementById('cidade').value||null) : null,
-      cep:                  selectedCountry==='Brasil' ? (document.getElementById('cep').value||null) : null,
-      foto_url:             document.getElementById('foto_url').value || null,
-      perfil_tipo:          selectedType,
-      eh_neurodivergente:   selectedType === 'neurodivergente',
-      diagnostico_neurodiv: selectedType==='neurodivergente' ? (document.getElementById('diagnostico_neurodiv').value||null) : null,
-      motivo_busca:         document.getElementById('motivo_busca').value || null,
-      pacote_id:            document.getElementById('pacote_id').value || null,
-      observacoes:          document.getElementById('observacoes').value || null,
-      sessoes_anteriores:   parseInt(document.getElementById('sessoes_anteriores').value)||0,
-      data_primeira_sessao: document.getElementById('data_primeira_sessao').value || null,
-      // Casal
-      conjuge_nome:              selectedType==='casal' ? (document.getElementById('conjuge_nome').value.trim()||null) : null,
-      conjuge_data_nascimento:   selectedType==='casal' ? (document.getElementById('conjuge_data_nascimento').value||null) : null,
-      conjuge_genero:            selectedType==='casal' ? (document.getElementById('conjuge_genero').value||null) : null,
-      conjuge_email:             selectedType==='casal' ? (document.getElementById('conjuge_email').value||null) : null,
-      conjuge_telefone:          selectedType==='casal' ? (document.getElementById('conjuge_telefone').value||null) : null,
-      conjuge_cpf:               selectedType==='casal' ? (document.getElementById('conjuge_cpf').value||null) : null,
-      // Adolescente
-      responsavel_nome:          selectedType==='adolescente' ? (document.getElementById('responsavel_nome').value.trim()||null) : null,
-      responsavel_cpf:           selectedType==='adolescente' ? (document.getElementById('responsavel_cpf').value||null) : null,
-      responsavel_email:         selectedType==='adolescente' ? (document.getElementById('responsavel_email').value||null) : null,
-      responsavel_telefone:      selectedType==='adolescente' ? (document.getElementById('responsavel_telefone').value||null) : null,
-    };
+  var endereco = selectedCountry === 'Brasil'
+    ? document.getElementById('endereco').value
+    : document.getElementById('endereco_intl').value;
 
-    const pac = await api('/api/pacientes', 'POST', payload);
-    showToast('Paciente cadastrado com sucesso!', 'success');
-    setTimeout(() => window.location.href = '/pacientes', 1200);
-  } catch (err) {
-    setLoading(false);
-    showFieldError('errorBanner', err.message || 'Erro ao cadastrar paciente.');
-  }
+  var payload = {
+    nome_completo:        nome,
+    data_nascimento:      document.getElementById('data_nascimento').value || null,
+    genero:               document.getElementById('genero').value || null,
+    email:                email || null,
+    telefone:             document.getElementById('telefone').value || null,
+    cpf:                  selectedCountry==='Brasil' ? (document.getElementById('cpf').value||null) : null,
+    rg:                   selectedCountry==='Brasil' ? (document.getElementById('rg').value||null) : null,
+    pais:                 selectedCountry,
+    endereco_completo:    endereco || null,
+    cidade:               selectedCountry==='Brasil' ? (document.getElementById('cidade').value||null) : null,
+    cep:                  selectedCountry==='Brasil' ? (document.getElementById('cep').value||null) : null,
+    foto_url:             document.getElementById('foto_url').value || null,
+    perfil_tipo:          selectedType,
+    eh_neurodivergente:   selectedType === 'neurodivergente',
+    diagnostico_neurodiv: selectedType==='neurodivergente' ? (document.getElementById('diagnostico_neurodiv').value||null) : null,
+    motivo_busca:         document.getElementById('motivo_busca').value || null,
+    pacote_id:            document.getElementById('pacote_id').value || null,
+    observacoes:          document.getElementById('observacoes').value || null,
+    sessoes_anteriores:   parseInt(document.getElementById('sessoes_anteriores').value)||0,
+    data_primeira_sessao: document.getElementById('data_primeira_sessao').value || null,
+    conjuge_nome:              selectedType==='casal' ? (document.getElementById('conjuge_nome').value.trim()||null) : null,
+    conjuge_data_nascimento:   selectedType==='casal' ? (document.getElementById('conjuge_data_nascimento').value||null) : null,
+    conjuge_genero:            selectedType==='casal' ? (document.getElementById('conjuge_genero').value||null) : null,
+    conjuge_email:             selectedType==='casal' ? (document.getElementById('conjuge_email').value||null) : null,
+    conjuge_telefone:          selectedType==='casal' ? (document.getElementById('conjuge_telefone').value||null) : null,
+    conjuge_cpf:               selectedType==='casal' ? (document.getElementById('conjuge_cpf').value||null) : null,
+    responsavel_nome:          selectedType==='adolescente' ? (document.getElementById('responsavel_nome').value.trim()||null) : null,
+    responsavel_cpf:           selectedType==='adolescente' ? (document.getElementById('responsavel_cpf').value||null) : null,
+    responsavel_email:         selectedType==='adolescente' ? (document.getElementById('responsavel_email').value||null) : null,
+    responsavel_telefone:      selectedType==='adolescente' ? (document.getElementById('responsavel_telefone').value||null) : null,
+  };
+
+  api('/api/pacientes', 'POST', payload)
+    .then(function() {
+      showToast('Paciente cadastrado com sucesso!', 'success');
+      setTimeout(function(){ window.location.href = '/pacientes'; }, 1200);
+    })
+    .catch(function(err) {
+      setLoading(false);
+      showFieldError('errorBanner', err.message || 'Erro ao cadastrar paciente.');
+    });
 }
 
 function showFieldError(id, msg) {

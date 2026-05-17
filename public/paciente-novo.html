@@ -106,9 +106,42 @@ body{font-family:var(--f-b);background:var(--bg);color:var(--text);min-height:10
 <aside class="sidebar" id="sidebar"></aside>
 
 <main class="main">
-  <a href="/pacientes" class="back-link">← Voltar para Pacientes</a>
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:4px">
+    <a href="/pacientes" class="back-link" style="margin-bottom:0">← Voltar para Pacientes</a>
+    <button onclick="abrirModalCadastro()" type="button" style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);color:#6ee7b7;border-radius:9px;padding:8px 14px;font-family:var(--fd);font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:6px;flex-shrink:0">
+      <span>📲</span> Formulário de Cadastro
+    </button>
+  </div>
   <div class="ph-title">Novo Paciente</div>
   <div class="ph-sub">Preencha os dados para cadastrar e gerar o link do formulário de mapeamento.</div>
+
+  <!-- Modal: Enviar Formulário de Cadastro via WhatsApp -->
+  <div id="modalCadastroWpp" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:100;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)" onclick="if(event.target===this)fecharModalCadastro()">
+    <div style="background:#1a2540;border:1px solid rgba(16,185,129,.3);border-radius:16px;padding:24px 20px;width:100%;max-width:400px;position:relative">
+      <div style="height:2px;background:linear-gradient(90deg,#10b981,transparent);border-radius:2px;margin-bottom:18px"></div>
+      <button onclick="fecharModalCadastro()" style="position:absolute;top:14px;right:16px;background:none;border:none;color:rgba(201,209,217,.4);cursor:pointer;font-size:18px">✕</button>
+
+      <div style="font-family:var(--fd);font-size:16px;font-weight:700;margin-bottom:4px">📲 Enviar Formulário de Cadastro</div>
+      <div style="font-size:12.5px;color:var(--dim);margin-bottom:18px;line-height:1.5">Informe o WhatsApp da pessoa e enviaremos o link do formulário.</div>
+
+      <div style="margin-bottom:14px">
+        <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:5px">WhatsApp <span style="color:var(--accent)">*</span></label>
+        <input id="wppCadastroInput" type="tel" placeholder="(00) 00000-0000"
+          style="width:100%;background:rgba(11,19,43,.6);border:1px solid var(--border);border-radius:9px;color:var(--text);font-family:var(--fb);font-size:14px;padding:10px 13px;outline:none"
+          oninput="mascaraTelModal(this)"
+          onkeydown="if(event.key==='Enter')enviarFormCadastro()">
+      </div>
+
+      <div style="background:rgba(16,185,129,.05);border:1px solid rgba(16,185,129,.12);border-radius:8px;padding:10px 13px;margin-bottom:16px">
+        <div style="font-size:10px;font-weight:700;color:#6ee7b7;text-transform:uppercase;letter-spacing:.6px;margin-bottom:5px">Mensagem que será enviada</div>
+        <div style="font-size:12.5px;color:var(--muted);line-height:1.6" id="previewMsgCadastro"></div>
+      </div>
+
+      <button onclick="enviarFormCadastro()" style="width:100%;background:linear-gradient(135deg,#10b981,#059669);color:white;border:none;border-radius:10px;padding:12px;font-family:var(--fd);font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
+        <span>💬</span> Abrir WhatsApp e Enviar
+      </button>
+    </div>
+  </div>
 
   <div class="error-banner" id="errorBanner"></div>
 
@@ -392,6 +425,44 @@ function filterPacotes() {
 }
 
 // ── SUBMIT ──
+async // ── MODAL FORMULÁRIO DE CADASTRO VIA WHATSAPP ──
+var LINK_CADASTRO = 'https://synapsecore.app.br/cadastro';
+
+var MSG_CADASTRO = 'Olá! 😊\n\nPara darmos início ao seu processo, preciso que você preencha o formulário de cadastro com seus dados pessoais.\n\nÉ rápido e simples:\n👉 ' + LINK_CADASTRO + '\n\nAssim que receber seus dados, envio as próximas orientações.\n\nQualquer dúvida, estou à disposição! 🙏';
+
+function abrirModalCadastro() {
+  document.getElementById('wppCadastroInput').value = '';
+  document.getElementById('previewMsgCadastro').textContent = MSG_CADASTRO;
+  var modal = document.getElementById('modalCadastroWpp');
+  modal.style.display = 'flex';
+  setTimeout(function(){ document.getElementById('wppCadastroInput').focus(); }, 100);
+}
+
+function fecharModalCadastro() {
+  document.getElementById('modalCadastroWpp').style.display = 'none';
+}
+
+function mascaraTelModal(el) {
+  var v = el.value.replace(/\D/g,'').substring(0,11);
+  if (v.length > 10) v = v.replace(/(\d{2})(\d{5})(\d{4})/,'($1) $2-$3');
+  else v = v.replace(/(\d{2})(\d{4,5})(\d{0,4})/,'($1) $2-$3').replace(/ -$/,'');
+  el.value = v;
+}
+
+function enviarFormCadastro() {
+  var val = document.getElementById('wppCadastroInput').value.replace(/\D/g,'');
+  if (!val || val.length < 10) {
+    document.getElementById('wppCadastroInput').style.borderColor = '#fca5a5';
+    document.getElementById('wppCadastroInput').focus();
+    return;
+  }
+  document.getElementById('wppCadastroInput').style.borderColor = '';
+  var tel = val.startsWith('55') ? val : '55' + val;
+  var url = 'https://wa.me/' + tel + '?text=' + encodeURIComponent(MSG_CADASTRO);
+  window.open(url, '_blank');
+  fecharModalCadastro();
+}
+
 async function handleSubmit(e) {
   e.preventDefault();
   const banner = document.getElementById('errorBanner');

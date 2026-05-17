@@ -75,7 +75,7 @@ router.post('/:paciente_id', verifyToken, async (req, res) => {
     if (resumo_terapeuta && resumo_terapeuta.trim()) {
       gerarEAtualizarResumo(paciente_id).catch(e => console.error('Resumo IA erro:', e.message));
       // v3.2.0 — snapshot leve + score básico de risco (sem IA)
-      gerarSnapshotLeve(paciente_id, res.rows[0].id).catch(e => console.error('Snapshot leve erro:', e.message));
+      gerarSnapshotLeve(paciente_id, sessao.id).catch(e => console.error('Snapshot leve erro:', e.message));
     }
 
     res.status(201).json(sessao);

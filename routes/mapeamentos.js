@@ -114,7 +114,7 @@ router.get('/:paciente_id', verifyToken, async (req, res) => {
     const r = await db.query(
       `SELECT m.*, p.nome_completo, p.perfil_tipo, p.data_nascimento,
               DATE_PART('year', AGE(p.data_nascimento))::int AS idade,
-              pk.nome AS pacote_nome
+              pk.nome AS pacote_nome, pk.qtd_sessoes AS pacote_qtd_sessoes
        FROM mapeamentos m
        JOIN pacientes p ON p.id = m.paciente_id
        LEFT JOIN pacotes pk ON pk.id = m.pacote_recomendado_id
@@ -123,7 +123,21 @@ router.get('/:paciente_id', verifyToken, async (req, res) => {
       [req.params.paciente_id]
     );
     if (!r.rows.length) return res.status(404).json({ message: 'Nenhum mapeamento gerado.' });
-    res.json(r.rows[0]);
+
+    const row = r.rows[0];
+    const proto = row.protocolo_json || {};
+
+    // Build programa object so frontend renderReport always has it structured
+    const programa = row.pacote_recomendado_id ? {
+      id:            row.pacote_recomendado_id,
+      nome:          row.pacote_nome || '',
+      compat:        row.compatibilidade_pct || null,
+      justificativa: proto.programa_justificativa || proto.programa_recomendado?.justificativa || '',
+      aderencia:     proto.programa_aderencia || row.compatibilidade_pct || null,
+      modo:          row.programa_modo || 'ia'
+    } : null;
+
+    res.json({ ...row, programa });
   } catch (err) {
     res.status(500).json({ message: 'Erro ao buscar mapeamento.' });
   }

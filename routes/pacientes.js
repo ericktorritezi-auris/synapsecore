@@ -10,13 +10,15 @@ router.get('/', verifyToken, async (req, res) => {
     const params = [];
     let where = status === 'inativo'
       ? `WHERE p.status = 'inativo'`
-      : `WHERE p.status != 'inativo'`;
+      : status === 'pendente'
+        ? `WHERE p.status = 'pendente'`
+        : `WHERE p.status = 'ativo'`;
     if (search) {
       params.push(`%${search}%`);
       const n = params.length;
       where += ` AND (p.nome_completo ILIKE $${n} OR p.email ILIKE $${n})`;
     }
-    if (tipo && status !== 'inativo') {
+    if (tipo && status !== 'inativo' && status !== 'pendente') {
       params.push(tipo);
       where += ` AND p.perfil_tipo = $${params.length}`;
     }

@@ -314,6 +314,107 @@ async function verificarSemRetorno() {
 }
 
 // ─────────────────────────────────────────────
+// ALERTA: LINKS DE MAPEAMENTO EXPIRANDO/EXPIRADOS
+// ─────────────────────────────────────────────
+async function verificarLinksMapeamento() {
+  try {
+    const r = await db.query(`
+      SELECT ft.id, ft.paciente_id, ft.expira_em, ft.usado,
+             p.nome_completo, p.telefone,
+             EXTRACT(EPOCH FROM (ft.expira_em - NOW()))/3600 AS horas_restantes
+      FROM form_tokens ft
+      JOIN pacientes p ON p.id = ft.paciente_id
+      WHERE ft.usado = false
+        AND p.status = 'ativo'
+      ORDER BY ft.expira_em ASC
+    `);
+
+    for (var row of r.rows) {
+      var horas = parseFloat(row.horas_restantes);
+      var nome  = row.nome_completo.split(' ')[0];
+      var pid   = row.paciente_id;
+
+      if (horas < 0) {
+        // Link expirado
+        await upsertAlerta({
+          tipo: 'link_mapeamento_expirado', prioridade: 'atencao',
+          titulo: '🔗 Link de mapeamento de ' + nome + ' expirou',
+          corpo:  'O link do formulário de mapeamento de ' + row.nome_completo + ' expirou. Gere um novo link se necessário.',
+          paciente_id: pid, acao_tipo: 'paciente',
+          acao_url: '/pacientes',
+          acao_whatsapp: fmtTel(row.telefone)
+        });
+        await resolverAlerta('link_mapeamento_expirando', pid);
+      } else if (horas <= 24) {
+        // Expira em até 1 dia
+        var hStr = horas < 1 ? 'menos de 1 hora' : Math.round(horas) + ' hora' + (Math.round(horas)>1?'s':'');
+        await upsertAlerta({
+          tipo: 'link_mapeamento_expirando', prioridade: 'operacional',
+          titulo: '🔗 Link de mapeamento de ' + nome + ' expira em ' + hStr,
+          corpo:  'O formulário de mapeamento de ' + row.nome_completo + ' expira em ' + hStr + '. Acompanhe se o paciente preencheu.',
+          paciente_id: pid, acao_tipo: 'paciente',
+          acao_url: '/pacientes',
+          acao_whatsapp: fmtTel(row.telefone)
+        });
+      } else {
+        // Link ainda válido — resolve alertas anteriores
+        await resolverAlerta('link_mapeamento_expirando', pid);
+        await resolverAlerta('link_mapeamento_expirado', pid);
+      }
+    }
+  } catch(e) { console.error('Cron links_mapeamento:', e.message); }
+}
+
+// ─────────────────────────────────────────────
+// ALERTA: LINKS DE EVOLUÇÃO EXPIRANDO/EXPIRADOS
+// ─────────────────────────────────────────────
+async function verificarLinksEvolucao() {
+  try {
+    const r = await db.query(`
+      SELECT rt.id, rt.paciente_id, rt.expira_em,
+             p.nome_completo, p.telefone,
+             EXTRACT(EPOCH FROM (rt.expira_em - NOW()))/3600 AS horas_restantes
+      FROM relatorio_tokens rt
+      JOIN pacientes p ON p.id = rt.paciente_id
+      WHERE p.status = 'ativo'
+        AND rt.expira_em > NOW() - INTERVAL '2 days'
+      ORDER BY rt.expira_em ASC
+    `);
+
+    for (var row of r.rows) {
+      var horas = parseFloat(row.horas_restantes);
+      var nome  = row.nome_completo.split(' ')[0];
+      var pid   = row.paciente_id;
+
+      if (horas < 0) {
+        await upsertAlerta({
+          tipo: 'link_evolucao_expirado', prioridade: 'operacional',
+          titulo: '📈 Link de evolução de ' + nome + ' expirou',
+          corpo:  'O link do relatório de evolução de ' + row.nome_completo + ' expirou. Gere um novo se necessário.',
+          paciente_id: pid, acao_tipo: 'paciente',
+          acao_url: '/mapeamento/' + pid,
+          acao_whatsapp: fmtTel(row.telefone)
+        });
+        await resolverAlerta('link_evolucao_expirando', pid);
+      } else if (horas <= 24) {
+        var hStr = horas < 1 ? 'menos de 1 hora' : Math.round(horas) + ' hora' + (Math.round(horas)>1?'s':'');
+        await upsertAlerta({
+          tipo: 'link_evolucao_expirando', prioridade: 'operacional',
+          titulo: '📈 Link de evolução de ' + nome + ' expira em ' + hStr,
+          corpo:  'O relatório de evolução de ' + row.nome_completo + ' expira em ' + hStr + '. Compartilhe antes do prazo.',
+          paciente_id: pid, acao_tipo: 'paciente',
+          acao_url: '/mapeamento/' + pid,
+          acao_whatsapp: fmtTel(row.telefone)
+        });
+      } else {
+        await resolverAlerta('link_evolucao_expirando', pid);
+        await resolverAlerta('link_evolucao_expirado', pid);
+      }
+    }
+  } catch(e) { console.error('Cron links_evolucao:', e.message); }
+}
+
+// ─────────────────────────────────────────────
 // FUNÇÃO PRINCIPAL — executa todos os checks
 // ─────────────────────────────────────────────
 async function gerarAlertas() {
@@ -323,6 +424,8 @@ async function gerarAlertas() {
   await verificarPagamentos();
   await verificarFeedbacks();
   await verificarSemRetorno();
+  await verificarLinksMapeamento();
+  await verificarLinksEvolucao();
   console.log('🔔 Cron alertas concluído');
 }
 

@@ -51,8 +51,8 @@ function renderNav() {
       '<img src="/img/logo-horizontal.png" alt="Synapse Core">'
       + '<div style="display:flex;align-items:center;gap:8px">'
         + '<div style="position:relative" id="alertasBtnWrap">'
-          + '<button onclick="toggleAlertas(event)" id="alertasBtn" style="background:none;border:none;cursor:pointer;padding:6px;position:relative;display:flex;align-items:center;justify-content:center">'
-            + '<span id="alertasSino" style="font-size:20px;color:rgba(201,209,217,.4);transition:color .2s">&#128276;</span>'
+          + '<button onclick="toggleAlertas(event)" id="alertasBtn" style="background:none;border:none;cursor:pointer;padding:8px;position:relative;display:flex;align-items:center;justify-content:center;min-width:36px;min-height:36px">'
+            + '<span id="alertasSino" style="font-size:20px;color:rgba(201,209,217,.55);transition:color .2s">&#128276;</span>'
             + '<span id="alertasBadge" style="display:none;position:absolute;top:2px;right:2px;background:#ef4444;color:white;border-radius:50%;width:16px;height:16px;font-size:9px;font-weight:700;display:none;align-items:center;justify-content:center;line-height:1"></span>'
           + '</button>'
         + '</div>'
@@ -68,7 +68,7 @@ function renderNav() {
         + '<img src="/img/logo-horizontal.png" alt="Synapse Core">'
         + '<div style="position:relative" id="alertasBtnWrapDesktop">'
           + '<button onclick="toggleAlertas(event)" id="alertasBtnDesktop" style="background:none;border:none;cursor:pointer;padding:4px;position:relative;display:flex;align-items:center">'
-            + '<span id="alertasSinoDesktop" style="font-size:18px;color:rgba(201,209,217,.4);transition:color .2s">&#128276;</span>'
+            + '<span id="alertasSinoDesktop" style="font-size:18px;color:rgba(201,209,217,.55);transition:color .2s">&#128276;</span>'
             + '<span id="alertasBadgeDesktop" style="display:none;position:absolute;top:0;right:0;background:#ef4444;color:white;border-radius:50%;width:15px;height:15px;font-size:9px;font-weight:700;align-items:center;justify-content:center;line-height:1"></span>'
           + '</button>'
         + '</div>'
@@ -151,7 +151,7 @@ function carregarContadorAlertas() {
 function atualizarBadge(count) {
   ['alertasSino','alertasSinoDesktop'].forEach(function(id) {
     var el = document.getElementById(id);
-    if (el) el.style.color = count > 0 ? '#D4AF7F' : 'rgba(201,209,217,.4)';
+    if (el) el.style.color = count > 0 ? '#D4AF7F' : 'rgba(201,209,217,.55)';
   });
   ['alertasBadge','alertasBadgeDesktop'].forEach(function(id) {
     var el = document.getElementById(id);

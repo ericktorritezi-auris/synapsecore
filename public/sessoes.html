@@ -121,6 +121,7 @@ body{font-family:var(--fb);background:var(--bg);color:var(--tx);min-height:100vh
 ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:2px}
 </style>
 <script src="/js/nav.js"></script>
+<script src="/js/paciente-nav.js"></script>
 </head>
 <body>
 <div class="topbar">
@@ -379,6 +380,7 @@ checkAuth();
 renderUserPill();
 
 var PACIENTE_ID = location.pathname.split('/').pop();
+renderPacienteNav(PACIENTE_ID, 'sessoes');
 var paciente = null;
 var sessoes  = [];
 var formOpen = false;

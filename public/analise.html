@@ -118,6 +118,7 @@ body{font-family:var(--fb);background:var(--bg);color:var(--tx);min-height:100vh
 ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:2px}
 </style>
 <script src="/js/nav.js"></script>
+<script src="/js/paciente-nav.js"></script>
 </head>
 <body>
 <div class="topbar" id="topbar"></div>
@@ -252,6 +253,7 @@ checkAuth();
 renderUserPill();
 
 var PACIENTE_ID = window.location.pathname.split('/')[2];
+renderPacienteNav(PACIENTE_ID, 'analise');
 var TIPO_HIP_COLORS = { emocional:'#fca5a5', cognitiva:'#93c5fd', relacional:'#6ee7b7', existencial:'#fcd34d', comportamental:'#c4b5fd', defesa:'#f97316', identidade:'var(--ac)', risco:'#ef4444' };
 
 window.addEventListener('DOMContentLoaded', function() {

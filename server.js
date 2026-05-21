@@ -7,7 +7,7 @@ const { runMigrations } = require('./db/migrations');
 
 const app     = express();
 const PORT    = process.env.PORT || 3000;
-const VERSION = '3.5.5';
+const VERSION = '3.5.6';
 
 // ── MIDDLEWARE ──
 app.use(cors());
@@ -33,41 +33,69 @@ app.use('/api/anamnese',  require('./routes/anamnese'));
 app.get('/api/contexto/:token', async (req, res) => {
   try {
     const r = await db.query(
-      `SELECT m.contexto_inicial, m.contexto_token, m.created_at,
+      `SELECT m.id, m.paciente_id, m.contexto_inicial, m.contexto_token, m.created_at,
               m.indices_json, m.flags_json, m.risco_nivel,
               m.relatorio_json, m.protocolo_json,
               p.nome_completo, p.perfil_tipo
        FROM mapeamentos m
        JOIN pacientes p ON p.id = m.paciente_id
-       WHERE m.contexto_token = $1`,
+       WHERE m.contexto_token::text = $1`,
       [req.params.token]
     );
     if (!r.rows.length || !r.rows[0].contexto_inicial) {
       return res.status(404).json({ message: 'Contexto não encontrado.' });
     }
     const row = r.rows[0];
+
+    // Parse stored contexto
     var dados = {};
     try { dados = JSON.parse(row.contexto_inicial); }
-    catch(e) { dados = { texto: row.contexto_inicial }; }
+    catch(e) { dados.texto = String(row.contexto_inicial || ''); }
 
-    if (!dados.indices && row.indices_json) dados.indices = row.indices_json;
-    if (!dados.flags   && row.flags_json)   dados.flags   = row.flags_json;
-    if (!dados.risco   && row.risco_nivel)  dados.risco   = row.risco_nivel;
+    // Merge structural data
+    if (!dados.indices) dados.indices = row.indices_json  || null;
+    if (!dados.flags)   dados.flags   = row.flags_json    || [];
+    if (!dados.risco)   dados.risco   = row.risco_nivel   || 'verde';
+
+    // Fetch CIDs if not stored
     if (!dados.cids) {
-      const cQ = await db.query(
-        `SELECT cid_codigo, cid_nome, confirmado FROM cids_paciente
-         WHERE paciente_id = (SELECT paciente_id FROM mapeamentos WHERE contexto_token=$1)
-         ORDER BY confirmado DESC, id ASC`,
-        [req.params.token]
-      );
-      dados.cids = cQ.rows;
+      try {
+        const cQ = await db.query(
+          `SELECT cid_codigo, cid_nome, confirmado FROM cids_paciente
+           WHERE paciente_id = $1 ORDER BY confirmado DESC, id ASC`,
+          [row.paciente_id]
+        );
+        dados.cids = cQ.rows || [];
+      } catch(e2) {
+        dados.cids = [];
+      }
     }
+
+    // Get sintese from relatorio if not stored
     if (!dados.sintese) {
-      const rel = row.relatorio_json || row.protocolo_json || {};
+      var rel = row.relatorio_json || row.protocolo_json || {};
       dados.sintese = rel.sintese_caso || '';
     }
-    res.json({ nome_completo: row.nome_completo, perfil_tipo: row.perfil_tipo, created_at: row.created_at, ...dados });
-  } catch(e) { res.status(500).json({ message: e.message }); }
+
+    // Build explicit response — no spread to avoid surprises
+    var resposta = {
+      nome_completo: row.nome_completo,
+      perfil_tipo:   row.perfil_tipo,
+      created_at:    row.created_at,
+      texto:         dados.texto    || '',
+      indices:       dados.indices  || null,
+      flags:         dados.flags    || [],
+      cids:          dados.cids     || [],
+      sintese:       dados.sintese  || '',
+      risco:         dados.risco    || 'verde',
+      nome:          dados.nome     || row.nome_completo
+    };
+
+    res.json(resposta);
+  } catch(e) {
+    console.error('GET /api/contexto error:', e.message, e.stack);
+    res.status(500).json({ message: e.message });
+  }
 });
 
 app.use('/api/mapeamentos',require('./routes/mapeamentos'));

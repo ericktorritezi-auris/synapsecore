@@ -481,7 +481,7 @@ body{font-family:var(--fb);background:var(--bg);color:var(--tx);min-height:100vh
           &#128260; <strong>Sem retorno após 1ª sessão</strong> — realizou a primeira sessão e não voltou em 10 dias<br><br>
           <strong>Ações em cada alerta:</strong> Abrir paciente · Financeiro · WhatsApp · &#10003; Marcar lido · &#9201; Lembrar em 24h<br><br>
           <strong>Comportamento:</strong> alertas lidos somem da lista. Se a condição persistir por 7 dias, o alerta reaparece automaticamente. Quando a condição é resolvida (ex: sessão registrada), o alerta fecha sozinho.<br><br>
-          <strong>Fase B (em breve):</strong> integração com Belle Planner para alertas de agendamento, cancelamento e aviso 30min antes da sessão.
+          <strong>Fase B (ativa):</strong> integração com Belle Planner via webhook. Eventos processados: novo agendamento (&#128197;), sessão em 30min (&#9200;), cancelamento (&#9888;). Configure a variável <code>WEBHOOK_AGENDA_SECRET</code> no Railway com o mesmo valor configurado no Belle Planner Master Panel. URL do webhook: <code>https://www.synapsecore.app.br/api/webhooks/agenda</code>
         </div>
       </div>
 

@@ -7,7 +7,7 @@ const { runMigrations } = require('./db/migrations');
 
 const app     = express();
 const PORT    = process.env.PORT || 3000;
-const VERSION = '3.3.5';
+const VERSION = '3.3.6';
 
 // ── MIDDLEWARE ──
 app.use(cors());
@@ -53,7 +53,10 @@ app.use('/api/cadastro',   require('./routes/cadastro'));
 app.get('/cadastro',       (req, res) => res.sendFile(path.join(__dirname, 'public', 'cadastro.html')));
 // ── v3.3.0 — CENTRAL DE ALERTAS ──
 app.use('/api/alertas',    require('./routes/alertas'));
-app.post('/api/webhooks/agenda', require('./routes/alertas').handle || function(req,res){ res.json({received:true}); });
+app.post('/api/webhooks/agenda', (req, res, next) => {
+  req.url = '/webhook-agenda';
+  require('./routes/alertas')(req, res, next);
+});
 
 // ── PAGES ──
 app.get('/',              (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));

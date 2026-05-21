@@ -219,6 +219,12 @@ body{font-family:var(--f-b);background:var(--bg);color:var(--text);min-height:10
       <label>Observações</label>
       <textarea id="editObs" rows="3" placeholder="Observações gerais sobre o paciente..."></textarea>
     </div>
+    <div class="form-group">
+      <label>Programa / Pacote terapêutico</label>
+      <select id="editPacote">
+        <option value="">Sem programa vinculado</option>
+      </select>
+    </div>
     <div id="editMsg" style="display:none;padding:10px;border-radius:8px;font-size:12.5px;margin-top:8px"></div>
     <div style="display:flex;gap:10px;margin-top:16px">
       <button onclick="fecharEdicao()" class="btn btn-ghost" style="flex:1;justify-content:center">Cancelar</button>
@@ -327,11 +333,13 @@ function renderList(patients) {
     var metaParts = [];
     if (p.idade) metaParts.push(p.idade + ' anos');
     if (p.pacote_nome) metaParts.push(p.pacote_nome);
+    var ant = parseInt(p.sessoes_anteriores) || 0;
+    var reg = parseInt(p.sessoes_realizadas) || 0;
     if (p.pacote_id && p.qtd_sessoes) {
-      var ant = parseInt(p.sessoes_anteriores) || 0;
-      var reg = parseInt(p.sessoes_realizadas) || 0;
       var totalFeitas = ant + reg;
       metaParts.push('Sessão ' + reg + '/' + totalFeitas);
+    } else if (reg > 0 || ant > 0) {
+      metaParts.push((ant + reg) + ' sessão' + (ant + reg !== 1 ? 'ões' : ''));
     }
     // Risk badge — loaded async
     var riskBadgeId = 'risk_'+p.id;
@@ -580,6 +588,18 @@ function renderList(patients) {
 // ── GERAR LINK ──
 // ── EDITAR PACIENTE ──
 function abrirEdicao(id) {
+  // Load pacotes for select first
+  api('/api/pacotes').then(function(pacotes) {
+    var sel = document.getElementById('editPacote');
+    sel.innerHTML = '<option value="">Sem programa vinculado</option>';
+    pacotes.forEach(function(pk) {
+      var opt = document.createElement('option');
+      opt.value = pk.id;
+      opt.textContent = pk.nome + ' (' + pk.qtd_sessoes + ' sessões)';
+      sel.appendChild(opt);
+    });
+  }).catch(function(){});
+
   api('/api/pacientes/' + id).then(function(p) {
     document.getElementById('editId').value = p.id;
     document.getElementById('editNome').value         = p.nome_completo || '';
@@ -590,6 +610,7 @@ function abrirEdicao(id) {
     document.getElementById('editSessoesAnt').value   = p.sessoes_anteriores || 0;
     document.getElementById('editPrimeiraSessao').value = p.data_primeira_sessao ? p.data_primeira_sessao.substring(0,10) : '';
     document.getElementById('editObs').value          = p.observacoes || '';
+    document.getElementById('editPacote').value       = p.pacote_id || '';
     document.getElementById('editMsg').style.display  = 'none';
     document.getElementById('editModal').classList.add('open');
   }).catch(function(e){ showToast('Erro ao carregar dados: '+e.message,'error'); });
@@ -613,7 +634,8 @@ function salvarEdicao() {
     genero:              document.getElementById('editGenero').value || null,
     sessoes_anteriores:  parseInt(document.getElementById('editSessoesAnt').value) || 0,
     data_primeira_sessao: document.getElementById('editPrimeiraSessao').value || null,
-    observacoes:         document.getElementById('editObs').value || null
+    observacoes:         document.getElementById('editObs').value || null,
+    pacote_id:           document.getElementById('editPacote').value || null
   }).then(function() {
     fecharEdicao();
     showToast('Dados atualizados!', 'success');

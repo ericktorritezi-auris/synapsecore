@@ -234,8 +234,9 @@ body{font-family:var(--fb);background:var(--bg);color:var(--tx);min-height:100vh
       </div>
       <div class="field" style="margin-top:4px">
         <label style="display:flex;align-items:center;gap:10px;cursor:pointer;text-transform:none;letter-spacing:0;font-size:13.5px;color:var(--text)">
-          <input type="checkbox" id="fPago" style="width:18px;height:18px;cursor:pointer;accent-color:#D4AF7F">
-          Sessão paga
+          <input type="checkbox" id="fPago" style="display:none">
+          <span id="fPagoBox" onclick="togglePagoBox()" style="width:20px;height:20px;border-radius:5px;border:2px solid rgba(212,175,127,.35);background:rgba(11,19,43,.6);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:all .18s"></span>
+          <span onclick="togglePagoBox()" style="cursor:pointer">Sessão paga</span>
           <span style="font-size:11px;color:var(--muted);font-weight:400">(marque se o pagamento já foi recebido)</span>
         </label>
       </div>
@@ -581,6 +582,7 @@ function salvarSessao() {
       document.getElementById('fNum').value=''; document.getElementById('fResumo').value='';
       document.getElementById('fValor').value=''; document.getElementById('fPagamento').value='';
       document.getElementById('fPago').checked=false;
+      atualizarPagoBox();
       btn.disabled=false; btn.textContent='Salvar Sessão';
       showToast('Sessão registrada! Atualizando resumo clínico...', 'success');
       // Reload patient to update progress
@@ -953,6 +955,28 @@ function toggleFeedbackForm() {
     var today = new Date().toISOString().split('T')[0];
     document.getElementById('fFeedbackData').value = today;
     document.getElementById('fFeedbackConteudo').value = '';
+  }
+}
+
+// ── PAGO VISUAL TOGGLE ──
+function togglePagoBox() {
+  var cb  = document.getElementById('fPago');
+  var box = document.getElementById('fPagoBox');
+  cb.checked = !cb.checked;
+  atualizarPagoBox();
+}
+function atualizarPagoBox() {
+  var cb  = document.getElementById('fPago');
+  var box = document.getElementById('fPagoBox');
+  if (!box) return;
+  if (cb.checked) {
+    box.style.background    = 'rgba(16,185,129,.15)';
+    box.style.borderColor   = '#6ee7b7';
+    box.innerHTML = '<svg width="12" height="10" viewBox="0 0 12 10" fill="none"><path d="M1 5l3.5 3.5L11 1" stroke="#6ee7b7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  } else {
+    box.style.background  = 'rgba(11,19,43,.6)';
+    box.style.borderColor = 'rgba(212,175,127,.35)';
+    box.innerHTML = '';
   }
 }
 

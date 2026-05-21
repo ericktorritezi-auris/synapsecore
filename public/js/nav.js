@@ -45,19 +45,24 @@ function renderNav() {
   }).join('\n');
 
   // ── TOPBAR ──
+  // Inject bell into existing topbar — surgical insert, don't replace structure
   var topbar = document.getElementById('topbar');
-  if (topbar) {
-    topbar.innerHTML =
-      '<img src="/img/logo-horizontal.png" alt="Synapse Core">'
-      + '<div style="display:flex;align-items:center;gap:8px">'
-        + '<div style="position:relative" id="alertasBtnWrap">'
-          + '<button onclick="toggleAlertas(event)" id="alertasBtn" style="background:none;border:none;cursor:pointer;padding:8px;position:relative;display:flex;align-items:center;justify-content:center;min-width:36px;min-height:36px">'
-            + '<span id="alertasSino" style="display:flex;align-items:center;color:rgba(201,209,217,.55);transition:color .2s"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></span>'
-            + '<span id="alertasBadge" style="display:none;position:absolute;top:0;right:0;background:#ef4444;color:white;border-radius:50%;min-width:16px;height:16px;font-size:10px;font-weight:700;align-items:center;justify-content:center;line-height:1;padding:0 3px"></span>'
-          + '</button>'
-        + '</div>'
-        + '<button class="hamburger" onclick="toggleSidebar()">&#9776;</button>'
-      + '</div>';
+  if (topbar && !document.getElementById('alertasBtnWrap')) {
+    var bellBtn = document.createElement('div');
+    bellBtn.id = 'alertasBtnWrap';
+    bellBtn.style.cssText = 'position:relative;display:flex;align-items:center;margin-right:4px';
+    bellBtn.innerHTML =
+      '<button onclick="toggleAlertas(event)" id="alertasBtn" style="background:none;border:none;cursor:pointer;padding:8px;position:relative;display:flex;align-items:center;justify-content:center;width:40px;height:40px">'
+        + '<span id="alertasSino" style="display:flex;align-items:center;color:rgba(201,209,217,.55);transition:color .2s"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></span>'
+        + '<span id="alertasBadge" style="display:none;position:absolute;top:4px;right:4px;background:#ef4444;color:white;border-radius:50%;min-width:16px;height:16px;font-size:10px;font-weight:700;align-items:center;justify-content:center;line-height:1;padding:0 3px"></span>'
+      + '</button>';
+    // Find hamburger and insert bell before it
+    var hamburger = topbar.querySelector('.hamburger') || topbar.querySelector('button');
+    if (hamburger) {
+      topbar.insertBefore(bellBtn, hamburger);
+    } else {
+      topbar.appendChild(bellBtn);
+    }
   }
 
   // ── SIDEBAR ──

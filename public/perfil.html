@@ -468,8 +468,25 @@ body{font-family:var(--fb);background:var(--bg);color:var(--tx);min-height:100vh
         </div>
       </div>
 
+
       <div class="manual-topic" onclick="toggleTopic(this)">
-        <div class="manual-topic-hdr">🔄 18. Fluxo completo do atendimento</div>
+        <div class="manual-topic-hdr">🔔 18. Central Inteligente de Alertas (v3.3)</div>
+        <div class="manual-topic-body">
+          Ícone de sino &#128276; no topo (mobile) e na sidebar (desktop). Alertas gerados automaticamente a cada hora — sem IA, apenas dados do sistema.<br><br>
+          <strong>Alertas disponíveis:</strong><br>
+          &#127874; <strong>Aniversário na semana</strong> — pacientes que aniversariam nos próximos 7 dias<br>
+          &#9888; <strong>Paciente sem sessão</strong> — 10 dias (operacional), 15 dias (atenção), 21+ dias (crítico)<br>
+          &#128176; <strong>Sessões sem pagamento</strong> — exibe quantidade e valor total pendente<br>
+          &#128221; <strong>Sem feedback recente</strong> — 20 dias (operacional), 30 dias (atenção)<br>
+          &#128260; <strong>Sem retorno após 1ª sessão</strong> — realizou a primeira sessão e não voltou em 10 dias<br><br>
+          <strong>Ações em cada alerta:</strong> Abrir paciente · Financeiro · WhatsApp · &#10003; Marcar lido · &#9201; Lembrar em 24h<br><br>
+          <strong>Comportamento:</strong> alertas lidos somem da lista. Se a condição persistir por 7 dias, o alerta reaparece automaticamente. Quando a condição é resolvida (ex: sessão registrada), o alerta fecha sozinho.<br><br>
+          <strong>Fase B (em breve):</strong> integração com Belle Planner para alertas de agendamento, cancelamento e aviso 30min antes da sessão.
+        </div>
+      </div>
+
+      <div class="manual-topic" onclick="toggleTopic(this)">
+        <div class="manual-topic-hdr">&#128260; 19. Fluxo completo do atendimento</div>
         <div class="manual-topic-body">
           O fluxo recomendado de uso do sistema:<br><br>
           <strong>1.</strong> Cadastrar paciente → gerar link do formulário → enviar ao paciente<br>

@@ -7,7 +7,7 @@ const { runMigrations } = require('./db/migrations');
 
 const app     = express();
 const PORT    = process.env.PORT || 3000;
-const VERSION = '3.2.19';
+const VERSION = '3.3.0';
 
 // ── MIDDLEWARE ──
 app.use(cors());
@@ -51,6 +51,9 @@ app.get('/prontuario-inteligente', (req, res) => res.sendFile(path.join(__dirnam
 // ── CADASTRO PÚBLICO (sem auth) ──
 app.use('/api/cadastro',   require('./routes/cadastro'));
 app.get('/cadastro',       (req, res) => res.sendFile(path.join(__dirname, 'public', 'cadastro.html')));
+// ── v3.3.0 — CENTRAL DE ALERTAS ──
+app.use('/api/alertas',    require('./routes/alertas'));
+app.post('/api/webhooks/agenda', require('./routes/alertas').handle || function(req,res){ res.json({received:true}); });
 
 // ── PAGES ──
 app.get('/',              (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
@@ -89,6 +92,13 @@ app.listen(PORT, async () => {
     const r = await db.query('SELECT NOW() AS agora');
     console.log(`✅ PostgreSQL conectado — ${r.rows[0].agora}`);
     await runMigrations();
+
+    // ── v3.3.0: Cron de alertas ──
+    const { gerarAlertas } = require('./services/alertas-cron');
+    gerarAlertas().catch(e => console.error('Cron alertas inicial:', e.message));
+    setInterval(function() {
+      gerarAlertas().catch(e => console.error('Cron alertas:', e.message));
+    }, 60 * 60 * 1000); // a cada 1 hora
   } catch (err) {
     console.error('❌ Erro ao iniciar banco:', err.message);
     process.exit(1);

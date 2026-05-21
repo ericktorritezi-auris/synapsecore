@@ -7,7 +7,7 @@ const { runMigrations } = require('./db/migrations');
 
 const app     = express();
 const PORT    = process.env.PORT || 3000;
-const VERSION = '3.5.6';
+const VERSION = '3.5.7';
 
 // ── MIDDLEWARE ──
 app.use(cors());
@@ -35,7 +35,7 @@ app.get('/api/contexto/:token', async (req, res) => {
     const r = await db.query(
       `SELECT m.id, m.paciente_id, m.contexto_inicial, m.contexto_token, m.created_at,
               m.indices_json, m.flags_json, m.risco_nivel,
-              m.relatorio_json, m.protocolo_json,
+              m.protocolo_json,
               p.nome_completo, p.perfil_tipo
        FROM mapeamentos m
        JOIN pacientes p ON p.id = m.paciente_id
@@ -73,7 +73,7 @@ app.get('/api/contexto/:token', async (req, res) => {
 
     // Get sintese from relatorio if not stored
     if (!dados.sintese) {
-      var rel = row.relatorio_json || row.protocolo_json || {};
+      var rel = row.protocolo_json || {};
       dados.sintese = rel.sintese_caso || '';
     }
 

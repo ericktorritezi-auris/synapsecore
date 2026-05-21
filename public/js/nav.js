@@ -52,7 +52,7 @@ function renderNav() {
       + '<div style="display:flex;align-items:center;gap:8px">'
         + '<div style="position:relative" id="alertasBtnWrap">'
           + '<button onclick="toggleAlertas(event)" id="alertasBtn" style="background:none;border:none;cursor:pointer;padding:8px;position:relative;display:flex;align-items:center;justify-content:center;min-width:36px;min-height:36px">'
-            + '<span id="alertasSino" style="font-size:20px;color:rgba(201,209,217,.55);transition:color .2s">&#128276;</span>'
+            + '<span id="alertasSino" style="display:flex;align-items:center;color:rgba(201,209,217,.55);transition:color .2s"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></span>'
             + '<span id="alertasBadge" style="display:none;position:absolute;top:0;right:0;background:#ef4444;color:white;border-radius:50%;min-width:16px;height:16px;font-size:10px;font-weight:700;align-items:center;justify-content:center;line-height:1;padding:0 3px"></span>'
           + '</button>'
         + '</div>'
@@ -68,7 +68,7 @@ function renderNav() {
         + '<img src="/img/logo-horizontal.png" alt="Synapse Core">'
         + '<div style="position:relative" id="alertasBtnWrapDesktop">'
           + '<button onclick="toggleAlertas(event)" id="alertasBtnDesktop" style="background:none;border:none;cursor:pointer;padding:4px;position:relative;display:flex;align-items:center">'
-            + '<span id="alertasSinoDesktop" style="font-size:18px;color:rgba(201,209,217,.55);transition:color .2s">&#128276;</span>'
+            + '<span id="alertasSinoDesktop" style="display:flex;align-items:center;color:rgba(201,209,217,.55);transition:color .2s"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d=\"M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9\"/><path d=\"M13.73 21a2 2 0 0 1-3.46 0\"/></svg></span>'
             + '<span id="alertasBadgeDesktop" style="display:none;position:absolute;top:0;right:0;background:#ef4444;color:white;border-radius:50%;width:15px;height:15px;font-size:9px;font-weight:700;align-items:center;justify-content:center;line-height:1"></span>'
           + '</button>'
         + '</div>'
@@ -93,7 +93,7 @@ function renderNav() {
     drop.style.cssText = 'display:none;position:fixed;top:0;right:0;width:100%;max-width:380px;max-height:100vh;background:#1a2540;border-left:1px solid rgba(201,209,217,.1);border-bottom:1px solid rgba(201,209,217,.1);z-index:200;box-shadow:-4px 4px 32px rgba(0,0,0,.5);border-bottom-left-radius:16px;overflow:hidden;flex-direction:column';
     drop.innerHTML =
       '<div style="padding:16px 16px 10px;border-bottom:1px solid rgba(201,209,217,.08);display:flex;align-items:center;justify-content:space-between;flex-shrink:0">'
-        + '<div style="font-family:\'Satoshi\',sans-serif;font-size:15px;font-weight:700">&#128276; Alertas</div>'
+        + '<div style="font-family:\'Satoshi\',sans-serif;font-size:15px;font-weight:700;display:flex;align-items:center;gap:7px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#D4AF7F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg> Alertas</div>'
         + '<div style="display:flex;gap:8px;align-items:center">'
           + '<button onclick="marcarTodosLidos()" style="font-size:11px;background:rgba(212,175,127,.08);color:#D4AF7F;border:1px solid rgba(212,175,127,.2);border-radius:6px;padding:4px 8px;cursor:pointer">&#10003; Todos lidos</button>'
           + '<button onclick="fecharAlertas()" style="background:none;border:none;color:rgba(201,209,217,.4);cursor:pointer;font-size:16px;padding:2px 4px">&#10005;</button>'

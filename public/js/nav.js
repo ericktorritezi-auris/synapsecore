@@ -53,7 +53,7 @@ function renderNav() {
         + '<div style="position:relative" id="alertasBtnWrap">'
           + '<button onclick="toggleAlertas(event)" id="alertasBtn" style="background:none;border:none;cursor:pointer;padding:8px;position:relative;display:flex;align-items:center;justify-content:center;min-width:36px;min-height:36px">'
             + '<span id="alertasSino" style="font-size:20px;color:rgba(201,209,217,.55);transition:color .2s">&#128276;</span>'
-            + '<span id="alertasBadge" style="display:none;position:absolute;top:2px;right:2px;background:#ef4444;color:white;border-radius:50%;width:16px;height:16px;font-size:9px;font-weight:700;display:none;align-items:center;justify-content:center;line-height:1"></span>'
+            + '<span id="alertasBadge" style="display:none;position:absolute;top:0;right:0;background:#ef4444;color:white;border-radius:50%;min-width:16px;height:16px;font-size:10px;font-weight:700;align-items:center;justify-content:center;line-height:1;padding:0 3px"></span>'
           + '</button>'
         + '</div>'
         + '<button class="hamburger" onclick="toggleSidebar()">&#9776;</button>'
@@ -157,7 +157,7 @@ function atualizarBadge(count) {
     var el = document.getElementById(id);
     if (!el) return;
     if (count > 0) {
-      el.style.display = 'flex';
+      el.style.display = 'inline-flex';
       el.textContent = count > 99 ? '99+' : String(count);
     } else {
       el.style.display = 'none';

@@ -7,7 +7,7 @@ const { runMigrations } = require('./db/migrations');
 
 const app     = express();
 const PORT    = process.env.PORT || 3000;
-const VERSION = '3.5.7';
+const VERSION = '3.5.8';
 
 // ── MIDDLEWARE ──
 app.use(cors());
@@ -57,18 +57,18 @@ app.get('/api/contexto/:token', async (req, res) => {
     if (!dados.flags)   dados.flags   = row.flags_json    || [];
     if (!dados.risco)   dados.risco   = row.risco_nivel   || 'verde';
 
-    // Fetch CIDs if not stored
-    if (!dados.cids) {
-      try {
-        const cQ = await db.query(
-          `SELECT cid_codigo, cid_nome, confirmado FROM cids_paciente
-           WHERE paciente_id = $1 ORDER BY confirmado DESC, id ASC`,
-          [row.paciente_id]
-        );
-        dados.cids = cQ.rows || [];
-      } catch(e2) {
-        dados.cids = [];
-      }
+    // Always fetch CIDs fresh from DB — single source of truth, no duplicates
+    try {
+      const cQ = await db.query(
+        `SELECT DISTINCT ON (cid_codigo) cid_codigo, cid_nome, confirmado
+         FROM cids_paciente
+         WHERE paciente_id = $1
+         ORDER BY cid_codigo, confirmado DESC, id ASC`,
+        [row.paciente_id]
+      );
+      dados.cids = cQ.rows || [];
+    } catch(e2) {
+      dados.cids = [];
     }
 
     // Get sintese from relatorio if not stored

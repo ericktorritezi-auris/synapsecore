@@ -1562,47 +1562,43 @@ Retorne APENAS JSON válido com esta estrutura exata:
 // Linguagem acolhedora, sem jargão clínico
 // ══════════════════════════════════════════════
 async function gerarContextoInicial({ paciente, mapeamento }) {
-  const Anthropic = require('@anthropic-ai/sdk');
-  const client    = new Anthropic();
-
   const nome     = paciente.nome_completo || 'Paciente';
+  const primeiro = nome.split(' ')[0];
   const relatorio= mapeamento.relatorio_json || mapeamento.protocolo_json || {};
-  const indices  = mapeamento.indices_json  || {};
-  const programa = relatorio.programa_recomendado || relatorio.programa_justificativa || '';
 
-  const prompt = `Você é um assistente especializado em comunicação terapêutica humanizada. Seu trabalho é transformar dados de uma avaliação clínica em um documento acolhedor e inspirador para o paciente — sem jargão técnico, sem diagnósticos, sem números de scores.
+  const prompt = 'Você é um assistante especializado em comunicação terapêutica humanizada. Transforme dados de avaliação clínica em um documento acolhedor para o paciente — sem jargão técnico, sem diagnósticos, sem scores.\n\n'
+    + 'DADOS DO MAPEAMENTO INICIAL:\n'
+    + 'Paciente: ' + nome + '\n'
+    + 'Perfil: ' + (paciente.perfil_tipo || 'adulto') + '\n'
+    + 'Motivo da busca: ' + (paciente.motivo_busca || '').substring(0, 300) + '\n\n'
+    + 'Dados do mapeamento:\n' + JSON.stringify(relatorio).substring(0, 1200) + '\n\n'
+    + 'INSTRUÇÕES: Crie um "Contexto Inicial" para ' + primeiro + ' com as seguintes partes em português brasileiro, tom caloroso e empático:\n'
+    + '1. Saudação personalizada (2-3 linhas) — acolha a pessoa pela decisão de buscar autoconhecimento\n'
+    + '2. O que você trouxe (3-4 linhas) — espelhe os principais temas sem diagnósticos\n'
+    + '3. O que identificamos juntos (3-4 linhas) — 2-3 pontos de força ou recursos internos\n'
+    + '4. O caminho que se abre (3-4 linhas) — processo terapêutico de forma esperançosa\n'
+    + '5. Mensagem de encerramento (2 linhas) — pessoa sentindo que está no lugar certo\n\n'
+    + 'IMPORTANTE: NUNCA mencione CID, diagnóstico, score, percentual, risco ou termos clínicos. '
+    + 'Use primeira pessoa do plural. Máximo 400 palavras. '
+    + 'Formato: texto corrido em parágrafos, sem markdown, sem bullets, sem títulos. '
+    + 'Separe cada parte por linha em branco. Use o nome ' + primeiro + ' naturalmente.';
 
-DADOS DO MAPEAMENTO INICIAL:
-Paciente: ${nome}
-Perfil: ${paciente.perfil_tipo || 'adulto'}
-Motivo da busca: ${(paciente.motivo_busca || '').substring(0, 300)}
-
-Áreas identificadas no mapeamento:
-${JSON.stringify(relatorio).substring(0, 1200)}
-
-INSTRUÇÕES:
-Crie um "Contexto Inicial" para ${nome.split(' ')[0]} com as seguintes seções — escreva em português brasileiro, tom caloroso, empático, esperançoso:
-
-1. **Uma saudação personalizada** (2-3 linhas) — acolha a pessoa pela decisão de buscar autoconhecimento
-2. **O que você trouxe** (3-4 linhas) — espelhe, em linguagem simples e humana, os principais temas que a pessoa trouxe (sem diagnósticos, sem scores)
-3. **O que identificamos juntos** (3-4 linhas) — aponte 2-3 pontos de força ou recursos internos que emergiram do mapeamento
-4. **O caminho que se abre** (3-4 linhas) — fale sobre o processo terapêutico de forma esperançosa e motivadora
-5. **Uma mensagem de encerramento** (2 linhas) — deixe a pessoa sentindo que está no lugar certo
-
-IMPORTANTE:
-- NUNCA mencione CID, diagnóstico, score, percentual, risco, ou termos clínicos
-- Use a primeira pessoa do plural ("identificamos", "percebemos") para criar parceria
-- Máximo 400 palavras no total
-- Formato: texto corrido em parágrafos (sem markdown, sem bullets, sem títulos com #)
-- Cada seção separada por uma linha em branco
-- Use o primeiro nome de ${nome.split(' ')[0]} naturalmente ao longo do texto`;
-
-  const msg = await client.messages.create({
-    model:      'claude-sonnet-4-20250514',
-    max_tokens: 800,
-    messages:   [{ role: 'user', content: prompt }]
+  const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': process.env.ANTHROPIC_API_KEY,
+      'anthropic-version': '2023-06-01'
+    },
+    body: JSON.stringify({
+      model:      'claude-sonnet-4-20250514',
+      max_tokens: 900,
+      messages:   [{ role: 'user', content: prompt }]
+    })
   });
 
-  const texto = msg.content[0].text.trim();
+  if (!resp.ok) throw new Error('Anthropic API error: ' + resp.status);
+  const data  = await resp.json();
+  const texto = data.content[0].text.trim();
   return { texto, nome };
 }

@@ -60,6 +60,14 @@ body{font-family:var(--fb);background:var(--bg);color:var(--text);min-height:100
 .cid-conf{font-size:10px;font-weight:600;color:#059669;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);border-radius:4px;padding:1px 6px;flex-shrink:0}
 /* SINTESE */
 .sintese-txt{font-size:13.5px;line-height:1.75;color:var(--muted)}
+/* CIDs */
+.cid-list{display:flex;flex-direction:column;gap:8px}
+.cid-item{display:flex;align-items:center;gap:12px;background:rgba(11,19,43,.03);border:1px solid var(--brd);border-radius:8px;padding:10px 14px}
+.cid-code{font-family:var(--fd);font-size:12px;font-weight:700;color:var(--navy);background:rgba(196,150,90,.08);border:1px solid rgba(196,150,90,.2);border-radius:6px;padding:2px 8px;white-space:nowrap;flex-shrink:0}
+.cid-name{font-size:13px;color:var(--text);line-height:1.4}
+.cid-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;flex-shrink:0;margin-left:auto}
+.cid-badge.conf{background:rgba(16,185,129,.08);color:#059669;border:1px solid rgba(16,185,129,.2)}
+.cid-badge.ia{background:rgba(245,158,11,.06);color:#b45309;border:1px solid rgba(245,158,11,.2)}
 /* TEXTO CONTEXTO */
 .contexto-texto{font-size:15px;line-height:1.85;color:var(--text)}
 .contexto-texto p{margin-bottom:16px}
@@ -143,6 +151,12 @@ body{font-family:var(--fb);background:var(--bg);color:var(--text);min-height:100
     <div class="cid-list" id="cidList"></div>
   </div>
 
+  <!-- CIDs -->
+  <div class="card" id="cardCids" style="display:none">
+    <div class="card-title"><span>◈</span> CIDs Identificados</div>
+    <div class="cid-list" id="cidList"></div>
+  </div>
+
   <!-- SÍNTESE DO CASO -->
   <div class="card" id="cardSintese" style="display:none">
     <div class="card-title"><span>◈</span> Síntese do Caso</div>
@@ -165,7 +179,7 @@ body{font-family:var(--fb);background:var(--bg);color:var(--text);min-height:100
 <script>
 var token = location.pathname.split('/').pop();
 
-fetch('/api/mapeamentos/contexto/' + token)
+fetch('/api/contexto/' + token)
   .then(function(r) {
     if (!r.ok) throw new Error('not found');
     return r.json();
@@ -247,6 +261,21 @@ fetch('/api/mapeamentos/contexto/' + token)
           + '<span class="cid-code">' + escH(c.cid_codigo) + '</span>'
           + '<span class="cid-name">' + escH(c.cid_nome) + '</span>'
           + (c.confirmado ? '<span class="cid-conf">✓ Confirmado</span>' : '')
+          + '</div>';
+      });
+    }
+
+    // ── CIDs ──
+    var cids = data.cids || [];
+    if (cids.length) {
+      document.getElementById('cardCids').style.display = 'block';
+      var cidList = document.getElementById('cidList');
+      cids.forEach(function(c) {
+        cidList.innerHTML += '<div class="cid-item">'
+          + '<span class="cid-code">' + escH(c.cid_codigo) + '</span>'
+          + '<span class="cid-name">' + escH(c.cid_nome) + '</span>'
+          + '<span class="cid-badge ' + (c.confirmado ? 'conf' : 'ia') + '">'
+          + (c.confirmado ? '✓ Confirmado' : 'IA') + '</span>'
           + '</div>';
       });
     }

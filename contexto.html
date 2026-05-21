@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Meu Contexto Inicial — Synapse Core</title>
+<meta name="theme-color" content="#0B132B">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<link rel="icon" href="/favicon.ico">
+<link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700,900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#0B132B;--gold:#C4965A;--gold2:#D4AF7F;--text:#1a1f2e;--muted:#4a5568;--dim:#8a92a6;--bg:#F6F7FA;--white:#ffffff;--brd:#e2e6ed;--fd:'Satoshi',sans-serif;--fb:'Inter',sans-serif;--r:12px}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--fb);background:var(--bg);color:var(--text);min-height:100vh}
+#scrLoad{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:16px;text-align:center;padding:32px}
+.load-logo{width:100px;height:auto;margin-bottom:8px}
+.load-circle{width:48px;height:48px;border-radius:50%;border:3px solid rgba(196,150,90,.2);border-top-color:var(--gold);animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#scrError{display:none;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:12px;text-align:center;padding:32px}
+#scrReport{display:none;max-width:720px;margin:0 auto;padding:32px 20px 60px}
+.toolbar{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;background:var(--navy);border-radius:12px;margin-bottom:24px;gap:12px;flex-wrap:wrap}
+.toolbar-logo{display:flex;align-items:center;gap:10px}
+.toolbar-logo img{height:28px}
+.toolbar-info{font-size:11px;color:rgba(255,255,255,.5);margin-top:2px}
+.toolbar-actions{display:flex;gap:8px}
+.btn-pdf{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;background:linear-gradient(135deg,var(--gold2),var(--gold));color:var(--navy);font-family:var(--fd);font-size:12.5px;font-weight:700;cursor:pointer;border:none;transition:all .2s}
+.btn-pdf:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(196,150,90,.4)}
+/* HERO */
+.hero{background:linear-gradient(135deg,var(--navy) 0%,#1c2e50 100%);border-radius:16px;padding:32px 24px;margin-bottom:20px;color:white;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;inset:0;background:url("data:image/svg+xml,%3Csvg viewBox='0 0 400 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M-10,80 Q80,20 200,80 T420,60' stroke='%23D4AF7F' stroke-width='.5' fill='none' opacity='.15'/%3E%3Cpath d='M-10,130 Q100,70 220,130 T420,110' stroke='%23D4AF7F' stroke-width='.5' fill='none' opacity='.1'/%3E%3C/svg%3E") center/cover;pointer-events:none}
+.hero-tag{display:inline-flex;align-items:center;gap:5px;background:rgba(212,175,127,.15);border:1px solid rgba(212,175,127,.3);border-radius:20px;padding:4px 12px;font-size:10.5px;font-weight:600;color:var(--gold2);letter-spacing:.5px;text-transform:uppercase;margin-bottom:12px}
+.hero-name{font-family:var(--fd);font-size:28px;font-weight:900;margin-bottom:4px;position:relative}
+.hero-sub{font-size:13px;color:rgba(255,255,255,.55);position:relative}
+/* CONTENT CARD */
+.card{background:var(--white);border:1px solid var(--brd);border-radius:var(--r);padding:24px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.card-title{font-family:var(--fd);font-size:12px;font-weight:700;color:var(--navy);margin-bottom:16px;display:flex;align-items:center;gap:7px;text-transform:uppercase;letter-spacing:.8px;padding-bottom:10px;border-bottom:1px solid var(--brd)}
+/* STATUS GLOBAL */
+.status-global{display:flex;align-items:center;gap:20px;background:linear-gradient(135deg,rgba(196,150,90,.06),rgba(196,150,90,.02));border:1px solid rgba(196,150,90,.2);border-radius:12px;padding:16px 20px;margin-bottom:20px}
+.status-circle{width:72px;height:72px;border-radius:50%;border:4px solid var(--gold);display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative;background:rgba(196,150,90,.06)}
+.status-num{font-family:var(--fd);font-size:26px;font-weight:900;color:var(--gold)}
+.status-info{}
+.status-lbl{font-family:var(--fd);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:3px}
+.status-desc{font-size:13px;color:var(--text);line-height:1.4}
+/* DIMENSOES GRID */
+.dim-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px}
+.dim-item{background:rgba(11,19,43,.03);border:1px solid var(--brd);border-radius:8px;padding:10px 12px}
+.dim-name{font-size:10.5px;color:var(--muted);margin-bottom:4px;font-weight:500}
+.dim-bar-wrap{height:5px;background:rgba(11,19,43,.08);border-radius:3px;margin-bottom:4px;overflow:hidden}
+.dim-bar{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--gold2),var(--gold))}
+.dim-val{font-family:var(--fd);font-size:13px;font-weight:700;color:var(--navy)}
+/* FLAGS */
+.flag-list{display:flex;flex-wrap:wrap;gap:6px}
+.flag-item{background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.2);border-radius:20px;padding:4px 12px;font-size:11.5px;font-weight:600;color:#b45309}
+/* CIDs */
+.cid-list{display:flex;flex-direction:column;gap:8px}
+.cid-item{display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(11,19,43,.03);border:1px solid var(--brd);border-radius:8px}
+.cid-code{font-family:var(--fd);font-size:12px;font-weight:700;color:var(--navy);background:rgba(196,150,90,.08);border:1px solid rgba(196,150,90,.2);border-radius:5px;padding:2px 8px;flex-shrink:0}
+.cid-name{font-size:13px;color:var(--text)}
+.cid-conf{font-size:10px;font-weight:600;color:#059669;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);border-radius:4px;padding:1px 6px;flex-shrink:0}
+/* SINTESE */
+.sintese-txt{font-size:13.5px;line-height:1.75;color:var(--muted)}
+/* CIDs */
+.cid-list{display:flex;flex-direction:column;gap:8px}
+.cid-item{display:flex;align-items:center;gap:12px;background:rgba(11,19,43,.03);border:1px solid var(--brd);border-radius:8px;padding:10px 14px}
+.cid-code{font-family:var(--fd);font-size:12px;font-weight:700;color:var(--navy);background:rgba(196,150,90,.08);border:1px solid rgba(196,150,90,.2);border-radius:6px;padding:2px 8px;white-space:nowrap;flex-shrink:0}
+.cid-name{font-size:13px;color:var(--text);line-height:1.4}
+.cid-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;flex-shrink:0;margin-left:auto}
+.cid-badge.conf{background:rgba(16,185,129,.08);color:#059669;border:1px solid rgba(16,185,129,.2)}
+.cid-badge.ia{background:rgba(245,158,11,.06);color:#b45309;border:1px solid rgba(245,158,11,.2)}
+/* TEXTO CONTEXTO */
+.contexto-texto{font-size:15px;line-height:1.85;color:var(--text)}
+.contexto-texto p{margin-bottom:16px}
+.contexto-texto p:last-child{margin-bottom:0}
+@media(max-width:500px){.dim-grid{grid-template-columns:1fr}.status-global{flex-direction:column;text-align:center}}
+/* FOOTER */
+.footer-card{background:linear-gradient(135deg,rgba(196,150,90,.08),rgba(196,150,90,.03));border:1px solid rgba(196,150,90,.2);border-radius:var(--r);padding:20px 24px;text-align:center;margin-top:24px}
+.footer-logo{height:32px;margin-bottom:12px;opacity:.7}
+.footer-txt{font-size:12px;color:var(--muted);line-height:1.6}
+.footer-brand{font-family:var(--fd);font-size:13px;font-weight:700;color:var(--navy);margin-top:4px}
+@media print{.toolbar{display:none!important}}
+@media(max-width:600px){
+  #scrReport{padding:16px 16px 48px}
+  .hero{padding:22px 18px}
+  .hero-name{font-size:22px}
+  .card{padding:18px}
+}
+</style>
+</head>
+<body>
+
+<div id="scrLoad">
+  <img class="load-logo" src="/img/logo-horizontal.png" alt="Synapse Core">
+  <div class="load-circle"></div>
+  <p style="font-size:13px;color:#8a92a6;font-family:'Satoshi',sans-serif">Carregando seu contexto inicial...</p>
+</div>
+
+<div id="scrError">
+  <img style="height:40px;opacity:.4" src="/img/logo-horizontal.png" alt="">
+  <p style="font-size:16px;font-weight:600;color:#1a1f2e">Contexto não encontrado</p>
+  <p style="font-size:13px;color:#8a92a6">Este link pode estar incorreto ou ainda não foi gerado.</p>
+</div>
+
+<div id="scrReport">
+  <div class="toolbar">
+    <div class="toolbar-logo">
+      <img src="/img/logo-horizontal.png" alt="Synapse Core">
+      <div>
+        <div style="font-size:12px;font-weight:600;color:rgba(255,255,255,.85);font-family:'Satoshi',sans-serif">Evolution Therapy</div>
+        <div class="toolbar-info">Contexto Inicial · Uso pessoal</div>
+      </div>
+    </div>
+    <div class="toolbar-actions">
+      <button class="btn-pdf" onclick="window.print()">🖨 Imprimir</button>
+    </div>
+  </div>
+
+  <div class="hero">
+    <div class="hero-tag">✦ Contexto Inicial</div>
+    <div class="hero-name" id="heroNome">--</div>
+    <div class="hero-sub" id="heroSub">Seu ponto de partida no processo de autoconhecimento</div>
+  </div>
+
+  <!-- STATUS GLOBAL -->
+  <div class="card" id="cardStatus" style="display:none">
+    <div class="card-title"><span>◈</span> Status Global</div>
+    <div class="status-global">
+      <div class="status-circle"><span class="status-num" id="statusNum">--</span></div>
+      <div class="status-info">
+        <div class="status-lbl">Índice de Bem-Estar Global</div>
+        <div class="status-desc" id="statusDesc">--</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PERFIL MULTIDIMENSIONAL -->
+  <div class="card" id="cardDim" style="display:none">
+    <div class="card-title"><span>◈</span> Perfil Multidimensional</div>
+    <div class="dim-grid" id="dimGrid"></div>
+  </div>
+
+  <!-- FLAGS CLÍNICAS -->
+  <div class="card" id="cardFlags" style="display:none">
+    <div class="card-title"><span>◈</span> Flags Clínicas</div>
+    <div class="flag-list" id="flagList"></div>
+  </div>
+
+  <!-- CIDs IDENTIFICADOS -->
+  <div class="card" id="cardCids" style="display:none">
+    <div class="card-title"><span>◈</span> CIDs Identificados</div>
+    <div class="cid-list" id="cidList"></div>
+  </div>
+
+  <!-- CIDs -->
+  <div class="card" id="cardCids" style="display:none">
+    <div class="card-title"><span>◈</span> CIDs Identificados</div>
+    <div class="cid-list" id="cidList"></div>
+  </div>
+
+  <!-- SÍNTESE DO CASO -->
+  <div class="card" id="cardSintese" style="display:none">
+    <div class="card-title"><span>◈</span> Síntese do Caso</div>
+    <div class="sintese-txt" id="sinteseTexto"></div>
+  </div>
+
+  <!-- CONTEXTO INICIAL (texto IA) -->
+  <div class="card">
+    <div class="card-title"><span>✦</span> Contexto Inicial</div>
+    <div class="contexto-texto" id="contextoTexto"></div>
+  </div>
+
+  <div class="footer-card">
+    <img class="footer-logo" src="/img/logo-horizontal.png" alt="Synapse Core">
+    <p class="footer-txt">Este documento foi preparado exclusivamente para você,<br>como ponto de partida da sua jornada de autoconhecimento.</p>
+    <p class="footer-brand">Evolution Therapy · Erick Torritezi</p>
+  </div>
+</div>
+
+<script>
+var token = location.pathname.split('/').pop();
+
+fetch('/api/contexto/' + token)
+  .then(function(r) {
+    if (!r.ok) return r.json().then(function(e){ throw new Error(e.message || 'Erro ' + r.status); });
+    return r.json();
+  })
+  .then(function(data) {
+    document.getElementById('scrLoad').style.display   = 'none';
+    document.getElementById('scrReport').style.display = 'block';
+
+    var nome     = data.nome_completo || '';
+    var primeiro = nome.split(' ')[0];
+    document.getElementById('heroNome').textContent = nome;
+    document.getElementById('heroSub').textContent  = 'Mapeamento clínico inicial · ' + primeiro;
+    document.title = 'Contexto Inicial — ' + primeiro;
+
+    var DIMS = [
+      { key:'regulacao_emocional',       label:'Regulação Emocional' },
+      { key:'padrao_cognitivo',           label:'Padrão Cognitivo' },
+      { key:'indice_relacional',          label:'Índice Relacional' },
+      { key:'indice_existencial',         label:'Índice Existencial' },
+      { key:'funcionamento_corporal',     label:'Funcionamento Corporal' },
+      { key:'sustentacao_comportamental', label:'Sustentação Comportamental' },
+      { key:'indice_psicossocial',        label:'Índice Psicossocial' },
+      { key:'vulnerabilidade_clinica',    label:'Vulnerabilidade Clínica' }
+    ];
+
+    // ── STATUS GLOBAL ──
+    var idx = data.indices || {};
+    if (idx.global !== undefined) {
+      document.getElementById('cardStatus').style.display = 'block';
+      document.getElementById('statusNum').textContent = idx.global;
+      var g = idx.global;
+      var desc = g >= 70 ? 'Bem-estar em nível satisfatório'
+               : g >= 50 ? 'Atenção e suporte recomendados'
+               :            'Suporte intensivo indicado';
+      document.getElementById('statusDesc').textContent = desc;
+    }
+
+    // ── PERFIL MULTIDIMENSIONAL ──
+    var dimGrid = document.getElementById('dimGrid');
+    var hasDims = false;
+    DIMS.forEach(function(d) {
+      var val = idx[d.key];
+      if (val === undefined || val === null) return;
+      hasDims = true;
+      var pct = Math.min(100, Math.max(0, val));
+      dimGrid.innerHTML += '<div class="dim-item">'
+        + '<div class="dim-name">' + escH(d.label) + '</div>'
+        + '<div class="dim-bar-wrap"><div class="dim-bar" style="width:' + pct + '%"></div></div>'
+        + '<div class="dim-val">' + val + '<span style="font-size:10px;font-weight:400;color:var(--muted)">/100</span></div>'
+        + '</div>';
+    });
+    if (hasDims) document.getElementById('cardDim').style.display = 'block';
+
+    // ── INDICADORES IDENTIFICADOS ──
+    var FLAG_LABELS = {
+      risco_depressivo:'Risco Depressivo', ansiedade_elevada:'Ansiedade Elevada',
+      sobrecarga_emocional:'Sobrecarga Emocional', rigidez_emocional:'Rigidez Emocional',
+      vulnerabilidade_relacional:'Vulnerabilidade Relacional', vazio_existencial:'Vazio Existencial',
+      isolamento_social:'Isolamento Social', instabilidade_emocional:'Instabilidade Emocional',
+      conflito_identitario:'Conflito Identitário', disfuncao_familiar:'Disfunção Familiar',
+      trauma_ativo:'Trauma Ativo', dependencia_emocional:'Dependência Emocional'
+    };
+    var flags = data.flags || [];
+    if (flags.length) {
+      document.getElementById('cardFlags').style.display = 'block';
+      var flagList = document.getElementById('flagList');
+      flags.forEach(function(f) {
+        flagList.innerHTML += '<span class="flag-item">' + escH(FLAG_LABELS[f] || f) + '</span>';
+      });
+    }
+
+    // ── CIDs ──
+    var cids = data.cids || [];
+    if (cids.length) {
+      document.getElementById('cardCids').style.display = 'block';
+      var cidList = document.getElementById('cidList');
+      cids.forEach(function(c) {
+        cidList.innerHTML += '<div class="cid-item">'
+          + '<span class="cid-code">' + escH(c.cid_codigo) + '</span>'
+          + '<span class="cid-name">' + escH(c.cid_nome) + '</span>'
+          + (c.confirmado ? '<span class="cid-conf">✓ Confirmado</span>' : '')
+          + '</div>';
+      });
+    }
+
+    // ── CIDs ──
+    var cids = data.cids || [];
+    if (cids.length) {
+      document.getElementById('cardCids').style.display = 'block';
+      var cidList = document.getElementById('cidList');
+      cids.forEach(function(c) {
+        cidList.innerHTML += '<div class="cid-item">'
+          + '<span class="cid-code">' + escH(c.cid_codigo) + '</span>'
+          + '<span class="cid-name">' + escH(c.cid_nome) + '</span>'
+          + '<span class="cid-badge ' + (c.confirmado ? 'conf' : 'ia') + '">'
+          + (c.confirmado ? '✓ Confirmado' : 'IA') + '</span>'
+          + '</div>';
+      });
+    }
+
+    // ── SÍNTESE DO CASO ──
+    var sintese = data.sintese || '';
+    if (sintese) {
+      document.getElementById('cardSintese').style.display = 'block';
+      document.getElementById('sinteseTexto').textContent = sintese;
+    }
+
+    // ── TEXTO IA ──
+    var texto = data.texto || data.contexto_inicial || '';
+    var paras = texto.split(/\n\n+/).filter(function(p){ return p.trim(); });
+    document.getElementById('contextoTexto').innerHTML =
+      paras.map(function(p){ return '<p>' + escH(p.trim()) + '</p>'; }).join('');
+  })
+  .catch(function(err) {
+    document.getElementById('scrLoad').style.display = 'none';
+    document.getElementById('scrError').style.display = 'flex';
+    var msg = err && err.message ? err.message : 'Erro desconhecido';
+    var p = document.querySelector('#scrError p:last-child');
+    if (p) p.textContent = msg;
+  });
+
+function escH(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+}
+</script>
+</body>
+</html>

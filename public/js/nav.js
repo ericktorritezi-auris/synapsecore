@@ -45,6 +45,14 @@ function renderNav() {
   }).join('\n');
 
   // ── TOPBAR ──
+  // For pages with empty topbar (documentos, analise) — fill logo + hamburger
+  var topbar = document.getElementById('topbar');
+  if (topbar && topbar.children.length === 0) {
+    topbar.innerHTML =
+      '<img src="/img/logo-horizontal.png" alt="Synapse Core" style="height:26px;width:auto">'
+      + '<button class="hamburger" onclick="toggleSidebar()">&#9776;</button>';
+  }
+
   // Mobile bell: position:fixed — works on ANY topbar structure
   if (!document.getElementById('alertasBtnWrap')) {
     var bellBtn = document.createElement('div');

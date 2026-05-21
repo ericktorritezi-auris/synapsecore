@@ -175,12 +175,18 @@ function renderPacienteNav(pacienteId, paginaAtiva) {
         document.body.appendChild(ov);
       }
 
-      // Adjust .main padding-top to account for 48px bar
+      // Adjust .main padding-top to account for 48px context bar
       var main = document.querySelector('.main');
       if (main) {
-        var curPad = window.getComputedStyle(main).paddingTop;
-        var curPx  = parseFloat(curPad)||0;
-        main.style.paddingTop = (curPx + 48) + 'px';
+        // Use a small timeout to ensure computed styles are ready
+        setTimeout(function() {
+          var curPx = parseFloat(window.getComputedStyle(main).paddingTop) || 0;
+          // Only add 48px if not already done
+          if (!main.dataset.pacNavAdjusted) {
+            main.style.paddingTop = (curPx + 48) + 'px';
+            main.dataset.pacNavAdjusted = '1';
+          }
+        }, 50);
       }
     })
     .catch(function(e){ console.warn('paciente-nav:', e.message); });

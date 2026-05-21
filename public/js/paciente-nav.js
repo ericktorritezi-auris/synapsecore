@@ -95,8 +95,9 @@ function renderPacienteNav(pacienteId, paginaAtiva) {
         '#pac-nav-bar .pnav-name{max-width:200px}',
       '}',
       '@media(min-width:960px){',
-        '#pac-nav-bar{left:260px}',
-        '#pac-nav-dropdown{left:260px}',
+        '#pac-nav-bar{left:260px;top:0 !important}',
+        '#pac-nav-dropdown{left:260px;top:48px !important}',
+        '#pac-nav-bar .pnav-name{max-width:220px}',
       '}'
     ].join('');
     document.head.appendChild(style);

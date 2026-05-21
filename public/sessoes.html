@@ -132,13 +132,11 @@ body{font-family:var(--fb);background:var(--bg);color:var(--tx);min-height:100vh
 <aside class="sidebar" id="sidebar"></aside>
 
 <main class="main">
-  <a href="/pacientes" class="back-link">&#8592; Pacientes</a>
   <div class="ph">
     <div>
       <div class="ph-title" id="phTitle">Sessões</div>
       <div class="ph-sub" id="phSub">Histórico clínico do paciente</div>
     </div>
-    <a href="#" class="btn btn-ghost btn-sm" id="btnMapeamento">&#9671; Ver Mapeamento</a>
   </div>
 
   <!-- Patient bar -->
@@ -387,7 +385,6 @@ var formOpen = false;
 var pacoteId = null;
 
 window.addEventListener('DOMContentLoaded', function() {
-  document.getElementById('btnMapeamento').href = '/mapeamento/' + PACIENTE_ID;
   Promise.all([
     api('/api/pacientes/' + PACIENTE_ID),
     api('/api/sessoes/' + PACIENTE_ID)

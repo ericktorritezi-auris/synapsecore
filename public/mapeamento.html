@@ -184,7 +184,6 @@ body{font-family:var(--fb);background:var(--bg);color:var(--text);min-height:100
 
   <!-- GENERATE -->
   <div id="scrGenerate" style="display:none">
-    <a href="/pacientes" style="display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-size:13px;text-decoration:none;margin-bottom:18px">&#8592; Pacientes</a>
     <div class="gen-card">
       <div class="gen-icon">&#9671;</div>
       <div class="gen-title" id="genNome">Mapeamento Clínico</div>
@@ -331,7 +330,6 @@ body{font-family:var(--fb);background:var(--bg);color:var(--text);min-height:100
 <div class="action-bar" id="actionBar" style="display:none">
   <button class="btn btn-ghost btn-sm" onclick="history.back()">&#8592; Voltar</button>
   <button class="btn btn-ghost btn-sm" onclick="confirmarRegerar()" title="Gerar nova versão do mapeamento">&#8635; Regerar</button>
-  <button class="btn btn-ghost btn-sm" id="btnAnalise" onclick="abrirAnalise()" style="background:var(--vdim);border-color:var(--vbrd);color:#c4b5fd" title="Análise Estrutural Clínica">&#129504; Análise</button>
   <button class="btn btn-primary" id="btnEvolucao" onclick="gerarRelatorioEvolucao()" style="justify-content:center;background:linear-gradient(135deg,#7c3aed,#3b82f6)">&#9651; Evolução</button>
   <button class="btn btn-ghost btn-sm" id="btnFinalizar" onclick="salvarObservacoes()">&#10003; Salvar</button>
 </div>
@@ -897,9 +895,6 @@ function renderRadarComEvolucao(indicesAtuais) {
 }
 
 
-function abrirAnalise() {
-  window.location.href = '/analise/' + PACIENTE_ID;
-}
 
 // ── PATCH RELATÓRIO EXISTENTE ──
 function patchRelatorio() {

@@ -119,13 +119,11 @@ body{font-family:var(--fb);background:var(--bg);color:var(--tx);min-height:100vh
 <aside class="sidebar" id="sidebar"></aside>
 
 <main class="main">
-  <a href="/pacientes" class="back-link">&#8592; Pacientes</a>
   <div class="ph">
     <div>
       <div class="ph-title" id="phTitle">Documentos</div>
       <div class="ph-sub" id="phSub">Carregando...</div>
     </div>
-    <a href="#" class="btn btn-ghost btn-sm" id="btnSessoes">&#9654; Sessões</a>
   </div>
 
   <!-- CIDs -->
@@ -202,7 +200,6 @@ var sessoes = [];
 var cids = [];
 
 window.addEventListener('DOMContentLoaded', function() {
-  document.getElementById('btnSessoes').href = '/sessoes/' + PACIENTE_ID;
   Promise.all([
     api('/api/pacientes/' + PACIENTE_ID),
     api('/api/documentos/' + PACIENTE_ID),

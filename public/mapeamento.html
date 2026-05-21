@@ -759,27 +759,42 @@ function abrirContextoInicial() {
     + '<div style="font-size:13px;color:rgba(201,209,217,.6)">Gerando contexto inicial...</div>'
     + '</div>';
 
-  api('/api/mapeamentos/' + MAPEAMENTO_ID + '/contexto-inicial', 'POST', {})
+  contextoRegerar = false;
+  chamarContextoAPI(false);
+}
+
+var contextoRegerar = false;
+
+function chamarContextoAPI(regerar) {
+  var body  = document.getElementById('ctxModalBody');
+  body.innerHTML = '<div style="text-align:center;padding:20px 0">'
+    + '<div style="width:36px;height:36px;border-radius:50%;border:3px solid rgba(212,175,127,.2);border-top-color:#D4AF7F;animation:spin .8s linear infinite;margin:0 auto 12px"></div>'
+    + '<div style="font-size:13px;color:rgba(201,209,217,.6)">' + (regerar ? 'Regerando...' : 'Gerando contexto inicial...') + '</div>'
+    + '</div>';
+
+  api('/api/mapeamentos/' + MAPEAMENTO_ID + '/contexto-inicial', 'POST', { regerar: regerar })
     .then(function(d) {
       var primeiroNome = (d.nome || 'Paciente').split(' ')[0];
-      var isNovo = d.novo;
       var wppMsg = 'Olá ' + primeiroNome + '! 😊\n\nSeu contexto inicial está pronto. Aqui você encontra um resumo do nosso mapeamento inicial — o ponto de partida da sua jornada de autoconhecimento:\n\n👉 ' + d.link;
       var wppNum  = mapeamentoData && mapeamentoData.telefone ? mapeamentoData.telefone.replace(/\D/g,'') : '';
       var wppHref = 'https://wa.me/' + (wppNum ? (wppNum.startsWith('55') ? wppNum : '55'+wppNum) : '') + '?text=' + encodeURIComponent(wppMsg);
 
       body.innerHTML =
         '<div style="font-family:var(--f-d);font-size:15px;font-weight:700;margin-bottom:4px">&#9998; Contexto Inicial</div>'
-        + '<div style="font-size:12px;color:rgba(201,209,217,.5);margin-bottom:16px">'
-        + (isNovo ? 'Gerado agora · documento imutável' : 'Já gerado anteriormente') + '</div>'
-        + '<div style="background:rgba(11,19,43,.6);border:1px solid rgba(212,175,127,.2);border-radius:8px;padding:10px 12px;margin-bottom:14px;word-break:break-all">'
+        + '<div style="font-size:12px;color:rgba(201,209,217,.5);margin-bottom:14px">'
+        + (d.novo ? 'Gerado agora' : 'Gerado anteriormente') + ' · link permanente</div>'
+        + '<div style="background:rgba(11,19,43,.6);border:1px solid rgba(212,175,127,.2);border-radius:8px;padding:10px 12px;margin-bottom:12px;word-break:break-all">'
           + '<div style="font-size:10px;font-weight:700;color:rgba(212,175,127,.6);text-transform:uppercase;letter-spacing:.6px;margin-bottom:5px">Link do paciente</div>'
-          + '<div style="font-size:12.5px;color:rgba(201,209,217,.8)">' + d.link + '</div>'
+          + '<div style="font-size:12px;color:rgba(201,209,217,.8)">' + d.link + '</div>'
+        + '</div>'
+        + '<div style="display:flex;gap:8px;margin-bottom:8px">'
+          + '<button onclick="copiarContextoLink(\'' + d.link + '\')" style="flex:1;background:rgba(212,175,127,.1);border:1px solid rgba(212,175,127,.25);color:#D4AF7F;border-radius:8px;padding:9px;font-family:var(--f-d);font-size:12px;font-weight:700;cursor:pointer">&#128203; Copiar</button>'
+          + '<a href="' + wppHref + '" target="_blank" style="flex:1;background:rgba(37,211,102,.08);border:1px solid rgba(37,211,102,.2);color:#25d366;border-radius:8px;padding:9px;font-family:var(--f-d);font-size:12px;font-weight:700;cursor:pointer;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:5px">&#128172; WhatsApp</a>'
         + '</div>'
         + '<div style="display:flex;gap:8px">'
-          + '<button onclick="copiarContextoLink(\'' + d.link + '\')" style="flex:1;background:rgba(212,175,127,.1);border:1px solid rgba(212,175,127,.25);color:#D4AF7F;border-radius:8px;padding:10px;font-family:var(--f-d);font-size:12.5px;font-weight:700;cursor:pointer">&#128203; Copiar</button>'
-          + '<a href="' + wppHref + '" target="_blank" style="flex:1;background:rgba(37,211,102,.08);border:1px solid rgba(37,211,102,.2);color:#25d366;border-radius:8px;padding:10px;font-family:var(--f-d);font-size:12.5px;font-weight:700;cursor:pointer;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:5px">&#128172; WhatsApp</a>'
-        + '</div>'
-        + '<button onclick="window.open(\'' + d.link + '\',\'_blank\')" style="width:100%;margin-top:8px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:rgba(201,209,217,.6);border-radius:8px;padding:8px;font-family:var(--f-d);font-size:12px;cursor:pointer">&#8599; Visualizar como paciente</button>';
+          + '<button onclick="window.open(\'' + d.link + '\',\'_blank\')" style="flex:1;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:rgba(201,209,217,.6);border-radius:8px;padding:8px;font-family:var(--f-d);font-size:12px;cursor:pointer">&#8599; Visualizar</button>'
+          + '<button onclick="regerarContexto()" style="flex:1;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:rgba(201,209,217,.6);border-radius:8px;padding:8px;font-family:var(--f-d);font-size:12px;cursor:pointer">&#8635; Regerar</button>'
+        + '</div>';
     })
     .catch(function(e) {
       body.innerHTML = '<div style="color:#fca5a5;font-size:13px;text-align:center;padding:16px">'
@@ -793,6 +808,11 @@ function copiarContextoLink(link) {
   }).catch(function() {
     showToast('Não foi possível copiar.', 'error');
   });
+}
+
+function regerarContexto() {
+  if (!confirm('Regerar o Contexto Inicial? O texto anterior será substituído.')) return;
+  chamarContextoAPI(true);
 }
 
 function fecharModalContexto() {

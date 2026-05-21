@@ -283,33 +283,68 @@ router.post('/:mapeamento_id/contexto-inicial', verifyToken, async (req, res) =>
     const baseUrl = process.env.BASE_URL || 'https://www.synapsecore.app.br';
     const link = baseUrl + '/contexto/' + row.contexto_token;
 
-    // Already generated — return existing (immutable)
-    if (row.contexto_inicial) {
+    const forcarRegerar = req.body && req.body.regerar === true;
+
+    // Load CIDs (confirmed + IA-suggested)
+    const cidsR = await db.query(
+      `SELECT cid_codigo, cid_nome, confirmado
+       FROM cids_paciente
+       WHERE paciente_id = $1
+       ORDER BY confirmado DESC, id ASC`,
+      [row.paciente_id]
+    );
+    const cids = cidsR.rows;
+
+    // Already generated and not forcing regen — return existing
+    if (row.contexto_inicial && !forcarRegerar) {
+      var dadosSalvos = {};
+      try { dadosSalvos = JSON.parse(row.contexto_inicial); } catch(e) {
+        // legacy: plain text
+        dadosSalvos = { texto: row.contexto_inicial };
+      }
       return res.json({
-        novo:  false,
-        token: row.contexto_token,
+        novo:   false,
+        token:  row.contexto_token,
         link,
-        nome:  row.nome_completo
+        nome:   row.nome_completo,
+        dados:  dadosSalvos
       });
     }
 
-    // Generate for the first time
-    const paciente  = { nome_completo: row.nome_completo, perfil_tipo: row.perfil_tipo, motivo_busca: row.motivo_busca };
-    const mapeamento = { relatorio_json: row.relatorio_json, protocolo_json: row.protocolo_json, indices_json: row.indices_json };
+    // Generate (first time or forced regen)
+    const paciente   = { nome_completo: row.nome_completo, perfil_tipo: row.perfil_tipo, motivo_busca: row.motivo_busca };
+    const mapeamento = {
+      relatorio_json: row.relatorio_json,
+      protocolo_json: row.protocolo_json,
+      indices_json:   row.indices_json,
+      flags_json:     row.flags_json,
+      risco_nivel:    row.risco_nivel
+    };
 
-    const resultado = await gerarContextoInicial({ paciente, mapeamento });
+    const resultado = await gerarContextoInicial({ paciente, mapeamento, cids });
 
-    // Save — one time only
+    // Store as JSON with all structured data
+    const dadosJson = JSON.stringify({
+      texto:   resultado.texto,
+      indices: resultado.indices,
+      flags:   resultado.flags,
+      sintese: resultado.sintese,
+      risco:   resultado.risco,
+      nome:    resultado.nome,
+      cids:    cids
+    });
+
     await db.query(
       'UPDATE mapeamentos SET contexto_inicial = $1 WHERE id = $2',
-      [resultado.texto, mapeamento_id]
+      [dadosJson, mapeamento_id]
     );
 
     res.json({
       novo:  true,
       token: row.contexto_token,
       link,
-      nome:  row.nome_completo
+      nome:  row.nome_completo,
+      dados: JSON.parse(dadosJson)
     });
 
   } catch (err) {
@@ -323,6 +358,8 @@ router.get('/contexto/:token', async (req, res) => {
   try {
     const r = await db.query(
       `SELECT m.contexto_inicial, m.contexto_token, m.created_at,
+              m.indices_json, m.flags_json, m.risco_nivel,
+              m.relatorio_json, m.protocolo_json,
               p.nome_completo, p.perfil_tipo
        FROM mapeamentos m
        JOIN pacientes p ON p.id = m.paciente_id
@@ -332,7 +369,38 @@ router.get('/contexto/:token', async (req, res) => {
     if (!r.rows.length || !r.rows[0].contexto_inicial) {
       return res.status(404).json({ message: 'Contexto não encontrado.' });
     }
-    res.json(r.rows[0]);
+    const row = r.rows[0];
+
+    // Parse stored JSON or handle legacy plain text
+    var dados = {};
+    try {
+      dados = JSON.parse(row.contexto_inicial);
+    } catch(e) {
+      dados = { texto: row.contexto_inicial };
+    }
+
+    // Merge with fresh data if indices missing from stored JSON
+    if (!dados.indices && row.indices_json) dados.indices = row.indices_json;
+    if (!dados.flags   && row.flags_json)   dados.flags   = row.flags_json;
+    if (!dados.risco   && row.risco_nivel)  dados.risco   = row.risco_nivel;
+    if (!dados.cids) {
+      const cidsQ = await db.query(
+        'SELECT cid_codigo, cid_nome, confirmado FROM cids_paciente WHERE paciente_id = (SELECT paciente_id FROM mapeamentos WHERE contexto_token=$1) ORDER BY confirmado DESC, id ASC',
+        [req.params.token]
+      );
+      dados.cids = cidsQ.rows;
+    }
+    if (!dados.sintese) {
+      var rel = row.relatorio_json || row.protocolo_json || {};
+      dados.sintese = rel.sintese_caso || '';
+    }
+
+    res.json({
+      nome_completo: row.nome_completo,
+      perfil_tipo:   row.perfil_tipo,
+      created_at:    row.created_at,
+      ...dados
+    });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

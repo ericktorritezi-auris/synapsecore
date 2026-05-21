@@ -1561,33 +1561,59 @@ Retorne APENAS JSON válido com esta estrutura exata:
 // Gerado UMA VEZ, baseado exclusivamente no mapeamento
 // Linguagem acolhedora, sem jargão clínico
 // ══════════════════════════════════════════════
-async function gerarContextoInicial({ paciente, mapeamento }) {
+async function gerarContextoInicial({ paciente, mapeamento, cids }) {
   const nome     = paciente.nome_completo || 'Paciente';
   const primeiro = nome.split(' ')[0];
   const relatorio= mapeamento.relatorio_json || mapeamento.protocolo_json || {};
+  const indices  = mapeamento.indices_json  || {};
+  const flags    = mapeamento.flags_json    || [];
 
-  const prompt = 'Você é um assistante especializado em comunicação terapêutica humanizada. Transforme dados de avaliação clínica em um documento acolhedor para o paciente — sem jargão técnico, sem diagnósticos, sem scores.\n\n'
-    + 'DADOS DO MAPEAMENTO INICIAL:\n'
-    + 'Paciente: ' + nome + '\n'
+  // Build dimensional scores string for AI context
+  var dimStr = '';
+  if (indices.global) {
+    dimStr = 'Score global: ' + indices.global + '/100\n'
+      + 'Regulação Emocional: ' + (indices.regulacao_emocional||'N/D') + '\n'
+      + 'Padrão Cognitivo: '    + (indices.padrao_cognitivo||'N/D')    + '\n'
+      + 'Índice Relacional: '   + (indices.indice_relacional||'N/D')   + '\n'
+      + 'Índice Existencial: '  + (indices.indice_existencial||'N/D')  + '\n'
+      + 'Funcionamento Corporal: '      + (indices.funcionamento_corporal||'N/D')      + '\n'
+      + 'Sustentação Comportamental: '  + (indices.sustentacao_comportamental||'N/D')  + '\n'
+      + 'Índice Psicossocial: '         + (indices.indice_psicossocial||'N/D')         + '\n'
+      + 'Vulnerabilidade Clínica: '     + (indices.vulnerabilidade_clinica||'N/D');
+  }
+
+  var sintese    = relatorio.sintese_caso || '';
+  var recursos   = relatorio.recursos_paciente || '';
+  var flagsStr   = Array.isArray(flags) ? flags.join(', ') : String(flags);
+  var cidsArr    = Array.isArray(cids) ? cids : [];
+  var cidsStr    = cidsArr.length
+    ? cidsArr.map(function(c){ return c.cid_codigo + ' — ' + c.cid_nome; }).join(', ')
+    : '';
+
+  const prompt = 'Você é um especialista em comunicação terapêutica humanizada. Transforme os dados clínicos abaixo em um texto acolhedor para o paciente — sem jargão técnico pesado, sem diagnósticos, linguagem empática e esperançosa.\n\n'
+    + 'DADOS DO PACIENTE:\n'
+    + 'Nome: ' + nome + '\n'
     + 'Perfil: ' + (paciente.perfil_tipo || 'adulto') + '\n'
     + 'Motivo da busca: ' + (paciente.motivo_busca || '').substring(0, 300) + '\n\n'
-    + 'Dados do mapeamento:\n' + JSON.stringify(relatorio).substring(0, 1200) + '\n\n'
-    + 'INSTRUÇÕES: Crie um "Contexto Inicial" para ' + primeiro + ' com as seguintes partes em português brasileiro, tom caloroso e empático:\n'
-    + '1. Saudação personalizada (2-3 linhas) — acolha a pessoa pela decisão de buscar autoconhecimento\n'
-    + '2. O que você trouxe (3-4 linhas) — espelhe os principais temas sem diagnósticos\n'
-    + '3. O que identificamos juntos (3-4 linhas) — 2-3 pontos de força ou recursos internos\n'
-    + '4. O caminho que se abre (3-4 linhas) — processo terapêutico de forma esperançosa\n'
-    + '5. Mensagem de encerramento (2 linhas) — pessoa sentindo que está no lugar certo\n\n'
-    + 'IMPORTANTE: NUNCA mencione CID, diagnóstico, score, percentual, risco ou termos clínicos. '
-    + 'Use primeira pessoa do plural. Máximo 400 palavras. '
-    + 'Formato: texto corrido em parágrafos, sem markdown, sem bullets, sem títulos. '
-    + 'Separe cada parte por linha em branco. Use o nome ' + primeiro + ' naturalmente.';
+    + (sintese ? 'Síntese clínica (use como base, reescreva em linguagem acessível):\n' + sintese.substring(0,500) + '\n\n' : '')
+    + (recursos ? 'Recursos e forças do paciente:\n' + recursos.substring(0,300) + '\n\n' : '')
+    + (cidsStr  ? 'CIDs identificados (mencione de forma acessível, sem código, sem diagnóstico direto):\n' + cidsStr + '\n\n' : '')
+    + (flagsStr ? 'Indicadores clínicos identificados (referencie de forma acolhedora):\n' + flagsStr + '\n\n' : '')
+    + 'INSTRUÇÕES: Escreva o texto do contexto inicial de ' + primeiro + ' em português brasileiro, tom caloroso, empático e esperançoso. Estruture em 5 parágrafos separados por linha em branco:\n'
+    + '1. Saudação personalizada — acolha a decisão de buscar autoconhecimento\n'
+    + '2. O que você trouxe — espelhe os temas que a pessoa trouxe, sem diagnósticos\n'
+    + '3. O que identificamos juntos — pontos de força e recursos internos\n'
+    + '4. O caminho que se abre — processo terapêutico de forma motivadora\n'
+    + '5. Encerramento — deixe a pessoa sentindo que está no lugar certo\n\n'
+    + 'REGRAS: NUNCA mencione score, percentual, CID, risco ou termos clínicos técnicos. '
+    + 'Use "identificamos", "percebemos", "notamos" (plural). Máximo 380 palavras. '
+    + 'Retorne APENAS o texto dos 5 parágrafos, sem títulos, sem numeração, sem markdown.';
 
   const resp = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': process.env.ANTHROPIC_API_KEY,
+      'Content-Type':      'application/json',
+      'x-api-key':         process.env.ANTHROPIC_API_KEY,
       'anthropic-version': '2023-06-01'
     },
     body: JSON.stringify({
@@ -1600,5 +1626,15 @@ async function gerarContextoInicial({ paciente, mapeamento }) {
   if (!resp.ok) throw new Error('Anthropic API error: ' + resp.status);
   const data  = await resp.json();
   const texto = data.content[0].text.trim();
-  return { texto, nome };
+
+  // Return text + structured data for the patient page
+  return {
+    texto,
+    nome,
+    indices,
+    flags:   Array.isArray(flags) ? flags : [],
+    cids:    Array.isArray(cids)  ? cids  : [],
+    sintese: sintese || '',
+    risco:   mapeamento.risco_nivel || 'verde'
+  };
 }

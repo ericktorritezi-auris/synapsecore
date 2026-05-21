@@ -1,7 +1,7 @@
 const express = require('express');
 const db      = require('../db');
 const { verifyToken } = require('../middleware/auth');
-const { calcularIndices, detectarFlags, gerarMapeamento, sugerirPrograma, sugerirProgramaLocal, sugerirCIDs } = require('../services/ai');
+const { calcularIndices, detectarFlags, gerarMapeamento, sugerirPrograma, sugerirProgramaLocal, sugerirCIDs, gerarContextoInicial } = require('../services/ai');
 const router  = express.Router();
 
 // ── POST /api/mapeamentos/:paciente_id/gerar ──
@@ -257,6 +257,83 @@ router.post('/:mapeamento_id/regerar-programa', verifyToken, async (req, res) =>
     });
   } catch (err) {
     console.error('regerar-programa:', err.message);
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// ── POST /api/mapeamentos/:mapeamento_id/contexto-inicial ──
+// Gera UMA VEZ o contexto inicial para o paciente
+// Se já existe, retorna o existente sem regenerar
+router.post('/:mapeamento_id/contexto-inicial', verifyToken, async (req, res) => {
+  try {
+    const { mapeamento_id } = req.params;
+
+    // Load mapeamento + patient
+    const r = await db.query(
+      `SELECT m.*, p.nome_completo, p.perfil_tipo, p.motivo_busca,
+              m.contexto_token, m.contexto_inicial
+       FROM mapeamentos m
+       JOIN pacientes p ON p.id = m.paciente_id
+       WHERE m.id = $1`,
+      [mapeamento_id]
+    );
+    if (!r.rows.length) return res.status(404).json({ message: 'Mapeamento não encontrado.' });
+
+    const row = r.rows[0];
+    const baseUrl = process.env.BASE_URL || 'https://www.synapsecore.app.br';
+    const link = baseUrl + '/contexto/' + row.contexto_token;
+
+    // Already generated — return existing (immutable)
+    if (row.contexto_inicial) {
+      return res.json({
+        novo:  false,
+        token: row.contexto_token,
+        link,
+        nome:  row.nome_completo
+      });
+    }
+
+    // Generate for the first time
+    const paciente  = { nome_completo: row.nome_completo, perfil_tipo: row.perfil_tipo, motivo_busca: row.motivo_busca };
+    const mapeamento = { relatorio_json: row.relatorio_json, protocolo_json: row.protocolo_json, indices_json: row.indices_json };
+
+    const resultado = await gerarContextoInicial({ paciente, mapeamento });
+
+    // Save — one time only
+    await db.query(
+      'UPDATE mapeamentos SET contexto_inicial = $1 WHERE id = $2',
+      [resultado.texto, mapeamento_id]
+    );
+
+    res.json({
+      novo:  true,
+      token: row.contexto_token,
+      link,
+      nome:  row.nome_completo
+    });
+
+  } catch (err) {
+    console.error('contexto-inicial:', err.message);
+    res.status(500).json({ message: 'Erro ao gerar contexto inicial.' });
+  }
+});
+
+// ── GET /api/contexto/:token — público, sem auth ──
+router.get('/contexto/:token', async (req, res) => {
+  try {
+    const r = await db.query(
+      `SELECT m.contexto_inicial, m.contexto_token, m.created_at,
+              p.nome_completo, p.perfil_tipo
+       FROM mapeamentos m
+       JOIN pacientes p ON p.id = m.paciente_id
+       WHERE m.contexto_token = $1`,
+      [req.params.token]
+    );
+    if (!r.rows.length || !r.rows[0].contexto_inicial) {
+      return res.status(404).json({ message: 'Contexto não encontrado.' });
+    }
+    res.json(r.rows[0]);
+  } catch (err) {
     res.status(500).json({ message: err.message });
   }
 });

@@ -378,7 +378,7 @@ NÃO diagnostique. Use linguagem de hipóteses ("sugere", "indica", "observa-se 
   return { relatorio, programa: prog };
 }
 
-module.exports = { calcularIndices, detectarFlags, gerarMapeamento, FLAG_LABELS, sugerirPrograma, sugerirProgramaLocal, gerarResumoClinico, gerarEvolucao, sugerirCIDs, registrarAuditoria, gerarBriefingSessao, gerarIntervencoes, atualizarMemoriaTerapeutica, gerarAnaliseEstrutural, gerarHipotesesClinicas, gerarMapaIdentidade, gerarSnapshotEvolutivoLeve, calcularScoreRiscoBasico, gerarRiscoAbandonoClinico, gerarEvolucaoPreditiva, gerarProntuarioInteligente };
+module.exports = { calcularIndices, detectarFlags, gerarMapeamento, FLAG_LABELS, sugerirPrograma, sugerirProgramaLocal, gerarResumoClinico, gerarEvolucao, sugerirCIDs, registrarAuditoria, gerarBriefingSessao, gerarIntervencoes, atualizarMemoriaTerapeutica, gerarAnaliseEstrutural, gerarHipotesesClinicas, gerarMapaIdentidade, gerarSnapshotEvolutivoLeve, calcularScoreRiscoBasico, gerarRiscoAbandonoClinico, gerarEvolucaoPreditiva, gerarProntuarioInteligente, gerarContextoInicial };
 
 // ══════════════════════════════════════════════
 // v3.0.0 — INTELIGÊNCIA CLÍNICA INTEGRATIVA
@@ -1554,4 +1554,55 @@ Retorne APENAS JSON válido com esta estrutura exata:
     await registrarAuditoria(db,{paciente_id:paciente.id,modulo:'prontuario_inteligente',sucesso:false,erro_msg:e.message,modo:'fallback'});
     throw e;
   }
+}
+
+// ══════════════════════════════════════════════
+// GERAR CONTEXTO INICIAL — para o paciente
+// Gerado UMA VEZ, baseado exclusivamente no mapeamento
+// Linguagem acolhedora, sem jargão clínico
+// ══════════════════════════════════════════════
+async function gerarContextoInicial({ paciente, mapeamento }) {
+  const Anthropic = require('@anthropic-ai/sdk');
+  const client    = new Anthropic();
+
+  const nome     = paciente.nome_completo || 'Paciente';
+  const relatorio= mapeamento.relatorio_json || mapeamento.protocolo_json || {};
+  const indices  = mapeamento.indices_json  || {};
+  const programa = relatorio.programa_recomendado || relatorio.programa_justificativa || '';
+
+  const prompt = `Você é um assistente especializado em comunicação terapêutica humanizada. Seu trabalho é transformar dados de uma avaliação clínica em um documento acolhedor e inspirador para o paciente — sem jargão técnico, sem diagnósticos, sem números de scores.
+
+DADOS DO MAPEAMENTO INICIAL:
+Paciente: ${nome}
+Perfil: ${paciente.perfil_tipo || 'adulto'}
+Motivo da busca: ${(paciente.motivo_busca || '').substring(0, 300)}
+
+Áreas identificadas no mapeamento:
+${JSON.stringify(relatorio).substring(0, 1200)}
+
+INSTRUÇÕES:
+Crie um "Contexto Inicial" para ${nome.split(' ')[0]} com as seguintes seções — escreva em português brasileiro, tom caloroso, empático, esperançoso:
+
+1. **Uma saudação personalizada** (2-3 linhas) — acolha a pessoa pela decisão de buscar autoconhecimento
+2. **O que você trouxe** (3-4 linhas) — espelhe, em linguagem simples e humana, os principais temas que a pessoa trouxe (sem diagnósticos, sem scores)
+3. **O que identificamos juntos** (3-4 linhas) — aponte 2-3 pontos de força ou recursos internos que emergiram do mapeamento
+4. **O caminho que se abre** (3-4 linhas) — fale sobre o processo terapêutico de forma esperançosa e motivadora
+5. **Uma mensagem de encerramento** (2 linhas) — deixe a pessoa sentindo que está no lugar certo
+
+IMPORTANTE:
+- NUNCA mencione CID, diagnóstico, score, percentual, risco, ou termos clínicos
+- Use a primeira pessoa do plural ("identificamos", "percebemos") para criar parceria
+- Máximo 400 palavras no total
+- Formato: texto corrido em parágrafos (sem markdown, sem bullets, sem títulos com #)
+- Cada seção separada por uma linha em branco
+- Use o primeiro nome de ${nome.split(' ')[0]} naturalmente ao longo do texto`;
+
+  const msg = await client.messages.create({
+    model:      'claude-sonnet-4-20250514',
+    max_tokens: 800,
+    messages:   [{ role: 'user', content: prompt }]
+  });
+
+  const texto = msg.content[0].text.trim();
+  return { texto, nome };
 }

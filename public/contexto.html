@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Meu Contexto Inicial — Synapse Core</title>
+<meta name="theme-color" content="#0B132B">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<link rel="icon" href="/favicon.ico">
+<link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700,900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#0B132B;--gold:#C4965A;--gold2:#D4AF7F;--text:#1a1f2e;--muted:#4a5568;--dim:#8a92a6;--bg:#F6F7FA;--white:#ffffff;--brd:#e2e6ed;--fd:'Satoshi',sans-serif;--fb:'Inter',sans-serif;--r:12px}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--fb);background:var(--bg);color:var(--text);min-height:100vh}
+#scrLoad{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:16px;text-align:center;padding:32px}
+.load-logo{width:100px;height:auto;margin-bottom:8px}
+.load-circle{width:48px;height:48px;border-radius:50%;border:3px solid rgba(196,150,90,.2);border-top-color:var(--gold);animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#scrError{display:none;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:12px;text-align:center;padding:32px}
+#scrReport{display:none;max-width:720px;margin:0 auto;padding:32px 20px 60px}
+.toolbar{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;background:var(--navy);border-radius:12px;margin-bottom:24px;gap:12px;flex-wrap:wrap}
+.toolbar-logo{display:flex;align-items:center;gap:10px}
+.toolbar-logo img{height:28px}
+.toolbar-info{font-size:11px;color:rgba(255,255,255,.5);margin-top:2px}
+.toolbar-actions{display:flex;gap:8px}
+.btn-pdf{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;background:linear-gradient(135deg,var(--gold2),var(--gold));color:var(--navy);font-family:var(--fd);font-size:12.5px;font-weight:700;cursor:pointer;border:none;transition:all .2s}
+.btn-pdf:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(196,150,90,.4)}
+/* HERO */
+.hero{background:linear-gradient(135deg,var(--navy) 0%,#1c2e50 100%);border-radius:16px;padding:32px 24px;margin-bottom:20px;color:white;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;inset:0;background:url("data:image/svg+xml,%3Csvg viewBox='0 0 400 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M-10,80 Q80,20 200,80 T420,60' stroke='%23D4AF7F' stroke-width='.5' fill='none' opacity='.15'/%3E%3Cpath d='M-10,130 Q100,70 220,130 T420,110' stroke='%23D4AF7F' stroke-width='.5' fill='none' opacity='.1'/%3E%3C/svg%3E") center/cover;pointer-events:none}
+.hero-tag{display:inline-flex;align-items:center;gap:5px;background:rgba(212,175,127,.15);border:1px solid rgba(212,175,127,.3);border-radius:20px;padding:4px 12px;font-size:10.5px;font-weight:600;color:var(--gold2);letter-spacing:.5px;text-transform:uppercase;margin-bottom:12px}
+.hero-name{font-family:var(--fd);font-size:28px;font-weight:900;margin-bottom:4px;position:relative}
+.hero-sub{font-size:13px;color:rgba(255,255,255,.55);position:relative}
+/* CONTENT CARD */
+.card{background:var(--white);border:1px solid var(--brd);border-radius:var(--r);padding:24px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.card-title{font-family:var(--fd);font-size:12px;font-weight:700;color:var(--navy);margin-bottom:16px;display:flex;align-items:center;gap:7px;text-transform:uppercase;letter-spacing:.8px;padding-bottom:10px;border-bottom:1px solid var(--brd)}
+.contexto-texto{font-size:15px;line-height:1.85;color:var(--text)}
+.contexto-texto p{margin-bottom:16px}
+.contexto-texto p:last-child{margin-bottom:0}
+/* FOOTER */
+.footer-card{background:linear-gradient(135deg,rgba(196,150,90,.08),rgba(196,150,90,.03));border:1px solid rgba(196,150,90,.2);border-radius:var(--r);padding:20px 24px;text-align:center;margin-top:24px}
+.footer-logo{height:32px;margin-bottom:12px;opacity:.7}
+.footer-txt{font-size:12px;color:var(--muted);line-height:1.6}
+.footer-brand{font-family:var(--fd);font-size:13px;font-weight:700;color:var(--navy);margin-top:4px}
+@media print{.toolbar{display:none!important}}
+@media(max-width:600px){
+  #scrReport{padding:16px 16px 48px}
+  .hero{padding:22px 18px}
+  .hero-name{font-size:22px}
+  .card{padding:18px}
+}
+</style>
+</head>
+<body>
+
+<div id="scrLoad">
+  <img class="load-logo" src="/img/logo-horizontal.png" alt="Synapse Core">
+  <div class="load-circle"></div>
+  <p style="font-size:13px;color:#8a92a6;font-family:'Satoshi',sans-serif">Carregando seu contexto inicial...</p>
+</div>
+
+<div id="scrError">
+  <img style="height:40px;opacity:.4" src="/img/logo-horizontal.png" alt="">
+  <p style="font-size:16px;font-weight:600;color:#1a1f2e">Contexto não encontrado</p>
+  <p style="font-size:13px;color:#8a92a6">Este link pode estar incorreto ou ainda não foi gerado.</p>
+</div>
+
+<div id="scrReport">
+  <div class="toolbar">
+    <div class="toolbar-logo">
+      <img src="/img/logo-horizontal.png" alt="Synapse Core">
+      <div>
+        <div style="font-size:12px;font-weight:600;color:rgba(255,255,255,.85);font-family:'Satoshi',sans-serif">Evolution Therapy</div>
+        <div class="toolbar-info">Contexto Inicial · Uso pessoal</div>
+      </div>
+    </div>
+    <div class="toolbar-actions">
+      <button class="btn-pdf" onclick="window.print()">🖨 Imprimir</button>
+    </div>
+  </div>
+
+  <div class="hero">
+    <div class="hero-tag">✦ Contexto Inicial</div>
+    <div class="hero-name" id="heroNome">--</div>
+    <div class="hero-sub" id="heroSub">Seu ponto de partida no processo de autoconhecimento</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">
+      <span>✦</span> Seu Contexto Inicial
+    </div>
+    <div class="contexto-texto" id="contextoTexto"></div>
+  </div>
+
+  <div class="footer-card">
+    <img class="footer-logo" src="/img/logo-horizontal.png" alt="Synapse Core">
+    <p class="footer-txt">Este documento foi preparado exclusivamente para você,<br>como ponto de partida da sua jornada de autoconhecimento.</p>
+    <p class="footer-brand">Evolution Therapy · Erick Torritezi</p>
+  </div>
+</div>
+
+<script>
+var token = location.pathname.split('/').pop();
+
+fetch('/api/mapeamentos/contexto/' + token)
+  .then(function(r) {
+    if (!r.ok) throw new Error('not found');
+    return r.json();
+  })
+  .then(function(data) {
+    document.getElementById('scrLoad').style.display   = 'none';
+    document.getElementById('scrReport').style.display = 'block';
+
+    var nome = data.nome_completo || '';
+    var primeiro = nome.split(' ')[0];
+    document.getElementById('heroNome').textContent = nome;
+    document.getElementById('heroSub').textContent  = 'Contexto inicial de ' + primeiro + ' · Mapeamento clínico inicial';
+    document.title = 'Contexto Inicial — ' + primeiro;
+
+    // Render text — split by blank lines into paragraphs
+    var texto = data.contexto_inicial || '';
+    var paras = texto.split(/\n\n+/).filter(function(p){ return p.trim(); });
+    document.getElementById('contextoTexto').innerHTML =
+      paras.map(function(p){ return '<p>' + escH(p.trim()) + '</p>'; }).join('');
+  })
+  .catch(function() {
+    document.getElementById('scrLoad').style.display = 'none';
+    document.getElementById('scrError').style.display = 'flex';
+  });
+
+function escH(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+}
+</script>
+</body>
+</html>

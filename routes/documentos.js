@@ -298,4 +298,80 @@ Retorne APENAS o texto em prosa, sem JSON, sem marcadores. Parágrafos separados
   return d.content?.[0]?.text || 'Relatório não gerado.';
 }
 
+// ── POST encaminhamento-psiquiatrico ──
+router.post('/:paciente_id/encaminhamento-psiquiatrico', verifyToken, async (req, res) => {
+  try {
+    const { motivo, sintomas, objetivo, resumo, frequencia, periodo_inicio } = req.body;
+    const [terap, pac] = await Promise.all([getTerapeuta(req.terapeuta.id), getPaciente(req.params.paciente_id)]);
+    const sessRes  = await db.query('SELECT * FROM sessoes WHERE paciente_id=$1 AND status=$2 ORDER BY data_sessao ASC', [req.params.paciente_id, 'realizada']);
+    const cids     = await getCIDs(req.params.paciente_id);
+    const dataInicio = periodo_inicio || sessRes.rows[0]?.data_sessao || null;
+
+    const conteudo = {
+      tipo:              'encaminhamento_psiq',
+      terapeuta:         terap,
+      paciente:          pac,
+      cids,
+      motivo:            motivo   || '',
+      sintomas:          sintomas || '',
+      objetivo:          objetivo || '',
+      resumo_clinico:    resumo   || '',
+      frequencia:        frequencia || '',
+      total_sessoes:     sessRes.rows.length,
+      data_inicio:       dataInicio,
+      data_emissao:      new Date().toISOString(),
+      gerado_com_ia:     req.body.gerado_com_ia || false
+    };
+
+    const doc = await saveDoc(req.params.paciente_id, 'encaminhamento_psiq',
+      'Encaminhamento para Avaliação Psiquiátrica — ' + pac.nome_completo,
+      conteudo);
+
+    // Audit log
+    const { registrarAuditoria } = require('../services/ai');
+    await registrarAuditoria(db, {
+      paciente_id: req.params.paciente_id,
+      modulo: 'encaminhamento_psiq',
+      referencia_tipo: 'documento',
+      referencia_id: doc.id,
+      output_resumo: 'Encaminhamento emitido para ' + pac.nome_completo,
+      sucesso: true,
+      modo: req.body.gerado_com_ia ? 'ia' : 'manual'
+    });
+
+    res.json({ link: baseUrl()+'/doc/'+doc.token, token: doc.token, id: doc.id });
+  } catch (err) {
+    console.error('encaminhamento-psiquiatrico:', err.message);
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// ── POST encaminhamento-psiquiatrico/sugerir — IA sugere campos ──
+router.post('/:paciente_id/encaminhamento-psiquiatrico/sugerir', verifyToken, async (req, res) => {
+  try {
+    const { gerarResumoEncaminhamento } = require('../services/ai');
+    const pac = await getPaciente(req.params.paciente_id);
+    const sessRes = await db.query('SELECT * FROM sessoes WHERE paciente_id=$1 AND status=$2 ORDER BY data_sessao ASC', [req.params.paciente_id, 'realizada']);
+    const mapRes  = await db.query('SELECT * FROM mapeamentos WHERE paciente_id=$1 ORDER BY versao DESC LIMIT 1', [req.params.paciente_id]);
+    const anaRes  = await db.query('SELECT * FROM analise_estrutural WHERE paciente_id=$1 ORDER BY created_at DESC LIMIT 1', [req.params.paciente_id]);
+    const hipRes  = await db.query('SELECT * FROM hipoteses_clinicas WHERE paciente_id=$1 ORDER BY created_at DESC LIMIT 3', [req.params.paciente_id]);
+    const memRes  = await db.query('SELECT conteudo FROM memoria_terapeutica WHERE paciente_id=$1 ORDER BY versao DESC LIMIT 1', [req.params.paciente_id]);
+
+    const sugestoes = await gerarResumoEncaminhamento({
+      paciente:  pac,
+      sessoes:   sessRes.rows,
+      mapeamento: mapRes.rows[0] || null,
+      analise:   anaRes.rows[0] || null,
+      hipoteses: hipRes.rows,
+      memoria:   memRes.rows[0]?.conteudo || null,
+      cids:      await getCIDs(req.params.paciente_id)
+    });
+
+    res.json(sugestoes);
+  } catch(err) {
+    console.error('sugerir-encaminhamento:', err.message);
+    res.status(500).json({ message: err.message });
+  }
+});
+
 module.exports = router;

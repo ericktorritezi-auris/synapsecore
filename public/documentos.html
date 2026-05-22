@@ -166,6 +166,11 @@ body{font-family:var(--fb);background:var(--bg);color:var(--tx);min-height:100vh
       <div class="dtc-title">Relatório de Alta</div>
       <div class="dtc-sub">Encerramento do processo com evolução completa</div>
     </div>
+    <div class="doc-type-card" onclick="abrirModal('encaminhamento-psiq')">
+      <div class="dtc-icon">&#128203;</div>
+      <div class="dtc-title">Encaminhamento Psiquiátrico</div>
+      <div class="dtc-sub">Apoio interdisciplinar — avaliação complementar</div>
+    </div>
   </div>
 
   <!-- Documents history -->
@@ -343,12 +348,30 @@ function removerDoc(id) {
 
 // ── MODAL ──
 var modalConfigs = {
-  'recibo-sessao': { title:'Recibo de Sessão', sub:'Selecione a sessão para gerar o recibo.' },
-  'recibo-ir':     { title:'Recibo para IR', sub:'Informe o período para consolidar as sessões.' },
-  'declaracao':    { title:'Declaração de Comparecimento', sub:'Informe o período e a finalidade.' },
-  'laudo':         { title:'Laudo Terapêutico', sub:'A IA irá gerar o laudo. Pode levar até 30 segundos.' },
-  'alta':          { title:'Relatório de Alta', sub:'Gera o relatório de encerramento do processo terapêutico.' }
+  'recibo-sessao':       { title:'Recibo de Sessão', sub:'Selecione a sessão para gerar o recibo.' },
+  'recibo-ir':           { title:'Recibo para IR', sub:'Informe o período para consolidar as sessões.' },
+  'declaracao':          { title:'Declaração de Comparecimento', sub:'Informe o período e a finalidade.' },
+  'laudo':               { title:'Laudo Terapêutico', sub:'A IA irá gerar o laudo. Pode levar até 30 segundos.' },
+  'alta':                { title:'Relatório de Alta', sub:'Gera o relatório de encerramento do processo terapêutico.' },
+  'encaminhamento-psiq': { title:'Encaminhamento Psiquiátrico', sub:'Preencha os campos ou clique em ✨ Sugerir para que a IA gere uma proposta baseada no histórico do paciente.' }
 };
+
+var encaminhamentoIAUsado = false;
+
+function buildFieldTextarea(id, label, placeholder, rows) {
+  var f = document.createElement('div'); f.className='field';
+  var l = document.createElement('label'); l.textContent = label;
+  var t = document.createElement('textarea'); t.id = id; t.placeholder = placeholder; t.rows = rows||2;
+  t.style.cssText = 'width:100%;resize:vertical;min-height:'+(rows||2)*22+'px';
+  f.appendChild(l); f.appendChild(t); return f;
+}
+
+function buildFieldInput(id, label, placeholder) {
+  var f = document.createElement('div'); f.className='field';
+  var l = document.createElement('label'); l.textContent = label;
+  var i = document.createElement('input'); i.type='text'; i.id=id; i.placeholder=placeholder||'';
+  f.appendChild(l); f.appendChild(i); return f;
+}
 
 function abrirModal(tipo) {
   tipoAtual = tipo;
@@ -359,6 +382,12 @@ function abrirModal(tipo) {
   document.getElementById('btnGerar').style.display = 'block';
   var form = document.getElementById('modalForm');
   form.innerHTML = '';
+
+  if (tipo === 'encaminhamento-psiq') {
+    buildFormEncaminhamento();
+    document.getElementById('docModal').classList.add('open');
+    return;
+  }
 
   if (tipo === 'recibo-sessao') {
     var realizadas = sessoes.filter(function(s){return s.status==='realizada';});
@@ -395,6 +424,70 @@ function abrirModal(tipo) {
   document.getElementById('docModal').classList.add('open');
 }
 
+// ── ENCAMINHAMENTO PSIQUIÁTRICO: form builder ──
+function buildFormEncaminhamento() {
+  encaminhamentoIAUsado = false;
+  var form = document.getElementById('modalForm');
+  form.innerHTML = '';
+
+  // Botão sugerir com IA
+  var btnWrap = document.createElement('div');
+  btnWrap.style.cssText = 'margin-bottom:14px';
+  var btnIA = document.createElement('button');
+  btnIA.type = 'button';
+  btnIA.id   = 'btnSugerirIA';
+  btnIA.textContent = '✨ Sugerir com IA';
+  btnIA.style.cssText = 'background:rgba(139,92,246,.12);border:1px solid rgba(139,92,246,.3);color:#c4b5fd;border-radius:8px;padding:8px 14px;font-family:var(--fd);font-size:12.5px;font-weight:700;cursor:pointer;width:100%';
+  btnIA.onclick = sugerirEncaminhamentoIA;
+  btnWrap.appendChild(btnIA);
+  form.appendChild(btnWrap);
+
+  // Divisor
+  var div = document.createElement('div');
+  div.style.cssText = 'font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px';
+  div.textContent = 'ou preencha manualmente';
+  form.appendChild(div);
+
+  form.appendChild(buildFieldTextarea('enc_motivo',   'Motivo do encaminhamento', 'Ex: Sintomas ansiosos recorrentes com prejuízo funcional observado ao longo do acompanhamento...', 2));
+  form.appendChild(buildFieldTextarea('enc_sintomas',  'Sintomas observados', 'Ex: Dificuldade de regulação emocional, insônia persistente, oscilações de humor relevantes...', 2));
+  form.appendChild(buildFieldInput   ('enc_frequencia','Frequência das sessões', 'Ex: Semanal'));
+  form.appendChild(buildFieldTextarea('enc_objetivo',  'Objetivo da avaliação', 'Ex: Avaliar possível necessidade de suporte medicamentoso complementar...', 2));
+  form.appendChild(buildFieldTextarea('enc_resumo',    'Resumo clínico breve', 'Ex: sofrimento emocional persistente com dificuldade de regulação...', 2));
+
+  var nota = document.createElement('div');
+  nota.style.cssText = 'font-size:11px;color:var(--dim);line-height:1.5;margin-top:8px;padding:8px 10px;background:rgba(255,255,255,.03);border-radius:6px;border:1px solid var(--border)';
+  nota.textContent = '⚠️ Este documento não emite diagnóstico. Revise todos os campos antes de emitir.';
+  form.appendChild(nota);
+}
+
+function sugerirEncaminhamentoIA() {
+  var btn = document.getElementById('btnSugerirIA');
+  btn.textContent = '⏳ Consultando histórico...';
+  btn.disabled = true;
+  btn.style.opacity = '.6';
+
+  api('/api/documentos/'+PACIENTE_ID+'/encaminhamento-psiquiatrico/sugerir', 'POST', {})
+    .then(function(d) {
+      if (d.motivo)    document.getElementById('enc_motivo').value    = d.motivo;
+      if (d.sintomas)  document.getElementById('enc_sintomas').value  = d.sintomas;
+      if (d.objetivo)  document.getElementById('enc_objetivo').value  = d.objetivo;
+      if (d.resumo)    document.getElementById('enc_resumo').value    = d.resumo;
+      btn.textContent = '✅ Sugerido — edite à vontade';
+      btn.style.background = 'rgba(16,185,129,.08)';
+      btn.style.borderColor = 'rgba(16,185,129,.25)';
+      btn.style.color = '#6ee7b7';
+      btn.disabled = false;
+      btn.style.opacity = '1';
+      encaminhamentoIAUsado = true;
+    })
+    .catch(function(e) {
+      btn.textContent = '✨ Sugerir com IA';
+      btn.disabled = false;
+      btn.style.opacity = '1';
+      showToast(e.message || 'Erro ao consultar IA.', 'error');
+    });
+}
+
 function fecharModal() {
   document.getElementById('docModal').classList.remove('open');
   document.getElementById('genLoading').style.display='none';
@@ -406,6 +499,14 @@ function gerarDocumento() {
   document.getElementById('genLoading').style.display='block';
   var payload = {};
   if (tipoAtual==='recibo-sessao') payload.sessao_id = document.getElementById('modalSessaoId')?.value;
+  if (tipoAtual==='encaminhamento-psiq') {
+    payload.motivo    = document.getElementById('enc_motivo')?.value    || '';
+    payload.sintomas  = document.getElementById('enc_sintomas')?.value  || '';
+    payload.frequencia= document.getElementById('enc_frequencia')?.value|| '';
+    payload.objetivo  = document.getElementById('enc_objetivo')?.value  || '';
+    payload.resumo    = document.getElementById('enc_resumo')?.value    || '';
+    payload.gerado_com_ia = encaminhamentoIAUsado;
+  }
   if (tipoAtual==='recibo-ir'||tipoAtual==='declaracao') {
     payload.periodo_inicio = document.getElementById('modal_inicio')?.value;
     payload.periodo_fim    = document.getElementById('modal_fim')?.value;

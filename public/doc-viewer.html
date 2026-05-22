@@ -149,7 +149,7 @@ function renderSig(terap) {
 function renderDoc(d, titulo) {
   var t = d.terapeuta; var p = d.paciente; var page = document.getElementById('docPage');
   var tipo = d.tipo;
-  var typeLabels = {recibo_sessao:'Recibo de Sessão',recibo_ir:'Recibo para Imposto de Renda',declaracao:'Declaração de Comparecimento',laudo:'Laudo Terapêutico',alta:'Relatório de Alta Terapêutica'};
+  var typeLabels = {recibo_sessao:'Recibo de Sessão',recibo_ir:'Recibo para Imposto de Renda',declaracao:'Declaração de Comparecimento',laudo:'Laudo Terapêutico',alta:'Relatório de Alta Terapêutica',encaminhamento_psiq:'Encaminhamento para Avaliação Psiquiátrica'};
   var tag = typeLabels[tipo]||tipo;
   var html = renderHeader(t);
   html += '<div class="doc-body">';
@@ -206,6 +206,41 @@ function renderDoc(d, titulo) {
     }
     html += '<div class="doc-divider"></div>';
     html += '<div style="font-size:13px;color:var(--text);line-height:1.7">Declaro, para os devidos fins, que o(a) Sr.(a) <strong>'+esc(p.nome_completo)+'</strong> esteve em atendimento psicoterápico nesta clínica no período de '+fDate(d.periodo_inicio)+' a '+fDate(d.periodo_fim)+', tendo realizado '+(realizadas.length)+' sessão(ões) terapêutica(s).</div>';
+  }
+
+  if (tipo==='encaminhamento_psiq') {
+    html += '<div style="font-size:11px;font-style:italic;color:var(--dim);margin-bottom:14px;line-height:1.5;padding:8px 12px;background:rgba(255,255,255,.03);border-radius:6px;border-left:2px solid rgba(201,209,217,.15)">Documento de apoio interdisciplinar — não substitui avaliação médica especializada</div>';
+    html += '<table class="info-table">';
+    html += '<tr><td>Paciente</td><td>'+esc(p.nome_completo)+(p.data_nascimento?' &mdash; '+new Date(p.data_nascimento).toLocaleDateString('pt-BR'):'')+(p.data_nascimento?' ('+Math.floor((new Date()-new Date(p.data_nascimento))/(365.25*24*60*60*1000))+' anos)':'')+'</td></tr>';
+    html += '<tr><td>Em acompanhamento desde</td><td>'+(d.data_inicio ? fDate(d.data_inicio) : 'Não informado')+'</td></tr>';
+    html += '<tr><td>Total de sessões</td><td>'+d.total_sessoes+' sessão(ões) realizada(s)</td></tr>';
+    if (d.frequencia) html += '<tr><td>Frequência</td><td>'+esc(d.frequencia)+'</td></tr>';
+    html += '</table>';
+    html += '<div class="doc-divider"></div>';
+
+    // Texto base formal
+    var nomePac = p.nome_completo;
+    var dataInicio = d.data_inicio ? fDate(d.data_inicio) : '[data de início]';
+    var freq = d.frequencia || '[frequência]';
+    var resumo = d.resumo_clinico || '[síntese clínica]';
+    var textoBase = 'Declaro, para os devidos fins, que o(a) paciente ' + nomePac + ', atualmente em acompanhamento terapêutico, encontra-se em processo regular de atendimento clínico.\n\n'
+      + 'Durante o acompanhamento, foram observadas manifestações emocionais, cognitivas e/ou comportamentais que sugerem a importância de uma avaliação psiquiátrica complementar, com o objetivo de ampliar a compreensão clínica do caso e avaliar possíveis necessidades de suporte especializado adicional.\n\n'
+      + 'O presente encaminhamento não possui finalidade diagnóstica definitiva, nem substitui avaliação médica especializada, sendo emitido exclusivamente como recurso interdisciplinar de apoio à continuidade do cuidado em saúde mental.\n\n'
+      + 'O(a) paciente encontra-se em acompanhamento desde ' + dataInicio + ', com frequência ' + freq + ', apresentando demandas relacionadas a ' + resumo + '.\n\n'
+      + 'Sem mais para o momento, coloco-me à disposição para eventuais esclarecimentos técnicos necessários dentro dos limites éticos e profissionais aplicáveis.';
+
+    html += '<div class="edit-hint">&#9998; Clique para editar antes de imprimir</div>';
+    html += '<textarea class="edit-note" id="docTextoEdit">' + esc(textoBase) + '</textarea>';
+
+    // Campos adicionais
+    if (d.motivo || d.sintomas || d.objetivo) {
+      html += '<div class="doc-divider"></div>';
+      if (d.motivo)   html += '<div style="margin-bottom:10px"><strong style="font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--dim)">Motivo do Encaminhamento</strong><div style="font-size:13px;margin-top:4px;line-height:1.6">'+esc(d.motivo)+'</div></div>';
+      if (d.sintomas) html += '<div style="margin-bottom:10px"><strong style="font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--dim)">Sintomas Observados</strong><div style="font-size:13px;margin-top:4px;line-height:1.6">'+esc(d.sintomas)+'</div></div>';
+      if (d.objetivo) html += '<div style="margin-bottom:10px"><strong style="font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--dim)">Objetivo da Avaliação</strong><div style="font-size:13px;margin-top:4px;line-height:1.6">'+esc(d.objetivo)+'</div></div>';
+    }
+
+    if (d.cids && d.cids.length) { html += renderCIDs(d.cids); }
   }
 
   if (tipo==='laudo' || tipo==='alta') {

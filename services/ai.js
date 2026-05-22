@@ -378,7 +378,7 @@ NÃO diagnostique. Use linguagem de hipóteses ("sugere", "indica", "observa-se 
   return { relatorio, programa: prog };
 }
 
-module.exports = { calcularIndices, detectarFlags, gerarMapeamento, FLAG_LABELS, sugerirPrograma, sugerirProgramaLocal, gerarResumoClinico, gerarEvolucao, sugerirCIDs, registrarAuditoria, gerarBriefingSessao, gerarIntervencoes, atualizarMemoriaTerapeutica, gerarAnaliseEstrutural, gerarHipotesesClinicas, gerarMapaIdentidade, gerarSnapshotEvolutivoLeve, calcularScoreRiscoBasico, gerarRiscoAbandonoClinico, gerarEvolucaoPreditiva, gerarProntuarioInteligente, gerarContextoInicial };
+module.exports = { calcularIndices, detectarFlags, gerarMapeamento, FLAG_LABELS, sugerirPrograma, sugerirProgramaLocal, gerarResumoClinico, gerarEvolucao, sugerirCIDs, registrarAuditoria, gerarBriefingSessao, gerarIntervencoes, atualizarMemoriaTerapeutica, gerarAnaliseEstrutural, gerarHipotesesClinicas, gerarMapaIdentidade, gerarSnapshotEvolutivoLeve, calcularScoreRiscoBasico, gerarRiscoAbandonoClinico, gerarEvolucaoPreditiva, gerarProntuarioInteligente, gerarContextoInicial, gerarResumoEncaminhamento };
 
 // ══════════════════════════════════════════════
 // v3.0.0 — INTELIGÊNCIA CLÍNICA INTEGRATIVA
@@ -1645,4 +1645,71 @@ async function gerarContextoInicial({ paciente, mapeamento, cids }) {
     sintese: sintese || '',
     risco:   mapeamento.risco_nivel || 'verde'
   };
+}
+
+// ══════════════════════════════════════════════
+// GERAR RESUMO ENCAMINHAMENTO PSIQUIÁTRICO
+// Sugere campos do encaminhamento com base no histórico
+// Linguagem ética, interdisciplinar, não diagnósticante
+// ══════════════════════════════════════════════
+async function gerarResumoEncaminhamento({ paciente, sessoes, mapeamento, analise, hipoteses, memoria, cids }) {
+  var nome     = paciente.nome_completo || 'Paciente';
+  var primeiro = nome.split(' ')[0];
+  var proto    = mapeamento && (mapeamento.relatorio_json || mapeamento.protocolo_json) || {};
+  var indices  = mapeamento && mapeamento.indices_json || {};
+  var flags    = mapeamento && mapeamento.flags_json   || [];
+
+  var totalSessoes = (sessoes || []).length;
+  var dataPrimeira = sessoes && sessoes[0] ? sessoes[0].data_sessao : null;
+  var dataUltima   = sessoes && sessoes[sessoes.length-1] ? sessoes[sessoes.length-1].data_sessao : null;
+
+  var context = 'Paciente: ' + nome + '\n'
+    + 'Motivo da busca: ' + (paciente.motivo_busca || '').substring(0, 200) + '\n'
+    + 'Total de sessões: ' + totalSessoes + '\n'
+    + (proto.sintese_caso ? 'Síntese clínica: ' + proto.sintese_caso.substring(0, 400) + '\n' : '')
+    + (analise && analise.mapa_estrutural ? 'Mapa estrutural: ' + analise.mapa_estrutural.substring(0, 300) + '\n' : '')
+    + (hipoteses && hipoteses.length ? 'Hipóteses: ' + hipoteses.slice(0,3).map(function(h){ return h.hipotese_ia||''; }).join('; ').substring(0,300) + '\n' : '')
+    + (memoria ? 'Memória terapêutica: ' + String(memoria).substring(0, 300) + '\n' : '')
+    + (flags && flags.length ? 'Indicadores: ' + flags.join(', ') + '\n' : '')
+    + (indices.global ? 'Score global: ' + indices.global + '/100\n' : '');
+
+  var prompt = 'Você é um assistente de documentação clínica para psicoterapeutas. Com base no histórico do paciente abaixo, sugira o preenchimento ético e técnico dos campos de um encaminhamento para avaliação psiquiátrica complementar.\n\n'
+    + 'IMPORTANTE:\n'
+    + '- Linguagem interdisciplinar e ética\n'
+    + '- NUNCA fechar diagnóstico definitivo\n'
+    + '- NUNCA usar termos como "é bipolar", "tem depressão severa", "transtorno X"\n'
+    + '- Usar: "sugere", "observou-se", "apresenta", "indica necessidade de"\n'
+    + '- Máximo 2 frases por campo\n'
+    + '- Retornar APENAS JSON válido, sem markdown, sem explicações\n\n'
+    + 'HISTÓRICO:\n' + context + '\n\n'
+    + 'Retorne EXATAMENTE este JSON:\n'
+    + '{"motivo":"...","sintomas":"...","objetivo":"...","resumo":"..."}';
+
+  var resp = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': process.env.ANTHROPIC_API_KEY,
+      'anthropic-version': '2023-06-01'
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 600,
+      messages: [{ role: 'user', content: prompt }]
+    })
+  });
+
+  if (!resp.ok) throw new Error('Anthropic API error: ' + resp.status);
+  var data = await resp.json();
+  var text = data.content[0].text.trim();
+
+  var resultado;
+  try {
+    resultado = JSON.parse(text);
+  } catch(e) {
+    // Try to extract JSON from text
+    var match = text.match(/\{[\s\S]*\}/);
+    resultado = match ? JSON.parse(match[0]) : { motivo:'', sintomas:'', objetivo:'', resumo:'' };
+  }
+  return resultado;
 }

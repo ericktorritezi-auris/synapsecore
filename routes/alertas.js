@@ -97,7 +97,13 @@ router.post('/webhook-agenda', async (req, res) => {
     var event   = payload.event;
     var patient = payload.patient || {};
 
-    console.log('Webhook agenda recebido:', event, patient.name || '');
+    console.log('=== WEBHOOK AGENDA ===');
+    console.log('Event:', event);
+    console.log('Tenant:', payload.tenant || payload.tenant_id || payload.tenant_slug || 'NÃO INFORMADO');
+    console.log('Patient:', patient.name || 'N/A', '| Phone:', patient.phone || 'N/A');
+    console.log('Date:', payload.date, 'Time:', payload.time);
+    console.log('Full payload:', JSON.stringify(payload));
+    console.log('======================');
 
     // Try to find patient in Synapse Core by phone or name
     var paciente_id = null;

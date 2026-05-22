@@ -272,11 +272,9 @@ body{font-family:var(--f-b);background:var(--bg);color:var(--text);min-height:10
   <div class="modal">
     <div style="height:2px;background:linear-gradient(90deg,var(--accent),transparent);border-radius:2px;margin-bottom:16px"></div>
     <button onclick="fecharModal()" style="position:absolute;top:14px;right:16px;background:none;border:none;color:var(--dim);cursor:pointer;font-size:18px">✕</button>
-    <div class="modal-title">💳 Atualizar Saldo</div>
-    <div class="modal-sub">Informe o saldo atual disponível na conta Anthropic. Consulte em <strong>console.anthropic.com</strong>.</div>
-    <label>Saldo disponível (USD $)</label>
-    <input type="number" id="inputSaldo" placeholder="0.00" step="0.01" oninput="atualizarPreview()">
-    <label>Total carregado (USD $)</label>
+    <div class="modal-title">💳 Atualizar Crédito</div>
+    <div class="modal-sub">Informe o total de crédito carregado na sua conta Anthropic. O saldo disponível será calculado automaticamente descontando o consumo registrado. Consulte em <strong>console.anthropic.com</strong>.</div>
+    <label>Total de crédito carregado (USD $)</label>
     <input type="number" id="inputTotal" placeholder="0.00" step="0.01" oninput="atualizarPreview()">
     <div class="modal-preview" id="modalPreview">—</div>
     <div class="modal-btns">
@@ -316,10 +314,10 @@ function renderizar(data) {
   var cfg    = data.config;
   var stats  = data.stats;
   var taxa   = parseFloat(document.getElementById('taxaCambio').value)||5.75;
-  var saldo  = parseFloat(cfg.saldo_usd)||0;
-  var total  = parseFloat(cfg.total_carregado_usd)||0;
-  var consumido = total > 0 ? total - saldo : parseFloat(stats.total_usd)||0;
-  var pct    = total > 0 ? Math.min(100,((consumido/total)*100)) : 0;
+  var total     = parseFloat(cfg.total_carregado_usd)||0;
+  var consumido = parseFloat(stats.total_usd)||0;
+  var saldo     = Math.max(0, total > 0 ? total - consumido : 0);
+  var pct       = total > 0 ? Math.min(100,((consumido/total)*100)) : 0;
   var media  = parseFloat(stats.media_diaria)||0;
   var diasR  = media > 0 ? Math.round(saldo/media) : null;
 
@@ -328,7 +326,7 @@ function renderizar(data) {
   document.getElementById('saldoBrl').textContent   = fmtBrl(saldo);
   document.getElementById('consumidoLbl').textContent = fmt(consumido);
   document.getElementById('totalLbl').textContent   = total > 0 ? fmt(total) : 'não configurado';
-  document.getElementById('pctLbl').textContent     = total > 0 ? pct.toFixed(1)+'% consumido' : 'saldo não configurado';
+  document.getElementById('pctLbl').textContent     = total > 0 ? pct.toFixed(1)+'% utilizado' : 'configure o crédito total';
   document.getElementById('diasLbl').textContent    = diasR !== null ? '≈ '+diasR+' dias restantes' : '--';
 
   var bar = document.getElementById('progBar');
@@ -429,27 +427,27 @@ function salvarTaxa() {
 
 function abrirModal() {
   var cfg = dadosGlobais ? dadosGlobais.config : {};
-  document.getElementById('inputSaldo').value = cfg.saldo_usd || '';
   document.getElementById('inputTotal').value = cfg.total_carregado_usd || '';
   atualizarPreview();
   document.getElementById('modalSaldo').classList.add('open');
 }
 function fecharModal() { document.getElementById('modalSaldo').classList.remove('open'); }
 function atualizarPreview() {
-  var s = parseFloat(document.getElementById('inputSaldo').value)||0;
-  var t = parseFloat(document.getElementById('inputTotal').value)||0;
-  var c = t > 0 ? t-s : 0;
-  var p = t > 0 ? ((c/t)*100).toFixed(1) : '—';
+  var t    = parseFloat(document.getElementById('inputTotal').value)||0;
+  var cons = dadosGlobais ? parseFloat(dadosGlobais.stats.total_usd)||0 : 0;
+  var s    = Math.max(0, t - cons);
+  var p    = t > 0 ? ((cons/t)*100).toFixed(1) : '—';
   var taxa = parseFloat(document.getElementById('taxaCambio').value)||5.75;
   document.getElementById('modalPreview').innerHTML =
-    'Saldo: <strong>'+fmt(s)+'</strong> ≈ <strong>R$ '+(s*taxa).toFixed(2).replace('.',',')+'</strong><br>'
-    +(t>0?'Consumido: <strong>'+fmt(c)+' ('+p+'%)</strong>':'');
+    'Total carregado: <strong>'+fmt(t)+'</strong><br>'
+    +'Consumido: <strong>'+fmt(cons)+'</strong><br>'
+    +'Saldo calculado: <strong>'+fmt(s)+'</strong> ≈ <strong>R$ '+(s*taxa).toFixed(2).replace('.',',')+'</strong>'
+    +(t>0?' ('+p+'% usado)':'');
 }
 function salvarSaldo() {
-  var s = parseFloat(document.getElementById('inputSaldo').value)||0;
   var t = parseFloat(document.getElementById('inputTotal').value)||0;
   var taxa = parseFloat(document.getElementById('taxaCambio').value)||5.75;
-  api('/api/consumo/config','PUT',{ saldo_usd:s, total_carregado_usd:t, taxa_cambio:taxa })
+  api('/api/consumo/config','PUT',{ total_carregado_usd:t, taxa_cambio:taxa })
     .then(function(){ fecharModal(); carregarDados(); showToast('Saldo atualizado!','success'); })
     .catch(function(e){ showToast(e.message,'error'); });
 }

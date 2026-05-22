@@ -113,7 +113,7 @@ router.get('/stats', verifyToken, async (req, res) => {
 
     res.json({
       config: {
-        saldo_usd:           parseFloat(config.saldo_usd),
+        saldo_usd:           Math.max(0, parseFloat(config.total_carregado_usd) - totalUsd),
         total_carregado_usd: parseFloat(config.total_carregado_usd),
         taxa_cambio:         parseFloat(config.taxa_cambio)
       },

@@ -353,9 +353,9 @@ router.post('/:paciente_id/encaminhamento-psiquiatrico/sugerir', verifyToken, as
     const pac = await getPaciente(req.params.paciente_id);
     const sessRes = await db.query('SELECT * FROM sessoes WHERE paciente_id=$1 AND status=$2 ORDER BY data_sessao ASC', [req.params.paciente_id, 'realizada']);
     const mapRes  = await db.query('SELECT * FROM mapeamentos WHERE paciente_id=$1 ORDER BY versao DESC LIMIT 1', [req.params.paciente_id]);
-    const anaRes  = await db.query('SELECT * FROM analise_estrutural WHERE paciente_id=$1 ORDER BY created_at DESC LIMIT 1', [req.params.paciente_id]);
-    const hipRes  = await db.query('SELECT * FROM hipoteses_clinicas WHERE paciente_id=$1 ORDER BY created_at DESC LIMIT 3', [req.params.paciente_id]);
-    const memRes  = await db.query('SELECT conteudo FROM memoria_terapeutica WHERE paciente_id=$1 ORDER BY versao DESC LIMIT 1', [req.params.paciente_id]);
+    const anaRes  = await db.query('SELECT * FROM analise_estrutural WHERE paciente_id=$1 ORDER BY gerado_em DESC LIMIT 1', [req.params.paciente_id]);
+    const hipRes  = await db.query('SELECT * FROM hipoteses_clinicas WHERE paciente_id=$1 ORDER BY criado_em DESC LIMIT 3', [req.params.paciente_id]);
+    const memRes  = await db.query('SELECT conteudo_texto FROM memoria_terapeutica WHERE paciente_id=$1 ORDER BY gerado_em DESC LIMIT 1', [req.params.paciente_id]);
 
     const sugestoes = await gerarResumoEncaminhamento({
       paciente:  pac,
@@ -363,7 +363,7 @@ router.post('/:paciente_id/encaminhamento-psiquiatrico/sugerir', verifyToken, as
       mapeamento: mapRes.rows[0] || null,
       analise:   anaRes.rows[0] || null,
       hipoteses: hipRes.rows,
-      memoria:   memRes.rows[0]?.conteudo || null,
+      memoria:   memRes.rows[0]?.conteudo_texto || null,
       cids:      await getCIDs(req.params.paciente_id)
     });
 

@@ -512,7 +512,8 @@ function gerarDocumento() {
     payload.periodo_fim    = document.getElementById('modal_fim')?.value;
     if (tipoAtual==='declaracao') payload.finalidade = document.getElementById('modal_finalidade')?.value||null;
   }
-  api('/api/documentos/'+PACIENTE_ID+'/'+tipoAtual,'POST',payload)
+  var apiTipo = tipoAtual === 'encaminhamento-psiq' ? 'encaminhamento-psiquiatrico' : tipoAtual;
+  api('/api/documentos/'+PACIENTE_ID+'/'+apiTipo,'POST',payload)
     .then(function(data) {
       fecharModal();
       showToast('Documento gerado!','success');

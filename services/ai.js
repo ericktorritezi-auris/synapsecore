@@ -387,14 +387,22 @@ module.exports = { calcularIndices, detectarFlags, gerarMapeamento, FLAG_LABELS,
 const crypto = require('crypto');
 
 // ── HELPER: Registrar auditoria de chamada IA ──
-async function registrarAuditoria(db, { paciente_id, modulo, referencia_tipo, referencia_id, prompt_resumo, input_hash, output_resumo, tokens_usados, duracao_ms, sucesso, erro_msg, modelo, modo }) {
+async function registrarAuditoria(db, { paciente_id, modulo, referencia_tipo, referencia_id, prompt_resumo, input_hash, output_resumo, tokens_usados, input_tokens, duracao_ms, sucesso, erro_msg, modelo, modo }) {
   try {
+    // Calcular custo estimado (Sonnet 4: $3/M input, $15/M output)
+    var custo = null;
+    var inTok  = input_tokens  || 0;
+    var outTok = tokens_usados || 0;
+    if (inTok > 0 || outTok > 0) {
+      custo = (inTok * 0.000003) + (outTok * 0.000015);
+    }
     await db.query(
-      `INSERT INTO ia_auditoria (paciente_id, modulo, referencia_tipo, referencia_id, prompt_resumo, input_hash, output_resumo, tokens_usados, duracao_ms, sucesso, erro_msg, modelo, modo)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
+      `INSERT INTO ia_auditoria (paciente_id, modulo, referencia_tipo, referencia_id, prompt_resumo, input_hash, output_resumo, tokens_usados, input_tokens, custo_usd, duracao_ms, sucesso, erro_msg, modelo, modo)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`,
       [paciente_id||null, modulo, referencia_tipo||null, referencia_id||null,
        (prompt_resumo||'').substring(0,500), input_hash||null,
-       (output_resumo||'').substring(0,500), tokens_usados||null, duracao_ms||null,
+       (output_resumo||'').substring(0,500), tokens_usados||null, input_tokens||null,
+       custo, duracao_ms||null,
        sucesso !== false, erro_msg||null, modelo||'claude-sonnet-4-20250514', modo||'ia']
     );
   } catch(e) {
@@ -472,7 +480,7 @@ Retorne APENAS JSON válido:
     const m = clean.match(/\{[\s\S]*\}/);
     const json = m ? JSON.parse(m[0]) : {};
     const duracao = Date.now() - inicio;
-    await registrarAuditoria(db, { paciente_id: paciente.id, modulo:'briefing', referencia_tipo:'paciente', referencia_id: paciente.id, prompt_resumo: prompt, input_hash: crypto.createHash('md5').update(prompt).digest('hex'), output_resumo: text, tokens_usados: data.usage && data.usage.output_tokens, duracao_ms: duracao, sucesso: true, modo:'ia' });
+    await registrarAuditoria(db, { paciente_id: paciente.id, modulo:'briefing', referencia_tipo:'paciente', referencia_id: paciente.id, prompt_resumo: prompt, input_hash: crypto.createHash('md5').update(prompt).digest('hex'), output_resumo: text, tokens_usados: data.usage && data.usage.output_tokens, input_tokens: data.usage && data.usage.input_tokens, duracao_ms: duracao, sucesso: true, modo:'ia' });
     return { json, texto: text, modo: 'ia' };
   } catch(e) {
     await registrarAuditoria(db, { paciente_id: paciente.id, modulo:'briefing', sucesso: false, erro_msg: e.message, modo:'fallback' });
@@ -550,7 +558,7 @@ Retorne APENAS JSON válido:
     const m = clean.match(/\{[\s\S]*\}/);
     const json = m ? JSON.parse(m[0]) : { intervencoes: [] };
     const duracao = Date.now() - inicio;
-    await registrarAuditoria(db, { paciente_id: paciente.id, modulo:'intervencoes', referencia_tipo:'mapeamento', referencia_id: mapeamento && mapeamento.id, prompt_resumo: prompt, input_hash: crypto.createHash('md5').update(prompt).digest('hex'), output_resumo: text, tokens_usados: data.usage && data.usage.output_tokens, duracao_ms: duracao, sucesso: true, modo:'ia' });
+    await registrarAuditoria(db, { paciente_id: paciente.id, modulo:'intervencoes', referencia_tipo:'mapeamento', referencia_id: mapeamento && mapeamento.id, prompt_resumo: prompt, input_hash: crypto.createHash('md5').update(prompt).digest('hex'), output_resumo: text, tokens_usados: data.usage && data.usage.output_tokens, input_tokens: data.usage && data.usage.input_tokens, duracao_ms: duracao, sucesso: true, modo:'ia' });
     return { intervencoes: (json.intervencoes||[]).map(i=>({...i, publico_alvo: paciente.perfil_tipo||'adulto'})), modo: 'ia' };
   } catch(e) {
     await registrarAuditoria(db, { paciente_id: paciente.id, modulo:'intervencoes', sucesso:false, erro_msg:e.message, modo:'fallback' });
@@ -609,7 +617,7 @@ Retorne APENAS JSON válido:
     const m = clean.match(/\{[\s\S]*\}/);
     const json = m ? JSON.parse(m[0]) : {};
     const duracao = Date.now() - inicio;
-    await registrarAuditoria(db, { paciente_id: paciente.id, modulo:'memoria', referencia_tipo:'paciente', referencia_id: paciente.id, prompt_resumo: prompt, input_hash: crypto.createHash('md5').update(prompt).digest('hex'), output_resumo: text, tokens_usados: data.usage && data.usage.output_tokens, duracao_ms: duracao, sucesso: true, modo:'ia' });
+    await registrarAuditoria(db, { paciente_id: paciente.id, modulo:'memoria', referencia_tipo:'paciente', referencia_id: paciente.id, prompt_resumo: prompt, input_hash: crypto.createHash('md5').update(prompt).digest('hex'), output_resumo: text, tokens_usados: data.usage && data.usage.output_tokens, input_tokens: data.usage && data.usage.input_tokens, duracao_ms: duracao, sucesso: true, modo:'ia' });
     return { json, texto: text, modo: 'ia' };
   } catch(e) {
     await registrarAuditoria(db, { paciente_id: paciente.id, modulo:'memoria', sucesso:false, erro_msg:e.message, modo:'fallback' });

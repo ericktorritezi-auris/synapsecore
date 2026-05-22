@@ -199,7 +199,23 @@ async function runMigrations() {
     await client.query(`ALTER TABLE pacientes ADD COLUMN IF NOT EXISTS responsavel_cpf VARCHAR(20)`);
     await client.query(`ALTER TABLE pacientes ADD COLUMN IF NOT EXISTS responsavel_email VARCHAR(255)`);
     await client.query(`ALTER TABLE pacientes ADD COLUMN IF NOT EXISTS responsavel_telefone VARCHAR(30)`);
-    await client.query(`ALTER TABLE mapeamentos ADD COLUMN IF NOT EXISTS programa_modo VARCHAR(20) DEFAULT 'fallback'`);
+    await client.query(`ALTER TABLE ia_auditoria ADD COLUMN IF NOT EXISTS input_tokens  INTEGER`);
+    await client.query(`ALTER TABLE ia_auditoria ADD COLUMN IF NOT EXISTS custo_usd     NUMERIC(10,6)`);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS consumo_config (
+        id                   SERIAL PRIMARY KEY,
+        saldo_usd            NUMERIC(10,2) DEFAULT 0,
+        total_carregado_usd  NUMERIC(10,2) DEFAULT 0,
+        taxa_cambio          NUMERIC(8,4)  DEFAULT 5.75,
+        updated_at           TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    await client.query(`
+      INSERT INTO consumo_config (id, saldo_usd, total_carregado_usd, taxa_cambio)
+      VALUES (1, 0, 0, 5.75)
+      ON CONFLICT (id) DO NOTHING
+    `);
     await client.query(`ALTER TABLE mapeamentos ADD COLUMN IF NOT EXISTS contexto_token UUID DEFAULT gen_random_uuid()`);
     await client.query(`ALTER TABLE mapeamentos ADD COLUMN IF NOT EXISTS contexto_inicial TEXT`);
     await client.query(`ALTER TABLE sessoes ADD COLUMN IF NOT EXISTS pago BOOLEAN DEFAULT false`);

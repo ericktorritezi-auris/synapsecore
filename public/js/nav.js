@@ -31,7 +31,8 @@ function renderNav() {
     { type: 'section', label: 'Gestão' },
     { type: 'item', href: '/financeiro',             icon: '&#128176;', label: 'Financeiro' },
     { type: 'section', label: 'Sistema' },
-    { type: 'item', href: '/perfil',                 icon: '&#9715;',  label: 'Configurações' },
+    { type: 'item', href: '/consumo',  icon: '&#9889;',  label: 'Consumo API' },
+    { type: 'item', href: '/perfil',   icon: '&#9715;',  label: 'Configurações' },
   ];
 
   var navHTML = navDefs.map(function(item) {

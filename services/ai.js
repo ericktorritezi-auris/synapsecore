@@ -1707,9 +1707,9 @@ async function gerarResumoEncaminhamento({ paciente, sessoes, mapeamento, analis
   try {
     resultado = JSON.parse(text);
   } catch(e) {
-    // Try to extract JSON from text
     var match = text.match(/\{[\s\S]*\}/);
     resultado = match ? JSON.parse(match[0]) : { motivo:'', sintomas:'', objetivo:'', resumo:'' };
   }
+  resultado._usage = data.usage || null;
   return resultado;
 }

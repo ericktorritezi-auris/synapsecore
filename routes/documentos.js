@@ -367,6 +367,21 @@ router.post('/:paciente_id/encaminhamento-psiquiatrico/sugerir', verifyToken, as
       cids:      await getCIDs(req.params.paciente_id)
     });
 
+    // Registrar consumo de IA
+    const { registrarAuditoria } = require('../services/ai');
+    const usage = sugestoes._usage || {};
+    delete sugestoes._usage;
+    await registrarAuditoria(db, {
+      paciente_id:    req.params.paciente_id,
+      modulo:         'encaminhamento_psiq',
+      referencia_tipo:'sugestao',
+      output_resumo:  'Sugestão de encaminhamento psiquiátrico',
+      tokens_usados:  usage.output_tokens || null,
+      input_tokens:   usage.input_tokens  || null,
+      sucesso:        true,
+      modo:           'ia'
+    });
+
     res.json(sugestoes);
   } catch(err) {
     console.error('sugerir-encaminhamento:', err.message);

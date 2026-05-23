@@ -5,10 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Synapse Core — Inteligência Clínica Integrativa</title>
 <meta name="theme-color" content="#070E1F">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
 <link rel="icon" type="image/x-icon" href="/favicon.ico">
 <link rel="manifest" href="/manifest.json">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Rajdhani:wght@300;400;500;600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  /* Font fallbacks — render immediately if Google Fonts unavailable */
+  :root {
+    --f-display: 'Cormorant Garamond', 'Georgia', 'Times New Roman', serif;
+    --f-ui:      'Rajdhani', 'Trebuchet MS', 'Arial Narrow', sans-serif;
+    --f-body:    'DM Sans', 'Segoe UI', 'Helvetica Neue', sans-serif;
+  }
+</style>
 <style>
 :root {
   --navy:    #070E1F;
@@ -30,15 +41,59 @@ html, body {
   overflow:hidden;
   background:var(--navy);
   color:var(--white);
-  font-family:'DM Sans', sans-serif;
+  font-family:var(--f-body);
   cursor:default;
 }
 @media(max-width:768px){ html,body{ overflow:auto; } }
 
-/* ── CANVAS BACKGROUND ── */
-canvas#bg {
+/* ── CSS BACKGROUND ── */
+#bg-css {
   position:fixed; inset:0; z-index:0;
-  opacity:.55;
+  background:
+    radial-gradient(ellipse 120% 80% at 70% 50%, rgba(12,22,48,1) 0%, rgba(4,8,18,1) 100%);
+}
+/* Animated grid */
+#bg-css::before {
+  content:'';
+  position:absolute; inset:0;
+  background-image:
+    linear-gradient(rgba(212,175,127,.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(212,175,127,.025) 1px, transparent 1px);
+  background-size:80px 80px;
+  animation:gridDrift 30s linear infinite;
+}
+/* Radial pulse */
+#bg-css::after {
+  content:'';
+  position:absolute; inset:0;
+  background:radial-gradient(ellipse 60% 60% at 72% 50%, rgba(196,150,90,.06) 0%, transparent 70%);
+  animation:bgPulse 8s ease-in-out infinite;
+}
+@keyframes gridDrift{
+  0%{ background-position:0 0, 0 0; }
+  100%{ background-position:80px 80px, 80px 80px; }
+}
+@keyframes bgPulse{
+  0%,100%{ opacity:.6; }
+  50%{ opacity:1; }
+}
+/* Floating particles via CSS */
+.particle-field {
+  position:fixed; inset:0; z-index:1; pointer-events:none; overflow:hidden;
+}
+.p {
+  position:absolute;
+  width:2px; height:2px;
+  border-radius:50%;
+  background:rgba(212,175,127,.4);
+  box-shadow:0 0 4px rgba(212,175,127,.3);
+  animation:floatP linear infinite;
+}
+@keyframes floatP{
+  0%  { transform:translateY(100vh) translateX(0); opacity:0; }
+  10% { opacity:1; }
+  90% { opacity:.3; }
+  100%{ transform:translateY(-20px) translateX(var(--drift)); opacity:0; }
 }
 
 /* ── GRAIN OVERLAY ── */
@@ -116,7 +171,7 @@ canvas#bg {
 .logo-hex svg { width:100%; height:100%; }
 .logo-text-wrap {}
 .logo-name {
-  font-family:'Rajdhani', sans-serif;
+  font-family:var(--f-ui);
   font-size:18px;
   font-weight:600;
   letter-spacing:3px;
@@ -132,7 +187,7 @@ canvas#bg {
   color:var(--gold);
   opacity:.6;
   margin-top:3px;
-  font-family:'Rajdhani',sans-serif;
+  font-family:var(--f-ui);
 }
 
 /* HEADLINE */
@@ -142,7 +197,7 @@ canvas#bg {
   animation: fadeUp .9s .25s ease forwards;
 }
 .headline-pre {
-  font-family:'Rajdhani', sans-serif;
+  font-family:var(--f-ui);
   font-size:10px;
   letter-spacing:4px;
   text-transform:uppercase;
@@ -161,7 +216,7 @@ canvas#bg {
   opacity:.5;
 }
 h1 {
-  font-family:'Cormorant Garamond', serif;
+  font-family:var(--f-display);
   font-size:clamp(38px, 4.5vw, 62px);
   font-weight:300;
   line-height:1.12;
@@ -204,7 +259,7 @@ h1 strong {
   gap:12px;
   font-size:12.5px;
   color:rgba(245,247,250,.6);
-  font-family:'Rajdhani', sans-serif;
+  font-family:var(--f-ui);
   letter-spacing:.5px;
   text-transform:uppercase;
 }
@@ -232,7 +287,7 @@ h1 strong {
   border:none;
   border-radius:4px;
   padding:14px 36px;
-  font-family:'Rajdhani', sans-serif;
+  font-family:var(--f-ui);
   font-size:13px;
   font-weight:700;
   letter-spacing:3px;
@@ -259,7 +314,7 @@ h1 strong {
 .cta-note {
   font-size:11px;
   color:rgba(245,247,250,.25);
-  font-family:'Rajdhani', sans-serif;
+  font-family:var(--f-ui);
   letter-spacing:1px;
   text-transform:uppercase;
   line-height:1.5;
@@ -276,7 +331,7 @@ h1 strong {
   gap:10px;
   font-size:10px;
   color:rgba(245,247,250,.18);
-  font-family:'Rajdhani', sans-serif;
+  font-family:var(--f-ui);
   letter-spacing:2px;
   text-transform:uppercase;
   background:linear-gradient(to top, rgba(4,8,18,.7), transparent);
@@ -416,7 +471,7 @@ h1 strong {
   50%{opacity:1; transform:scale(1.3);}
 }
 .node-label {
-  font-family:'Rajdhani', sans-serif;
+  font-family:var(--f-ui);
   font-size:10px;
   letter-spacing:2px;
   text-transform:uppercase;
@@ -438,7 +493,7 @@ h1 strong {
   pointer-events:none;
 }
 .orb-score {
-  font-family:'Cormorant Garamond', serif;
+  font-family:var(--f-display);
   font-size:42px;
   font-weight:300;
   color:var(--gold3);
@@ -446,7 +501,7 @@ h1 strong {
   opacity:.7;
 }
 .orb-label {
-  font-family:'Rajdhani', sans-serif;
+  font-family:var(--f-ui);
   font-size:9px;
   letter-spacing:3px;
   text-transform:uppercase;
@@ -488,7 +543,7 @@ h1 strong {
   color:rgba(245,247,250,.2);
   font-size:18px; cursor:pointer;
   transition:color .2s;
-  font-family:'DM Sans',sans-serif;
+  font-family:var(--f-body);
 }
 .modal-close:hover{ color:rgba(245,247,250,.6); }
 .modal-logo {
@@ -497,7 +552,7 @@ h1 strong {
 }
 .modal-logo-icon { width:28px; height:28px; }
 .modal-logo-name {
-  font-family:'Rajdhani',sans-serif;
+  font-family:var(--f-ui);
   font-size:14px; font-weight:600;
   letter-spacing:3px; text-transform:uppercase;
   color:var(--white);
@@ -512,14 +567,14 @@ h1 strong {
 }
 .modal-sub {
   font-size:12px; color:rgba(245,247,250,.3);
-  font-family:'Rajdhani',sans-serif;
+  font-family:var(--f-ui);
   letter-spacing:1px; text-transform:uppercase;
   margin-bottom:28px;
 }
 .field { margin-bottom:16px; }
 .field label {
   display:block;
-  font-family:'Rajdhani',sans-serif;
+  font-family:var(--f-ui);
   font-size:10px; letter-spacing:2px;
   text-transform:uppercase;
   color:rgba(212,175,127,.5);
@@ -531,7 +586,7 @@ h1 strong {
   border:1px solid rgba(212,175,127,.15);
   border-radius:2px;
   color:var(--white);
-  font-family:'DM Sans',sans-serif;
+  font-family:var(--f-body);
   font-size:14px;
   padding:12px 14px;
   outline:none;
@@ -541,7 +596,7 @@ h1 strong {
 .field input::placeholder{ color:rgba(245,247,250,.15); }
 .error-msg {
   font-size:12px; color:#fca5a5;
-  font-family:'Rajdhani',sans-serif;
+  font-family:var(--f-ui);
   letter-spacing:.5px;
   margin-bottom:16px;
   display:none;
@@ -551,7 +606,7 @@ h1 strong {
   background:linear-gradient(135deg,var(--gold2),var(--gold));
   color:var(--navy);
   border:none; border-radius:2px;
-  font-family:'Rajdhani',sans-serif;
+  font-family:var(--f-ui);
   font-size:12px; font-weight:700;
   letter-spacing:3px; text-transform:uppercase;
   cursor:pointer;
@@ -610,7 +665,7 @@ h1 strong {
 }
 @keyframes statusPulse{ 0%,100%{opacity:.5;} 50%{opacity:1;} }
 .status-text {
-  font-family:'Rajdhani',sans-serif;
+  font-family:var(--f-ui);
   font-size:9px; letter-spacing:2.5px;
   text-transform:uppercase;
   color:rgba(245,247,250,.2);
@@ -626,8 +681,8 @@ h1 strong {
 </head>
 <body>
 
-<!-- Background canvas -->
-<canvas id="bg"></canvas>
+<!-- Background CSS -->
+<div id="bg-css"></div>
 <div class="grain"></div>
 <div class="vignette"></div>
 <div class="glow-center"></div>
@@ -798,101 +853,25 @@ h1 strong {
 </div>
 
 <script>
-// ── BACKGROUND CANVAS ──
+// ── CSS PARTICLE FIELD ──
 (function() {
-  var canvas = document.getElementById('bg');
-  var ctx    = canvas.getContext('2d');
-  var W, H, particles = [];
-
-  function resize() {
-    W = canvas.width  = window.innerWidth;
-    H = canvas.height = window.innerHeight;
+  var field = document.createElement('div');
+  field.className = 'particle-field';
+  var count = 40;
+  for (var i = 0; i < count; i++) {
+    var p = document.createElement('div');
+    p.className = 'p';
+    var left = Math.random() * 100;
+    var dur  = 8 + Math.random() * 16;
+    var del  = Math.random() * -20;
+    var size = .5 + Math.random() * 1.5;
+    var drift= (Math.random() - .5) * 80;
+    p.style.cssText = 'left:'+left+'%;width:'+size+'px;height:'+size+'px;'
+      + 'animation-duration:'+dur+'s;animation-delay:'+del+'s;'
+      + '--drift:'+drift+'px;';
+    field.appendChild(p);
   }
-
-  function Particle() {
-    this.reset();
-  }
-  Particle.prototype.reset = function() {
-    this.x  = Math.random() * W;
-    this.y  = Math.random() * H;
-    this.r  = Math.random() * 1.2 + 0.2;
-    this.vx = (Math.random() - .5) * .15;
-    this.vy = (Math.random() - .5) * .15;
-    this.a  = Math.random() * .5 + .1;
-    this.flicker = Math.random() * Math.PI * 2;
-  };
-  Particle.prototype.update = function() {
-    this.x += this.vx;
-    this.y += this.vy;
-    this.flicker += .02;
-    if (this.x < 0 || this.x > W || this.y < 0 || this.y > H) this.reset();
-  };
-
-  for (var i = 0; i < 120; i++) particles.push(new Particle());
-
-  // Connections
-  var lines = [];
-  for (var j = 0; j < 18; j++) {
-    lines.push({
-      x1: Math.random()*W, y1: Math.random()*H,
-      x2: Math.random()*W, y2: Math.random()*H,
-      a: Math.random()*.06+.01
-    });
-  }
-
-  function draw() {
-    ctx.clearRect(0, 0, W, H);
-
-    // Background gradient
-    var bg = ctx.createRadialGradient(W*.5, H*.5, 0, W*.5, H*.5, Math.max(W,H)*.7);
-    bg.addColorStop(0,  'rgba(12,20,42,1)');
-    bg.addColorStop(1,  'rgba(4,8,18,1)');
-    ctx.fillStyle = bg;
-    ctx.fillRect(0,0,W,H);
-
-    // Grid lines (very faint)
-    ctx.strokeStyle = 'rgba(212,175,127,0.025)';
-    ctx.lineWidth = .5;
-    for (var gx=0; gx<W; gx+=80) {
-      ctx.beginPath(); ctx.moveTo(gx,0); ctx.lineTo(gx,H); ctx.stroke();
-    }
-    for (var gy=0; gy<H; gy+=80) {
-      ctx.beginPath(); ctx.moveTo(0,gy); ctx.lineTo(W,gy); ctx.stroke();
-    }
-
-    // Connecting lines between nearby particles
-    for (var p1=0; p1<particles.length; p1++) {
-      for (var p2=p1+1; p2<particles.length; p2++) {
-        var dx=particles[p1].x-particles[p2].x;
-        var dy=particles[p1].y-particles[p2].y;
-        var dist=Math.sqrt(dx*dx+dy*dy);
-        if (dist < 120) {
-          ctx.strokeStyle = 'rgba(196,150,90,'+((.12*(1-dist/120))).toFixed(3)+')';
-          ctx.lineWidth = .5;
-          ctx.beginPath();
-          ctx.moveTo(particles[p1].x, particles[p1].y);
-          ctx.lineTo(particles[p2].x, particles[p2].y);
-          ctx.stroke();
-        }
-      }
-    }
-
-    // Particles
-    particles.forEach(function(p) {
-      p.update();
-      var flick = (.5 + .5*Math.sin(p.flicker)) * p.a;
-      ctx.fillStyle = 'rgba(212,175,127,'+flick.toFixed(3)+')';
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
-      ctx.fill();
-    });
-
-    requestAnimationFrame(draw);
-  }
-
-  window.addEventListener('resize', resize);
-  resize();
-  draw();
+  document.body.appendChild(field);
 })();
 
 // ── SCORE COUNTER ──

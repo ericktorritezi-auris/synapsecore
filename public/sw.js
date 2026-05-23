@@ -1,5 +1,5 @@
 // SYNAPSE CORE — Service Worker v3.2.10
-var CACHE_NAME = 'synapse-core-v3';
+var CACHE_NAME = 'synapse-core-v4';
 
 // Install
 self.addEventListener('install', function(e) {

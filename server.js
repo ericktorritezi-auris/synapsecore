@@ -7,13 +7,13 @@ const { runMigrations } = require('./db/migrations');
 
 const app     = express();
 const PORT    = process.env.PORT || 3000;
-const VERSION = '3.8.5';
+const VERSION = '3.8.6';
 
 // ── MIDDLEWARE ──
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'), { index: false }));
 
 // Disable caching for all API routes
 app.use('/api', function(req, res, next) {

@@ -109,7 +109,7 @@ body{font-family:var(--f-b);background:var(--bg);color:var(--text);min-height:10
 
 /* TWO COL */
 .two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
-@media(max-width:700px){.two-col{grid-template-columns:1fr}}
+@media(max-width:700px){.two-col{grid-template-columns:1fr!important;display:block!important}.two-col>.card{width:100%!important;margin-bottom:12px}}
 .chart-wrap{height:140px;display:flex;align-items:flex-end;gap:5px;padding-bottom:4px;overflow-x:hidden}
 
 /* MODAL */

@@ -286,15 +286,20 @@ h1 strong {
   color:var(--navy);
   border:none;
   border-radius:4px;
-  padding:14px 36px;
+  padding:16px 52px;
+  min-width:220px;
   font-family:var(--f-ui);
-  font-size:13px;
+  font-size:14px;
   font-weight:700;
   letter-spacing:3px;
   text-transform:uppercase;
   cursor:pointer;
   transition:all .3s;
   box-shadow:0 0 30px rgba(196,150,90,.2);
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
 }
 .btn-enter::before {
   content:'';
@@ -311,14 +316,7 @@ h1 strong {
 .btn-enter:hover::before { opacity:1; }
 .btn-enter:active { transform:translateY(0); }
 
-.cta-note {
-  font-size:11px;
-  color:rgba(245,247,250,.25);
-  font-family:var(--f-ui);
-  letter-spacing:1px;
-  text-transform:uppercase;
-  line-height:1.5;
-}
+
 
 /* AUTHOR LINE */
 .author-line {
@@ -330,7 +328,7 @@ h1 strong {
   justify-content:center;
   gap:10px;
   font-size:10px;
-  color:rgba(245,247,250,.18);
+  color:rgba(245,247,250,.45);
   font-family:var(--f-ui);
   letter-spacing:2px;
   text-transform:uppercase;
@@ -345,12 +343,12 @@ h1 strong {
   flex:1;
   max-width:120px;
   height:1px;
-  background:linear-gradient(90deg, transparent, rgba(212,175,127,.15));
+  background:linear-gradient(90deg, transparent, rgba(212,175,127,.3));
 }
 .author-line::after {
-  background:linear-gradient(270deg, transparent, rgba(212,175,127,.15));
+  background:linear-gradient(270deg, transparent, rgba(212,175,127,.3));
 }
-.author-line span { color:rgba(212,175,127,.35); }
+.author-line span { color:rgba(212,175,127,.7); }
 @media(max-width:768px){
   .author-line{
     position:relative;
@@ -752,9 +750,7 @@ h1 strong {
       <button class="btn-enter" onclick="abrirLogin()">
         Acessar Sistema
       </button>
-      <div class="cta-note">
-        Acesso<br>restrito
-      </div>
+
     </div>
 
   </div>

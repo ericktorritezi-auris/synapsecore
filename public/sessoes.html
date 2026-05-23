@@ -527,6 +527,40 @@ function renderSessoes() {
           }).catch(function(e){ showToast(e.message,'error'); });
       });
       hdr.appendChild(pagoBadge);
+
+      // WhatsApp button — always visible for sessions with valor
+      var wppBtn = document.createElement('button');
+      wppBtn.title = 'Enviar mensagem via WhatsApp';
+      wppBtn.style.cssText = 'background:rgba(37,211,102,.08);border:1px solid rgba(37,211,102,.25);color:#4ade80;border-radius:8px;width:30px;height:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;margin-left:4px;font-size:15px;transition:all .15s';
+      wppBtn.innerHTML = '&#128172;';
+      wppBtn.dataset.sessaoId = s.id;
+      wppBtn.addEventListener('mouseenter', function(){ this.style.background='rgba(37,211,102,.18)'; });
+      wppBtn.addEventListener('mouseleave', function(){ this.style.background='rgba(37,211,102,.08)'; });
+      wppBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        var pago    = pagoBadge.dataset.pago === '1';
+        var telPac  = paciente && paciente.telefone ? paciente.telefone.replace(/\D/g,'') : '';
+        if (telPac && !telPac.startsWith('55')) telPac = '55' + telPac;
+        if (!telPac) { showToast('Telefone do paciente não cadastrado.', 'error'); return; }
+        var nomeP    = paciente ? paciente.nome_completo.split(' ')[0] : 'paciente';
+        var valorFmt = 'R$ ' + parseFloat(s.valor_cobrado).toFixed(2).replace('.',',');
+        var msg;
+        if (pago) {
+          msg = 'Ola ' + nomeP + '! Sua sessao foi realizada com sucesso. Pagamento de ' + valorFmt + ' confirmado. Obrigado! Ate a proxima.';
+        } else {
+          var pixTipo  = terapeuta && terapeuta.pix_tipo  ? terapeuta.pix_tipo  : '';
+          var pixChave = terapeuta && terapeuta.pix_chave ? terapeuta.pix_chave : '';
+          var pixLbl   = { telefone:'Telefone', email:'E-mail', cpf:'CPF', cnpj:'CNPJ', aleatoria:'Chave aleatoria' };
+          var tipoStr  = pixTipo ? (pixLbl[pixTipo] || pixTipo) : 'Pix';
+          if (pixChave) {
+            msg = 'Ola ' + nomeP + '! Sua sessao foi realizada com sucesso.\nPara o pagamento, segue minha chave Pix ' + tipoStr + ': ' + pixChave + '\nValor: ' + valorFmt + '\nQualquer duvida estou a disposicao!';
+          } else {
+            msg = 'Ola ' + nomeP + '! Sua sessao foi realizada com sucesso. Valor: ' + valorFmt + '. Qualquer duvida estou a disposicao!';
+          }
+        }
+        window.open('https://wa.me/' + telPac + '?text=' + encodeURIComponent(msg), '_blank');
+      });
+      hdr.appendChild(wppBtn);
     }
 
     var body = document.createElement('div'); body.className='sess-body';

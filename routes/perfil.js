@@ -9,7 +9,8 @@ router.get('/', verifyToken, async (req, res) => {
   try {
     const t = await db.query(
       `SELECT id, nome, login, email, telefone, especialidades, bio,
-              foto_url, logo_url, assinatura_url, carimbo_url, created_at
+              foto_url, logo_url, assinatura_url, carimbo_url,
+              pix_tipo, pix_chave, created_at
        FROM terapeutas WHERE id = $1`, [req.terapeuta.id]
     );
     if (!t.rows.length) return res.status(404).json({ message: 'Perfil não encontrado.' });
@@ -29,13 +30,14 @@ router.get('/', verifyToken, async (req, res) => {
 // PUT /api/perfil/dados
 router.put('/dados', verifyToken, async (req, res) => {
   try {
-    const { nome, email, telefone, especialidades, bio } = req.body;
+    const { nome, email, telefone, especialidades, bio, pix_tipo, pix_chave } = req.body;
     if (!nome || !nome.trim()) return res.status(400).json({ message: 'Nome é obrigatório.' });
 
     await db.query(
       `UPDATE terapeutas SET nome=$1, email=$2, telefone=$3,
-       especialidades=$4, bio=$5, updated_at=NOW() WHERE id=$6`,
-      [nome.trim(), email||null, telefone||null, especialidades||null, bio||null, req.terapeuta.id]
+       especialidades=$4, bio=$5, pix_tipo=$6, pix_chave=$7, updated_at=NOW() WHERE id=$8`,
+      [nome.trim(), email||null, telefone||null, especialidades||null, bio||null,
+       pix_tipo||null, pix_chave||null, req.terapeuta.id]
     );
 
     // Update cached name in token context (client needs to refresh)

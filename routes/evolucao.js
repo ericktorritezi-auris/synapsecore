@@ -212,7 +212,7 @@ router.post('/:paciente_id/gerar', verifyToken, async (req, res) => {
     const pacote = pacoteRes.rows[0] || null;
 
     // ── Generate via AI (single call, stored result) ──
-    const evolucao = await gerarEvolucao({ paciente, mapeamento, sessoes, resumoClinico, pacote });
+    const evolucao = await gerarEvolucao({ db, paciente, mapeamento, sessoes, resumoClinico, pacote });
 
     // Calculate deltas
     const indicesIniciais = mapeamento.dimensoes_json || {};

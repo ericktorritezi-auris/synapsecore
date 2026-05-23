@@ -378,6 +378,7 @@ checkAuth();
 renderUserPill();
 
 var PACIENTE_ID = location.pathname.split('/').pop();
+var terapeuta   = null;
 renderPacienteNav(PACIENTE_ID, 'sessoes');
 var paciente = null;
 var sessoes  = [];
@@ -387,10 +388,12 @@ var pacoteId = null;
 window.addEventListener('DOMContentLoaded', function() {
   Promise.all([
     api('/api/pacientes/' + PACIENTE_ID),
-    api('/api/sessoes/' + PACIENTE_ID)
+    api('/api/sessoes/' + PACIENTE_ID),
+    api('/api/perfil/')
   ]).then(function(results) {
-    paciente = results[0];
-    sessoes  = results[1];
+    paciente  = results[0];
+    sessoes   = results[1];
+    terapeuta = results[2];
     renderPatient();
     renderSessoes();
     loadResumo();
@@ -584,6 +587,33 @@ function salvarSessao() {
       atualizarPagoBox();
       btn.disabled=false; btn.textContent='Salvar Sessão';
       showToast('Sessão registrada! Atualizando resumo clínico...', 'success');
+      // WhatsApp notification when valor > 0
+      var valor = parseFloat(payload.valor_cobrado) || 0;
+      if (valor > 0) {
+        var pago    = s.pago === true || payload.pago === true || payload.pago === 'true';
+        var telPac  = paciente && paciente.telefone ? paciente.telefone.replace(/\D/g,'') : '';
+        if (telPac && !telPac.startsWith('55')) telPac = '55' + telPac;
+        var nomeP   = paciente ? paciente.nome_completo.split(' ')[0] : 'paciente';
+        var valorFmt= 'R$ ' + valor.toFixed(2).replace('.',',');
+        var msg;
+        if (pago) {
+          msg = 'Olá ' + nomeP + '! 😊 Sua sessão foi realizada com sucesso. Pagamento de ' + valorFmt + ' confirmado. Obrigado! Até a próxima. 🙏';
+        } else {
+          var pixTipo  = terapeuta && terapeuta.pix_tipo  ? terapeuta.pix_tipo  : '';
+          var pixChave = terapeuta && terapeuta.pix_chave ? terapeuta.pix_chave : '';
+          var pixLbl   = { telefone:'Telefone', email:'E-mail', cpf:'CPF', cnpj:'CNPJ', aleatoria:'Chave aleatória' };
+          var tipoStr  = pixTipo ? (pixLbl[pixTipo] || pixTipo) : 'Pix';
+          if (pixChave) {
+            msg = 'Olá ' + nomeP + '! 😊 Sua sessão foi realizada com sucesso.\nPara o pagamento, segue minha chave Pix ' + tipoStr + ': ' + pixChave + '\nValor: ' + valorFmt + '\nQualquer dúvida estou à disposição! 🙏';
+          } else {
+            msg = 'Olá ' + nomeP + '! 😊 Sua sessão foi realizada com sucesso. Valor: ' + valorFmt + '. Qualquer dúvida estou à disposição! 🙏';
+          }
+        }
+        if (telPac) {
+          var wppUrl  = 'https://wa.me/' + telPac + '?text=' + encodeURIComponent(msg);
+          showToastWpp(nomeP, wppUrl);
+        }
+      }
       // Reload patient to update progress
       api('/api/pacientes/'+PACIENTE_ID).then(function(p){paciente=p;renderPatient();});
       // Load resumo after a delay (AI takes a few seconds)
@@ -1092,6 +1122,34 @@ function confirmarExcluir() {
   api('/api/sessoes/' + PACIENTE_ID + '/excluir', 'DELETE', {})
     .then(function() { showToast('Paciente excluído.','success'); setTimeout(function(){ window.location.href='/pacientes'; },1500); })
     .catch(function(err){ showToast(err.message||'Erro ao excluir.','error'); });
+}
+
+// ── WHATSAPP TOAST ──
+function showToastWpp(nome, url) {
+  var old = document.getElementById('sc-toast-wpp');
+  if (old) old.remove();
+  var el = document.createElement('div');
+  el.id = 'sc-toast-wpp';
+  el.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#0d1f2b;border:1px solid rgba(37,211,102,0.35);color:#a7f3d0;padding:14px 18px;border-radius:12px;font-family:var(--fd,Inter);font-size:13px;z-index:9999;max-width:320px;text-align:center;box-shadow:0 8px 24px rgba(0,0,0,.4);';
+  var closeEl = function(){ var t=document.getElementById('sc-toast-wpp'); if(t) t.remove(); };
+  var btnA = document.createElement('a');
+  btnA.href = url; btnA.target = '_blank';
+  btnA.style.cssText = 'display:inline-block;background:#25d366;color:#000;border-radius:8px;padding:7px 18px;font-size:12.5px;font-weight:700;cursor:pointer;text-decoration:none';
+  btnA.textContent = 'Abrir WhatsApp';
+  btnA.addEventListener('click', closeEl);
+  var btnX = document.createElement('button');
+  btnX.style.cssText = 'background:rgba(255,255,255,.06);color:#ccc;border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:7px 14px;font-size:12px;cursor:pointer;margin-left:8px';
+  btnX.textContent = 'Agora nao';
+  btnX.addEventListener('click', closeEl);
+  el.textContent = '';
+  var msg = document.createElement('span');
+  msg.innerHTML = '&#128172; Avisar <strong>' + nome + '</strong> via WhatsApp?';
+  var row = document.createElement('div');
+  row.style.cssText = 'display:flex;gap:8px;justify-content:center;margin-top:10px';
+  row.appendChild(btnA); row.appendChild(btnX);
+  el.appendChild(msg); el.appendChild(document.createElement('br')); el.appendChild(row);
+  document.body.appendChild(el);
+  setTimeout(closeEl, 12000);
 }
 </script>
 </body>

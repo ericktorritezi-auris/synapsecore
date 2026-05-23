@@ -178,6 +178,21 @@ body{font-family:var(--fb);background:var(--bg);color:var(--tx);min-height:100vh
         <label>Bio Profissional</label>
         <textarea id="pBio" placeholder="Breve apresentação profissional que aparecerá nos documentos..."></textarea>
       </div>
+      <div class="field">
+        <label>Tipo da Chave Pix</label>
+        <select id="pPixTipo">
+          <option value="">— Selecione —</option>
+          <option value="telefone">Telefone</option>
+          <option value="email">E-mail</option>
+          <option value="cpf">CPF</option>
+          <option value="cnpj">CNPJ</option>
+          <option value="aleatoria">Chave aleatória</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Chave Pix</label>
+        <input type="text" id="pPixChave" placeholder="Informe sua chave Pix">
+      </div>
     </div>
     <div id="msgDados" class="msg"></div>
     <button class="btn btn-primary btn-full" onclick="salvarDados()" style="margin-top:14px">Salvar Dados Pessoais</button>
@@ -558,6 +573,8 @@ window.addEventListener('DOMContentLoaded', function() {
     document.getElementById('pTelefone').value      = d.telefone      || '';
     document.getElementById('pEspecialidades').value= d.especialidades|| '';
     document.getElementById('pBio').value           = d.bio           || '';
+    document.getElementById('pPixTipo').value       = d.pix_tipo      || '';
+    document.getElementById('pPixChave').value      = d.pix_chave     || '';
     if (d.foto_url)       showPreview('prevFoto',      'zoneFoto',      d.foto_url);
     if (d.logo_url)       showPreview('prevLogo',      'zoneLogo',      d.logo_url);
     if (d.assinatura_url) showPreview('prevAssinatura','zoneAssinatura',d.assinatura_url);
@@ -620,7 +637,9 @@ function salvarDados() {
     nome, email: document.getElementById('pEmail').value||null,
     telefone: document.getElementById('pTelefone').value||null,
     especialidades: document.getElementById('pEspecialidades').value||null,
-    bio: document.getElementById('pBio').value||null
+    bio: document.getElementById('pBio').value||null,
+    pix_tipo:  document.getElementById('pPixTipo').value||null,
+    pix_chave: document.getElementById('pPixChave').value||null
   })
   .then(function() {
     showMsg('msgDados','Dados salvos com sucesso!','ok');

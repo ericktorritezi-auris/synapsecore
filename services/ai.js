@@ -282,7 +282,7 @@ const FLAG_LABELS = {
 };
 
 // ── GERA MAPEAMENTO VIA ANTHROPIC ──
-async function gerarMapeamento({ paciente, respostas, indices, flags, pacotes, riscoNivel }) {
+async function gerarMapeamento({ db, paciente, respostas, indices, flags, pacotes, riscoNivel }) {
   const prog = sugerirPrograma(paciente.perfil_tipo, indices, flags, pacotes);
   const flagLabels = flags.map(f => FLAG_LABELS[f] && FLAG_LABELS[f].l || f).join(', ') || 'Nenhuma';
 
@@ -375,6 +375,16 @@ NÃO diagnostique. Use linguagem de hipóteses ("sugere", "indica", "observa-se 
     else throw new Error('Não foi possível parsear o relatório da IA.');
   }
 
+  if (db) {
+    await registrarAuditoria(db, {
+      paciente_id: paciente.id, modulo: 'mapeamento',
+      referencia_tipo: 'paciente', referencia_id: paciente.id,
+      output_resumo: 'Mapeamento gerado',
+      tokens_usados: data.usage && data.usage.output_tokens,
+      input_tokens:  data.usage && data.usage.input_tokens,
+      sucesso: true, modelo: 'claude-sonnet-4-20250514', modo: 'ia'
+    }).catch(function(e){ console.warn('audit mapeamento:', e.message); });
+  }
   return { relatorio, programa: prog };
 }
 
@@ -626,7 +636,7 @@ Retorne APENAS JSON válido:
 }
 
 // ── SUGERE CIDs (ICD-10) ──
-async function sugerirCIDs({ paciente, respostas, indices, flags }) {
+async function sugerirCIDs({ db, paciente, respostas, indices, flags }) {
   const flagLabels = flags.map(f => FLAG_LABELS[f] && FLAG_LABELS[f].l || f).join(', ') || 'Nenhuma';
   const ra82 = respostas.Q82 || '';
   const ra84 = respostas.Q84 || '';
@@ -688,18 +698,29 @@ Retorne APENAS JSON válido, sem texto antes ou depois:
   const data  = await resp.json();
   const texto = data.content && data.content[0] && data.content[0].text || '[]';
   const clean = texto.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
+  let cidsArr;
   try {
     const arr = JSON.parse(clean);
-    return Array.isArray(arr) ? arr : [];
+    cidsArr = Array.isArray(arr) ? arr : [];
   } catch (e) {
     const match = clean.match(/\[[\s\S]*\]/);
-    if (match) return JSON.parse(match[0]);
-    return [];
+    cidsArr = match ? JSON.parse(match[0]) : [];
   }
+  if (db) {
+    await registrarAuditoria(db, {
+      paciente_id: paciente.id, modulo: 'cids',
+      referencia_tipo: 'paciente', referencia_id: paciente.id,
+      output_resumo: 'Sugestao CIDs gerada (' + cidsArr.length + ' itens)',
+      tokens_usados: data.usage && data.usage.output_tokens,
+      input_tokens:  data.usage && data.usage.input_tokens,
+      sucesso: true, modelo: 'claude-sonnet-4-20250514', modo: 'ia'
+    }).catch(function(e){ console.warn('audit cids:', e.message); });
+  }
+  return cidsArr;
 }
 
 // ── GERA RELATÓRIO DE EVOLUÇÃO ──
-async function gerarEvolucao({ paciente, mapeamento, sessoes, resumoClinico, pacote }) {
+async function gerarEvolucao({ db, paciente, mapeamento, sessoes, resumoClinico, pacote }) {
   const indicesIniciais = (mapeamento && mapeamento.dimensoes_json) || (mapeamento && mapeamento.indices_json && mapeamento.indices_json.dimensoes) || {};
   const proto = mapeamento && mapeamento.protocolo_json || {};
 
@@ -769,17 +790,29 @@ Regras: indices_atuais devem refletir a evolução observada nas sessões (podem
   const data  = await resp.json();
   const texto = data.content && data.content[0] && data.content[0].text || '';
   const clean = texto.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
+  let conteudoEv;
   try {
-    return JSON.parse(clean);
+    conteudoEv = JSON.parse(clean);
   } catch (e) {
     const match = clean.match(/\{[\s\S]*\}/);
-    if (match) return JSON.parse(match[0]);
-    throw new Error('Não foi possível parsear a evolução da IA.');
+    if (match) conteudoEv = JSON.parse(match[0]);
+    else throw new Error('Não foi possível parsear a evolução da IA.');
   }
+  if (db) {
+    await registrarAuditoria(db, {
+      paciente_id: paciente.id, modulo: 'evolucao',
+      referencia_tipo: 'paciente', referencia_id: paciente.id,
+      output_resumo: 'Relatório de evolução gerado',
+      tokens_usados: data.usage && data.usage.output_tokens,
+      input_tokens:  data.usage && data.usage.input_tokens,
+      sucesso: true, modelo: 'claude-sonnet-4-20250514', modo: 'ia'
+    }).catch(function(e){ console.warn('audit evolucao:', e.message); });
+  }
+  return conteudoEv;
 }
 
 // ── GERA RESUMO CLÍNICO PÓS-SESSÃO ──
-async function gerarResumoClinico({ paciente, sessoes, mapeamento, pacote, isPrimeiro, novasSessoes, novosObsBlock, novosFeedbacks, resumoAtual }) {
+async function gerarResumoClinico({ db, paciente, sessoes, mapeamento, pacote, isPrimeiro, novasSessoes, novosObsBlock, novosFeedbacks, resumoAtual }) {
   const indicesStr = mapeamento ? JSON.stringify(mapeamento.indices_json || {}, null, 0) : 'Não disponível';
   const flagsStr   = mapeamento ? (mapeamento.flags_json || []).join(', ') || 'Nenhuma' : 'Não disponível';
 
@@ -804,6 +837,16 @@ Este é o PRIMEIRO resumo analítico — baseado exclusivamente nos dados do for
     });
     if (!resp.ok) throw new Error('Anthropic error: ' + resp.status);
     const d = await resp.json();
+    if (db) {
+      await registrarAuditoria(db, {
+        paciente_id: paciente.id, modulo: 'resumo_clinico',
+        referencia_tipo: 'paciente', referencia_id: paciente.id,
+        output_resumo: 'Resumo clínico atualizado',
+        tokens_usados: d.usage && d.usage.output_tokens,
+        input_tokens:  d.usage && d.usage.input_tokens,
+        sucesso: true, modelo: 'claude-sonnet-4-20250514', modo: 'ia'
+      }).catch(function(e){ console.warn('audit resumo:', e.message); });
+    }
     return (d.content && d.content[0] && d.content[0].text) || 'Resumo inicial não gerado.';
   }
 
@@ -840,6 +883,16 @@ Atualize o resumo clínico incorporando essas novidades. Mantenha o que já esta
     });
     if (!resp.ok) throw new Error('Anthropic error: ' + resp.status);
     const d = await resp.json();
+    if (db) {
+      await registrarAuditoria(db, {
+        paciente_id: paciente.id, modulo: 'resumo_clinico',
+        referencia_tipo: 'paciente', referencia_id: paciente.id,
+        output_resumo: 'Resumo clínico atualizado',
+        tokens_usados: d.usage && d.usage.output_tokens,
+        input_tokens:  d.usage && d.usage.input_tokens,
+        sucesso: true, modelo: 'claude-sonnet-4-20250514', modo: 'ia'
+      }).catch(function(e){ console.warn('audit resumo:', e.message); });
+    }
     return (d.content && d.content[0] && d.content[0].text) || resumoAtual;
   }
 
@@ -1643,7 +1696,8 @@ async function gerarContextoInicial({ paciente, mapeamento, cids }) {
     flags:   Array.isArray(flags) ? flags : [],
     cids:    Array.isArray(cids)  ? cids  : [],
     sintese: sintese || '',
-    risco:   mapeamento.risco_nivel || 'verde'
+    risco:   mapeamento.risco_nivel || 'verde',
+    _usage:  data.usage || null
   };
 }
 

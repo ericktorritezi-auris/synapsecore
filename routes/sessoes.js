@@ -324,7 +324,7 @@ async function gerarEAtualizarResumo(paciente_id, forceRegenerate) {
     ].filter(Boolean).join('\n') : null;
 
     const conteudo = await gerarResumoClinico({
-      paciente, sessoes, mapeamento, pacote,
+      db, paciente, sessoes, mapeamento, pacote,
       isPrimeiro: false,
       novasSessoes:  sessoesNovas.length ? sessoesNovas : null,
       novosObsBlock: novosObsBlock || null,
@@ -349,7 +349,7 @@ async function gerarEAtualizarResumo(paciente_id, forceRegenerate) {
   const obsAtual = [proto.obs_terapeuta, proto.objetivos_iniciais, proto.protocolo_sugerido, proto.sintese_caso].filter(Boolean).join('|');
   const obsHash = obsAtual ? crypto.createHash('md5').update(obsAtual).digest('hex') : '';
 
-  const conteudo = await gerarResumoClinico({ paciente, sessoes, mapeamento, pacote, isPrimeiro });
+  const conteudo = await gerarResumoClinico({ db, paciente, sessoes, mapeamento, pacote, isPrimeiro });
 
   const ids  = sessoes.map(s => s.id);
   const fids = feedbacks.map(f => f.id);

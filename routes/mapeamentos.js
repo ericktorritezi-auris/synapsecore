@@ -1,7 +1,7 @@
 const express = require('express');
 const db      = require('../db');
 const { verifyToken } = require('../middleware/auth');
-const { calcularIndices, detectarFlags, gerarMapeamento, sugerirPrograma, sugerirProgramaLocal, sugerirCIDs, gerarContextoInicial } = require('../services/ai');
+const { calcularIndices, detectarFlags, gerarMapeamento, sugerirPrograma, sugerirProgramaLocal, sugerirCIDs, gerarContextoInicial, registrarAuditoria } = require('../services/ai');
 const router  = express.Router();
 
 // ── POST /api/mapeamentos/:paciente_id/gerar ──
@@ -40,7 +40,7 @@ router.post('/:paciente_id/gerar', verifyToken, async (req, res) => {
     const prog = await sugerirPrograma(paciente.perfil_tipo, indices, flags, pacotes);
 
     // Generate mapping via AI
-    const { relatorio } = await gerarMapeamento({
+    const { relatorio } = await gerarMapeamento({ db,
       paciente, respostas, indices, flags, pacotes, riscoNivel
     });
 
@@ -85,7 +85,7 @@ router.post('/:paciente_id/gerar', verifyToken, async (req, res) => {
     });
 
     // Generate CID suggestions in background (don't block response)
-    sugerirCIDs({ paciente, respostas, indices, flags })
+    sugerirCIDs({ db, paciente, respostas, indices, flags })
       .then(async function(cids) {
         if (!cids.length) return;
         // Remove old unconfirmed CIDs for this patient
@@ -322,6 +322,18 @@ router.post('/:mapeamento_id/contexto-inicial', verifyToken, async (req, res) =>
     };
 
     const resultado = await gerarContextoInicial({ paciente, mapeamento, cids });
+
+    // Audit IA usage
+    if (resultado._usage) {
+      await registrarAuditoria(db, {
+        paciente_id: row.paciente_id, modulo: 'contexto_inicial',
+        referencia_tipo: 'mapeamento', referencia_id: mapeamento_id,
+        output_resumo: 'Contexto inicial gerado',
+        tokens_usados: resultado._usage.output_tokens || null,
+        input_tokens:  resultado._usage.input_tokens  || null,
+        sucesso: true, modelo: 'claude-sonnet-4-20250514', modo: 'ia'
+      }).catch(function(e){ console.warn('audit contexto:', e.message); });
+    }
 
     // Store as JSON with all structured data
     const dadosJson = JSON.stringify({

@@ -158,6 +158,39 @@ router.post('/webhook-agenda', async (req, res) => {
     }
 
     // ── EVENTOS ──
+
+    // ── appointment.daily_summary — agenda do dia (disparo às 6h30) ──
+    if (event === 'agenda.daily' || event === 'appointment.daily_summary') {
+      var appointments = payload.appointments || [];
+      var dateStr = payload.date || '';
+      var dataFmt = '';
+      if (dateStr) {
+        try {
+          var dObj = new Date(dateStr + 'T12:00:00');
+          dataFmt = dObj.toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'2-digit' });
+          dataFmt = dataFmt.charAt(0).toUpperCase() + dataFmt.slice(1);
+        } catch(e2) { dataFmt = dateStr; }
+      }
+      if (!appointments.length) {
+        console.log('Agenda do dia vazia — sem alerta');
+        return res.json({ received: true, event, ignored: true, reason: 'no_appointments' });
+      }
+      var qtd    = appointments.length || parseInt(payload.total) || 0;
+      var titulo = '📋 Agenda de hoje — ' + qtd + ' sessão' + (qtd > 1 ? 'ões' : '');
+      var lista  = appointments.map(function(a) {
+        return (a.time ? a.time.substring(0,5) : '') + ' ' + (a.patient_name || 'Paciente');
+      }).join(' · ');
+      var corpo  = (dataFmt ? dataFmt + ': ' : '') + lista + '.';
+
+      await db.query(
+        `INSERT INTO alertas (tipo, prioridade, titulo, corpo, acao_tipo, acao_url)
+         VALUES ($1,$2,$3,$4,$5,$6)`,
+        ['agenda_dia', 'informativo', titulo, corpo, 'paciente', '/pacientes']
+      );
+      console.log('Alerta agenda do dia:', titulo);
+      return res.json({ received: true, event, sessoes: qtd });
+    }
+
     if (event === 'appointment.created') {
       var titulo = '📅 Novo agendamento: ' + pacienteNome;
       var corpo  = patName + ' agendou ' + proc +

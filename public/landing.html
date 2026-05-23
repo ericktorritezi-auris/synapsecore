@@ -308,6 +308,13 @@ h1 strong {
   background:linear-gradient(135deg,rgba(255,255,255,.15),transparent);
   opacity:0;
   transition:opacity .3s;
+  pointer-events:none;
+  z-index:0;
+}
+.btn-enter span {
+  position:relative;
+  z-index:1;
+  pointer-events:none;
 }
 .btn-enter:hover {
   transform:translateY(-2px);
@@ -748,7 +755,7 @@ h1 strong {
     <!-- CTA -->
     <div class="cta-row">
       <button class="btn-enter" onclick="abrirLogin()">
-        Acessar Sistema
+        <span>Acessar Sistema</span>
       </button>
 
     </div>

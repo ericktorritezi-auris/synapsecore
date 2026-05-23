@@ -7,7 +7,7 @@ const { runMigrations } = require('./db/migrations');
 
 const app     = express();
 const PORT    = process.env.PORT || 3000;
-const VERSION = '3.8.2';
+const VERSION = '3.8.3';
 
 // ── MIDDLEWARE ──
 app.use(cors());
@@ -130,8 +130,16 @@ app.post('/api/webhooks/agenda', (req, res, next) => {
 });
 
 // ── PAGES ──
-app.get('/',       (req, res) => res.sendFile(path.join(__dirname, 'public', 'landing.html')));
-app.get('/login',  (req, res) => res.sendFile(path.join(__dirname, 'public', 'landing.html')));
+app.get('/', (req, res) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.sendFile(path.join(__dirname, 'public', 'landing.html'));
+});
+app.get('/login', (req, res) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.sendFile(path.join(__dirname, 'public', 'landing.html'));
+});
 app.get('/dashboard',     (req, res) => res.sendFile(path.join(__dirname, 'public', 'dashboard.html')));
 app.get('/pacientes',     (req, res) => res.sendFile(path.join(__dirname, 'public', 'pacientes.html')));
 app.get('/paciente-novo', (req, res) => res.sendFile(path.join(__dirname, 'public', 'paciente-novo.html')));

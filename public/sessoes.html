@@ -546,16 +546,16 @@ function renderSessoes() {
         var valorFmt = 'R$ ' + parseFloat(s.valor_cobrado).toFixed(2).replace('.',',');
         var msg;
         if (pago) {
-          msg = 'Ola ' + nomeP + '! Sua sessao foi realizada com sucesso. Pagamento de ' + valorFmt + ' confirmado. Obrigado! Ate a proxima.';
+          msg = 'Olá, ' + nomeP + '! 🌟\n\n✅ Sessão realizada com sucesso.\n💳 Pagamento de ' + valorFmt + ' confirmado.\n\nFoi um prazer te acompanhar hoje. Até o nosso próximo encontro! 🙏\n\n—\n⚡ Enviado via Synapse Core';
         } else {
           var pixTipo  = terapeuta && terapeuta.pix_tipo  ? terapeuta.pix_tipo  : '';
           var pixChave = terapeuta && terapeuta.pix_chave ? terapeuta.pix_chave : '';
           var pixLbl   = { telefone:'Telefone', email:'E-mail', cpf:'CPF', cnpj:'CNPJ', aleatoria:'Chave aleatoria' };
           var tipoStr  = pixTipo ? (pixLbl[pixTipo] || pixTipo) : 'Pix';
           if (pixChave) {
-            msg = 'Ola ' + nomeP + '! Sua sessao foi realizada com sucesso.\nPara o pagamento, segue minha chave Pix ' + tipoStr + ': ' + pixChave + '\nValor: ' + valorFmt + '\nQualquer duvida estou a disposicao!';
+            msg = 'Olá, ' + nomeP + '! 🌟\n\n✅ Sessão realizada com sucesso.\n\n💰 Para o pagamento:\n🔑 Chave Pix (' + tipoStr + '): ' + pixChave + '\n💵 Valor: ' + valorFmt + '\n\nQualquer dúvida estou à disposição! 😊🙏\n\n—\n⚡ Enviado via Synapse Core';
           } else {
-            msg = 'Ola ' + nomeP + '! Sua sessao foi realizada com sucesso. Valor: ' + valorFmt + '. Qualquer duvida estou a disposicao!';
+            msg = 'Olá, ' + nomeP + '! 🌟\n\n✅ Sessão realizada com sucesso.\n💵 Valor: ' + valorFmt + '\n\nQualquer dúvida estou à disposição! 😊🙏\n\n—\n⚡ Enviado via Synapse Core';
           }
         }
         window.open('https://wa.me/' + telPac + '?text=' + encodeURIComponent(msg), '_blank');
@@ -631,16 +631,16 @@ function salvarSessao() {
         var valorFmt= 'R$ ' + valor.toFixed(2).replace('.',',');
         var msg;
         if (pago) {
-          msg = 'Olá ' + nomeP + '! 😊 Sua sessão foi realizada com sucesso. Pagamento de ' + valorFmt + ' confirmado. Obrigado! Até a próxima. 🙏';
+          msg = 'Olá, ' + nomeP + '! 🌟\n\n✅ Sessão realizada com sucesso.\n💳 Pagamento de ' + valorFmt + ' confirmado.\n\nFoi um prazer te acompanhar hoje. Até o nosso próximo encontro! 🙏\n\n—\n⚡ Enviado via Synapse Core';
         } else {
           var pixTipo  = terapeuta && terapeuta.pix_tipo  ? terapeuta.pix_tipo  : '';
           var pixChave = terapeuta && terapeuta.pix_chave ? terapeuta.pix_chave : '';
           var pixLbl   = { telefone:'Telefone', email:'E-mail', cpf:'CPF', cnpj:'CNPJ', aleatoria:'Chave aleatória' };
           var tipoStr  = pixTipo ? (pixLbl[pixTipo] || pixTipo) : 'Pix';
           if (pixChave) {
-            msg = 'Olá ' + nomeP + '! 😊 Sua sessão foi realizada com sucesso.\nPara o pagamento, segue minha chave Pix ' + tipoStr + ': ' + pixChave + '\nValor: ' + valorFmt + '\nQualquer dúvida estou à disposição! 🙏';
+            msg = 'Olá, ' + nomeP + '! 🌟\n\n✅ Sessão realizada com sucesso.\n\n💰 Para o pagamento:\n🔑 Chave Pix (' + tipoStr + '): ' + pixChave + '\n💵 Valor: ' + valorFmt + '\n\nQualquer dúvida estou à disposição! 😊🙏\n\n—\n⚡ Enviado via Synapse Core';
           } else {
-            msg = 'Olá ' + nomeP + '! 😊 Sua sessão foi realizada com sucesso. Valor: ' + valorFmt + '. Qualquer dúvida estou à disposição! 🙏';
+            msg = 'Olá, ' + nomeP + '! 🌟\n\n✅ Sessão realizada com sucesso.\n💵 Valor: ' + valorFmt + '\n\nQualquer dúvida estou à disposição! 😊🙏\n\n—\n⚡ Enviado via Synapse Core';
           }
         }
         if (telPac) {

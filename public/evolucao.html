@@ -262,9 +262,12 @@ window.addEventListener('DOMContentLoaded', function() {
         document.getElementById('errMsg').textContent = 'Erro ao renderizar o relatório.';
       }
     })
-    .catch(function() {
+    .catch(function(err) {
       document.getElementById('scrLoad').style.display='none';
       document.getElementById('scrError').style.display='flex';
+      var msg = err && err.message ? err.message : 'Erro ao carregar o relatório.';
+      var el = document.getElementById('errMsg');
+      if (el) el.textContent = msg;
     });
 });
 

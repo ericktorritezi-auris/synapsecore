@@ -1,6 +1,30 @@
 // SYNAPSE CORE — AI Service v1.4.0
 // Índices · Flags · Prompt · Anthropic API
 
+// ── FETCH COM TIMEOUT 45s ──
+async function fetchIA(body) {
+  var controller = new AbortController();
+  var timer = setTimeout(function(){ controller.abort(); }, 45000);
+  try {
+    var resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify(body),
+      signal: controller.signal
+    });
+    clearTimeout(timer);
+    return resp;
+  } catch(e) {
+    clearTimeout(timer);
+    if (e.name === 'AbortError') throw new Error('A IA demorou mais que o esperado. Tente novamente.');
+    throw e;
+  }
+}
+
 // ── SCORE CONVERTERS ──
 const sf  = v => ({r:0,av:25,f:50,qs:75,s:100}[v]??null);   // positive LF
 const sn  = v => ({r:100,av:75,f:50,qs:25,s:0}[v]??null);   // negative LF
@@ -211,11 +235,7 @@ Retorne APENAS JSON válido:
   "aderencia_sessoes": "<breve descrição de como as primeiras sessões do programa se adequam ao perfil clínico>"
 }`;
 
-  const resp = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: { 'Content-Type':'application/json', 'x-api-key': process.env.ANTHROPIC_API_KEY, 'anthropic-version':'2023-06-01' },
-    body: JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:600, messages:[{role:'user',content:prompt}] })
-  });
+  const resp = await fetchIA(JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:600, messages:[{role:'user',content:prompt}] }));
   if (!resp.ok) throw new Error('Anthropic API error: ' + resp.status);
   const data  = await resp.json();
   const text  = (data.content && data.content[0] && data.content[0].text) || '{}';
@@ -341,19 +361,11 @@ NÃO diagnostique. Use linguagem de hipóteses ("sugere", "indica", "observa-se 
   "obs_terapeuta": ""
 }`;
 
-  const resp = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': process.env.ANTHROPIC_API_KEY,
-      'anthropic-version': '2023-06-01'
-    },
-    body: JSON.stringify({
+  const resp = await fetchIA(JSON.stringify({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 4000,
       messages: [{ role: 'user', content: prompt }]
-    })
-  });
+    }));
 
   if (!resp.ok) {
     const err = await resp.text();
@@ -479,11 +491,7 @@ Retorne APENAS JSON válido:
 }`;
 
   try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method:'POST',
-      headers:{'Content-Type':'application/json','x-api-key':process.env.ANTHROPIC_API_KEY,'anthropic-version':'2023-06-01'},
-      body:JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:1200, messages:[{role:'user',content:prompt}] })
-    });
+    const resp = await fetchIA(JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:1200, messages:[{role:'user',content:prompt}] }));
     const data = await resp.json();
     const text = data.content && data.content[0] && data.content[0].text || '{}';
     const clean = text.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
@@ -557,11 +565,7 @@ Retorne APENAS JSON válido:
 }`;
 
   try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method:'POST',
-      headers:{'Content-Type':'application/json','x-api-key':process.env.ANTHROPIC_API_KEY,'anthropic-version':'2023-06-01'},
-      body:JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:2000, messages:[{role:'user',content:prompt}] })
-    });
+    const resp = await fetchIA(JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:2000, messages:[{role:'user',content:prompt}] }));
     const data = await resp.json();
     const text = data.content && data.content[0] && data.content[0].text || '{}';
     const clean = text.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
@@ -616,11 +620,7 @@ Retorne APENAS JSON válido:
 }`;
 
   try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method:'POST',
-      headers:{'Content-Type':'application/json','x-api-key':process.env.ANTHROPIC_API_KEY,'anthropic-version':'2023-06-01'},
-      body:JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:1500, messages:[{role:'user',content:prompt}] })
-    });
+    const resp = await fetchIA(JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:1500, messages:[{role:'user',content:prompt}] }));
     const data = await resp.json();
     const text = data.content && data.content[0] && data.content[0].text || '{}';
     const clean = text.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
@@ -680,19 +680,11 @@ Retorne APENAS JSON válido, sem texto antes ou depois:
   }
 ]`;
 
-  const resp = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': process.env.ANTHROPIC_API_KEY,
-      'anthropic-version': '2023-06-01'
-    },
-    body: JSON.stringify({
+  const resp = await fetchIA(JSON.stringify({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 2000,
       messages: [{ role: 'user', content: prompt }]
-    })
-  });
+    }));
 
   if (!resp.ok) throw new Error('Anthropic API error: ' + resp.status);
   const data  = await resp.json();
@@ -772,19 +764,11 @@ Analise a evolução e retorne APENAS um JSON válido, sem texto antes ou depois
 }
 Regras: indices_atuais devem refletir a evolução observada nas sessões (podem subir ou descer). Seja realista — não infle os números sem evidência nas sessões.`;
 
-  const resp = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': process.env.ANTHROPIC_API_KEY,
-      'anthropic-version': '2023-06-01'
-    },
-    body: JSON.stringify({
+  const resp = await fetchIA(JSON.stringify({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 3000,
       messages: [{ role: 'user', content: prompt }]
-    })
-  });
+    }));
 
   if (!resp.ok) throw new Error('Anthropic API error: ' + resp.status);
   const data  = await resp.json();
@@ -830,11 +814,7 @@ FLAGS CLÍNICAS: ${flagsStr}
 
 Este é o PRIMEIRO resumo analítico — baseado exclusivamente nos dados do formulário de avaliação inicial. Gere um resumo clínico de linha de base (3-4 parágrafos) descrevendo o perfil clínico inicial, principais áreas de atenção, pontos de força e direção inicial para o trabalho terapêutico. Use linguagem técnica e clínica.`;
 
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': process.env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1500, messages: [{ role: 'user', content: prompt }] })
-    });
+    const resp = await fetchIA(JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1500, messages: [{ role: 'user', content: prompt }] }));
     if (!resp.ok) throw new Error('Anthropic error: ' + resp.status);
     const d = await resp.json();
     if (db) {
@@ -876,11 +856,7 @@ ${novidades.join('\n\n')}
 
 Atualize o resumo clínico incorporando essas novidades. Mantenha o que já estava correto e preciso. Acrescente e refine com base nas novas informações. Use linguagem técnica e clínica. Retorne apenas o resumo atualizado completo, sem comentários adicionais.`;
 
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': process.env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1800, messages: [{ role: 'user', content: prompt }] })
-    });
+    const resp = await fetchIA(JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1800, messages: [{ role: 'user', content: prompt }] }));
     if (!resp.ok) throw new Error('Anthropic error: ' + resp.status);
     const d = await resp.json();
     if (db) {
@@ -936,19 +912,11 @@ Escreva em prosa contínua, 4-6 parágrafos, cobrindo:
 5. Posicionamento atual no processo e próximos focos
 Retorne APENAS o texto do resumo, sem JSON, sem títulos, sem marcadores.`;
 
-  const resp = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': process.env.ANTHROPIC_API_KEY,
-      'anthropic-version': '2023-06-01'
-    },
-    body: JSON.stringify({
+  const resp = await fetchIA(JSON.stringify({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 2000,
       messages: [{ role: 'user', content: prompt }]
-    })
-  });
+    }));
 
   if (!resp.ok) throw new Error('Anthropic API error: ' + resp.status);
   const data = await resp.json();
@@ -1026,10 +994,7 @@ Retorne APENAS JSON válido:
 }`;
 
   try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method:'POST', headers:{'Content-Type':'application/json','x-api-key':process.env.ANTHROPIC_API_KEY,'anthropic-version':'2023-06-01'},
-      body:JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:2000, messages:[{role:'user',content:prompt}] })
-    });
+    const resp = await fetchIA(JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:2000, messages:[{role:'user',content:prompt}] }));
     if (!resp.ok) { const errTxt = await resp.text().catch(function(){return '';}); throw new Error('Anthropic 400: '+errTxt.substring(0,400)); }
     const data = await resp.json();
     const text = data.content && data.content[0] && data.content[0].text||'{}';
@@ -1037,7 +1002,7 @@ Retorne APENAS JSON válido:
     const m = clean.match(/\{[\s\S]*\}/);
     const json = m ? JSON.parse(m[0]) : {};
     const duracao = Date.now()-inicio;
-    await registrarAuditoria(db,{paciente_id:paciente.id,modulo:'analise_estrutural',referencia_tipo:'mapeamento',referencia_id:mapeamento && mapeamento.id,prompt_resumo:prompt,input_hash:crypto.createHash('md5').update(prompt).digest('hex'),output_resumo:text,tokens_usados:data.usage && data.usage.output_tokens,duracao_ms:duracao,sucesso:true,modelo:'claude-sonnet-4-20250514',modo:'ia'});
+    await registrarAuditoria(db,{paciente_id:paciente.id,modulo:'analise_estrutural',referencia_tipo:'mapeamento',referencia_id:mapeamento && mapeamento.id,prompt_resumo:prompt,input_hash:crypto.createHash('md5').update(prompt).digest('hex'),output_resumo:text,tokens_usados:data.usage && data.usage.output_tokens,input_tokens:data.usage && data.usage.input_tokens,duracao_ms:duracao,sucesso:true,modelo:'claude-sonnet-4-20250514',modo:'ia'});
     return { json, resumo_executivo: json.resumo_executivo||'', modo:'ia', modelo:'claude-sonnet-4-20250514' };
   } catch(e) {
     await registrarAuditoria(db,{paciente_id:paciente.id,modulo:'analise_estrutural',sucesso:false,erro_msg:e.message,modo:'fallback'});
@@ -1092,10 +1057,7 @@ Retorne APENAS JSON válido:
 }`;
 
   try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method:'POST', headers:{'Content-Type':'application/json','x-api-key':process.env.ANTHROPIC_API_KEY,'anthropic-version':'2023-06-01'},
-      body:JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:2500, messages:[{role:'user',content:prompt}] })
-    });
+    const resp = await fetchIA(JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:2500, messages:[{role:'user',content:prompt}] }));
     if (!resp.ok) { const errTxt = await resp.text().catch(function(){return '';}); throw new Error('Anthropic 400: '+errTxt.substring(0,400)); }
     const data = await resp.json();
     const text = data.content && data.content[0] && data.content[0].text||'{}';
@@ -1103,7 +1065,7 @@ Retorne APENAS JSON válido:
     const m = clean.match(/\{[\s\S]*\}/);
     const json = m ? JSON.parse(m[0]) : { hipoteses:[] };
     const duracao = Date.now()-inicio;
-    await registrarAuditoria(db,{paciente_id:paciente.id,modulo:'hipoteses_clinicas',referencia_tipo:'mapeamento',referencia_id:mapeamento && mapeamento.id,prompt_resumo:prompt,input_hash:crypto.createHash('md5').update(prompt).digest('hex'),output_resumo:text,tokens_usados:data.usage && data.usage.output_tokens,duracao_ms:duracao,sucesso:true,modelo:'claude-sonnet-4-20250514',modo:'ia'});
+    await registrarAuditoria(db,{paciente_id:paciente.id,modulo:'hipoteses_clinicas',referencia_tipo:'mapeamento',referencia_id:mapeamento && mapeamento.id,prompt_resumo:prompt,input_hash:crypto.createHash('md5').update(prompt).digest('hex'),output_resumo:text,tokens_usados:data.usage && data.usage.output_tokens,input_tokens:data.usage && data.usage.input_tokens,duracao_ms:duracao,sucesso:true,modelo:'claude-sonnet-4-20250514',modo:'ia'});
     return { hipoteses: json.hipoteses||[], modo:'ia' };
   } catch(e) {
     await registrarAuditoria(db,{paciente_id:paciente.id,modulo:'hipoteses_clinicas',sucesso:false,erro_msg:e.message,modo:'fallback'});
@@ -1148,10 +1110,7 @@ Retorne APENAS JSON válido:
 }`;
 
   try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method:'POST', headers:{'Content-Type':'application/json','x-api-key':process.env.ANTHROPIC_API_KEY,'anthropic-version':'2023-06-01'},
-      body:JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:2000, messages:[{role:'user',content:prompt}] })
-    });
+    const resp = await fetchIA(JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:2000, messages:[{role:'user',content:prompt}] }));
     if (!resp.ok) { const errTxt = await resp.text().catch(function(){return '';}); throw new Error('Anthropic 400: '+errTxt.substring(0,400)); }
     const data = await resp.json();
     const text = data.content && data.content[0] && data.content[0].text||'{}';
@@ -1159,7 +1118,7 @@ Retorne APENAS JSON válido:
     const m = clean.match(/\{[\s\S]*\}/);
     const json = m ? JSON.parse(m[0]) : {};
     const duracao = Date.now()-inicio;
-    await registrarAuditoria(db,{paciente_id:paciente.id,modulo:'mapa_identidade',referencia_tipo:'mapeamento',referencia_id:mapeamento && mapeamento.id,prompt_resumo:prompt,input_hash:crypto.createHash('md5').update(prompt).digest('hex'),output_resumo:text,tokens_usados:data.usage && data.usage.output_tokens,duracao_ms:duracao,sucesso:true,modelo:'claude-sonnet-4-20250514',modo:'ia'});
+    await registrarAuditoria(db,{paciente_id:paciente.id,modulo:'mapa_identidade',referencia_tipo:'mapeamento',referencia_id:mapeamento && mapeamento.id,prompt_resumo:prompt,input_hash:crypto.createHash('md5').update(prompt).digest('hex'),output_resumo:text,tokens_usados:data.usage && data.usage.output_tokens,input_tokens:data.usage && data.usage.input_tokens,duracao_ms:duracao,sucesso:true,modelo:'claude-sonnet-4-20250514',modo:'ia'});
     return { json, frase_identitaria: json.frase_identitaria||'', praticas_sustentacao: json.praticas_sustentacao||[], modo:'ia', modelo:'claude-sonnet-4-20250514' };
   } catch(e) {
     await registrarAuditoria(db,{paciente_id:paciente.id,modulo:'mapa_identidade',sucesso:false,erro_msg:e.message,modo:'fallback'});
@@ -1309,10 +1268,7 @@ Retorne APENAS JSON válido:
 }`;
 
   try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method:'POST', headers:{'Content-Type':'application/json','x-api-key':process.env.ANTHROPIC_API_KEY,'anthropic-version':'2023-06-01'},
-      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:prompt}]})
-    });
+    const resp = await fetchIA(JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:prompt}]}));
     if (!resp.ok) { const e=await resp.text().catch(function(){return '';}); throw new Error('Anthropic 400: '+e.substring(0,300)); }
     const data = await resp.json();
     const text = (data.content&&data.content[0]&&data.content[0].text)||'{}';
@@ -1320,7 +1276,7 @@ Retorne APENAS JSON válido:
     const m = clean.match(/\{[\s\S]*\}/);
     const json = m ? JSON.parse(m[0]) : {};
     const duracao = Date.now()-inicio;
-    await registrarAuditoria(db,{paciente_id:paciente.id,modulo:'risco_abandono',referencia_tipo:'paciente',referencia_id:paciente.id,prompt_resumo:prompt,input_hash:crypto.createHash('md5').update(prompt).digest('hex'),output_resumo:text,tokens_usados:data.usage&&data.usage.output_tokens,duracao_ms:duracao,sucesso:true,modelo:'claude-sonnet-4-20250514',modo:'clinico'});
+    await registrarAuditoria(db,{paciente_id:paciente.id,modulo:'risco_abandono',referencia_tipo:'paciente',referencia_id:paciente.id,prompt_resumo:prompt,input_hash:crypto.createHash('md5').update(prompt).digest('hex'),output_resumo:text,tokens_usados:data.usage&&data.usage.output_tokens,input_tokens:data.usage&&data.usage.input_tokens,duracao_ms:duracao,sucesso:true,modelo:'claude-sonnet-4-20250514',modo:'clinico'});
     return { score:parseInt(json.score)||0, nivel:json.nivel||'baixo', nivel_confianca:json.nivel_confianca||'moderado', fatores:json.fatores||[], explicacao:json.explicacao||'', sugestao_estrategica:json.sugestao_estrategica||'', acao_recomendada:json.acao_recomendada||'', modo:'clinico' };
   } catch(e) {
     await registrarAuditoria(db,{paciente_id:paciente.id,modulo:'risco_abandono',sucesso:false,erro_msg:e.message,modo:'fallback'});
@@ -1410,10 +1366,7 @@ Retorne APENAS JSON válido:
 }`;
 
   try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method:'POST', headers:{'Content-Type':'application/json','x-api-key':process.env.ANTHROPIC_API_KEY,'anthropic-version':'2023-06-01'},
-      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1500,messages:[{role:'user',content:prompt}]})
-    });
+    const resp = await fetchIA(JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1500,messages:[{role:'user',content:prompt}]}));
     if (!resp.ok) { const e=await resp.text().catch(function(){return '';}); throw new Error('Anthropic 400: '+e.substring(0,300)); }
     const data = await resp.json();
     const text = (data.content&&data.content[0]&&data.content[0].text)||'{}';
@@ -1421,7 +1374,7 @@ Retorne APENAS JSON válido:
     const m = clean.match(/\{[\s\S]*\}/);
     const json = m ? JSON.parse(m[0]) : {};
     const duracao = Date.now()-inicio;
-    await registrarAuditoria(db,{paciente_id:paciente.id,modulo:'evolucao_preditiva',referencia_tipo:'paciente',referencia_id:paciente.id,prompt_resumo:prompt,input_hash:crypto.createHash('md5').update(prompt).digest('hex'),output_resumo:text,tokens_usados:data.usage&&data.usage.output_tokens,duracao_ms:duracao,sucesso:true,modelo:'claude-sonnet-4-20250514',modo:'ia'});
+    await registrarAuditoria(db,{paciente_id:paciente.id,modulo:'evolucao_preditiva',referencia_tipo:'paciente',referencia_id:paciente.id,prompt_resumo:prompt,input_hash:crypto.createHash('md5').update(prompt).digest('hex'),output_resumo:text,tokens_usados:data.usage&&data.usage.output_tokens,input_tokens:data.usage&&data.usage.input_tokens,duracao_ms:duracao,sucesso:true,modelo:'claude-sonnet-4-20250514',modo:'ia'});
     return { nivel_dados:nivelDados, nivel_confianca:nivelConfianca, horizonte_sessoes:horizSessoes, tendencia_predominante:json.tendencia_predominante||'', fatores_favoraveis:json.fatores_favoraveis||[], fatores_risco:json.fatores_risco||[], dimensoes_frageis:json.dimensoes_frageis||[], dimensoes_fortalecidas:json.dimensoes_fortalecidas||[], proximos_focos:json.proximos_focos||[], ajustes_recomendados:json.ajustes_recomendados||[], modo:'ia' };
   } catch(e) {
     await registrarAuditoria(db,{paciente_id:paciente.id,modulo:'evolucao_preditiva',sucesso:false,erro_msg:e.message,modo:'fallback'});
@@ -1582,11 +1535,7 @@ Retorne APENAS JSON válido com esta estrutura exata:
 }`;
 
   try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method:'POST',
-      headers:{'Content-Type':'application/json','x-api-key':process.env.ANTHROPIC_API_KEY,'anthropic-version':'2023-06-01'},
-      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:3500,messages:[{role:'user',content:prompt}]})
-    });
+    const resp = await fetchIA(JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:3500,messages:[{role:'user',content:prompt}]}));
     if (!resp.ok) { const e=await resp.text().catch(function(){return '';}); throw new Error('Anthropic 400: '+e.substring(0,300)); }
     const data = await resp.json();
     const text = (data.content&&data.content[0]&&data.content[0].text)||'{}';
@@ -1594,7 +1543,7 @@ Retorne APENAS JSON válido com esta estrutura exata:
     const m = clean.match(/\{[\s\S]*\}/);
     const json = m ? JSON.parse(m[0]) : {};
     const duracao = Date.now()-inicio;
-    await registrarAuditoria(db,{paciente_id:paciente.id,modulo:'prontuario_inteligente',referencia_tipo:'paciente',referencia_id:paciente.id,prompt_resumo:prompt,input_hash:crypto.createHash('md5').update(prompt).digest('hex'),output_resumo:text,tokens_usados:data.usage&&data.usage.output_tokens,duracao_ms:duracao,sucesso:true,modelo:'claude-sonnet-4-20250514',modo:'ia'});
+    await registrarAuditoria(db,{paciente_id:paciente.id,modulo:'prontuario_inteligente',referencia_tipo:'paciente',referencia_id:paciente.id,prompt_resumo:prompt,input_hash:crypto.createHash('md5').update(prompt).digest('hex'),output_resumo:text,tokens_usados:data.usage&&data.usage.output_tokens,input_tokens:data.usage&&data.usage.input_tokens,duracao_ms:duracao,sucesso:true,modelo:'claude-sonnet-4-20250514',modo:'ia'});
     return {
       paciente: {
         nome: paciente.nome_completo, perfil: paciente.perfil_tipo||'adulto',
@@ -1670,19 +1619,11 @@ async function gerarContextoInicial({ paciente, mapeamento, cids }) {
     + 'Use "identificamos", "percebemos", "notamos" (plural). Máximo 380 palavras. '
     + 'Retorne APENAS o texto dos 5 parágrafos, sem títulos, sem numeração, sem markdown.';
 
-  const resp = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type':      'application/json',
-      'x-api-key':         process.env.ANTHROPIC_API_KEY,
-      'anthropic-version': '2023-06-01'
-    },
-    body: JSON.stringify({
+  const resp = await fetchIA(JSON.stringify({
       model:      'claude-sonnet-4-20250514',
       max_tokens: 900,
       messages:   [{ role: 'user', content: prompt }]
-    })
-  });
+    }));
 
   if (!resp.ok) throw new Error('Anthropic API error: ' + resp.status);
   const data  = await resp.json();
@@ -1739,19 +1680,11 @@ async function gerarResumoEncaminhamento({ paciente, sessoes, mapeamento, analis
     + 'Retorne EXATAMENTE este JSON:\n'
     + '{"motivo":"...","sintomas":"...","objetivo":"...","resumo":"..."}';
 
-  var resp = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': process.env.ANTHROPIC_API_KEY,
-      'anthropic-version': '2023-06-01'
-    },
-    body: JSON.stringify({
+  var resp = await fetchIA(JSON.stringify({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 600,
       messages: [{ role: 'user', content: prompt }]
-    })
-  });
+    }));
 
   if (!resp.ok) throw new Error('Anthropic API error: ' + resp.status);
   var data = await resp.json();

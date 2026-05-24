@@ -18,15 +18,25 @@ function logout() {
 // ── API ──
 async function api(url, method = 'GET', data = null) {
   const token = localStorage.getItem('sc_token');
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 50000); // 50s timeout
   const opts = {
     method,
-    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    signal: controller.signal
   };
   if (data) opts.body = JSON.stringify(data);
-  const res  = await fetch(url, opts);
-  const json = await res.json();
-  if (!res.ok) throw { status: res.status, message: json.message || 'Erro' };
-  return json;
+  try {
+    const res  = await fetch(url, opts);
+    clearTimeout(timer);
+    const json = await res.json();
+    if (!res.ok) throw { status: res.status, message: json.message || 'Erro' };
+    return json;
+  } catch(e) {
+    clearTimeout(timer);
+    if (e.name === 'AbortError') throw { status: 408, message: 'A IA demorou mais que o esperado. Tente novamente.' };
+    throw e;
+  }
 }
 
 // ── TOAST ──

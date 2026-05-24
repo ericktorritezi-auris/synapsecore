@@ -13,7 +13,7 @@ async function fetchIA(body) {
         'x-api-key': process.env.ANTHROPIC_API_KEY,
         'anthropic-version': '2023-06-01'
       },
-      body: JSON.stringify(body),
+      body: typeof body === 'string' ? body : JSON.stringify(body),
       signal: controller.signal
     });
     clearTimeout(timer);

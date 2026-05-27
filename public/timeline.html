@@ -461,9 +461,11 @@ function renderDesktopPanorama(data){
   var hist=data.evolucao_historico||[];
   if(!eventos.length){track.innerHTML='<div class="dt-axis"></div>';return;}
 
-  // Update range label
-  if(hist.length>=2&&range){
-    range.textContent=fmtMs(hist[0].gerado_em)+' — '+fmtMs(hist[hist.length-1].gerado_em);
+  // Update range label — usar primeiro e último EVENTO (não evolucao_historico)
+  if(range&&eventos.length){
+    var dataInicio=eventos[0].data;
+    var dataFim=eventos[eventos.length-1].data;
+    range.textContent=fmtMs(dataInicio)+(dataInicio!==dataFim?' — '+fmtMs(dataFim):'');
   }
 
   // Phase backgrounds
@@ -551,9 +553,11 @@ async function init(){
       document.getElementById('chartCard').style.display='block';
     }
 
-    var hist=data.evolucao_historico||[];
-    if(hist.length>=2){
-      document.getElementById('chartRange').textContent=fmtMs(hist[0].gerado_em)+' — '+fmtMs(hist[hist.length-1].gerado_em);
+    // chartRange: usar primeiro e último evento
+    var evts=data.eventos||[];
+    if(evts.length){
+      var r0=evts[0].data,rN=evts[evts.length-1].data;
+      document.getElementById('chartRange').textContent=fmtMs(r0)+(r0!==rN?' — '+fmtMs(rN):'');
     }
 
     if(data.mudou){

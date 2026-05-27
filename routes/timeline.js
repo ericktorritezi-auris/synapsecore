@@ -49,8 +49,8 @@ router.get('/:paciente_id', verifyToken, async (req, res) => {
 
     // ── 6. Documentos ──
     const docRes = await db.query(
-      `SELECT tipo_documento, titulo, criado_em FROM documentos_clinicos
-       WHERE paciente_id=$1 ORDER BY criado_em ASC`,
+      `SELECT tipo, titulo, created_at FROM documentos
+       WHERE paciente_id=$1 ORDER BY created_at ASC`,
       [pid]
     );
 
@@ -119,8 +119,8 @@ router.get('/:paciente_id', verifyToken, async (req, res) => {
     docRes.rows.forEach(function(d) {
       eventos.push({
         tipo: 'documento',
-        data: d.criado_em,
-        tipo_documento: d.tipo_documento,
+        data: d.created_at,
+        tipo_documento: d.tipo,
         titulo: d.titulo
       });
     });

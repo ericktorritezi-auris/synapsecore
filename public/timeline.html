@@ -371,7 +371,6 @@ function renderFeed(data){
     return;
   }
   var html='';
-  var total=eventos.length;
 
   if(fases.length){
     // Show phases as intro section, then ALL events in chronological order
@@ -382,9 +381,13 @@ function renderFeed(data){
       +'</div></div>';
   }
 
-  // Render ALL events chronologically — no slicing
+  // Render ALL events chronologically
   eventos.forEach(function(ev){html+=renderEvCard(ev);});
 
+  // *** Inserir HTML no DOM ANTES de buscar os elementos ***
+  feed.innerHTML=html;
+
+  // Agora o querySelectorAll encontra os cards corretamente
   feed.querySelectorAll('.ev-card').forEach(function(c){
     c.addEventListener('click',function(){this.classList.toggle('expanded');});
   });
@@ -543,8 +546,8 @@ async function init(){
     document.getElementById('scoreHero').style.display='flex';
 
     renderChart(data.evolucao_historico||[]);
-    // Only show chart card on mobile (desktop uses panorama)
-    if(window.innerWidth < 960){
+    // Only show chart card on mobile when there are at least 2 data points
+    if(window.innerWidth < 960 && (data.evolucao_historico||[]).length >= 2){
       document.getElementById('chartCard').style.display='block';
     }
 
@@ -562,14 +565,12 @@ async function init(){
         console.warn('IA fases falhou:',iaErr.message);
         data.fases=data.fases||[];
       }
-    }else{
-      document.getElementById('genBanner').style.display='none';
-      document.getElementById('okBanner').style.display='flex';
     }
 
     renderFeed(data);
     renderDesktopPanorama(data);
     document.getElementById('genBanner').style.display='none';
+    document.getElementById('okBanner').style.display='flex';
 
   }catch(err){
     document.getElementById('genBanner').style.display='none';

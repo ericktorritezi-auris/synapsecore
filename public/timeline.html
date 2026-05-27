@@ -136,7 +136,7 @@ body{font-family:var(--fb);background:var(--bg);color:var(--tx);min-height:100vh
 .dim-bar{height:100%;border-radius:2px;background:linear-gradient(90deg,#C4965A,var(--ac))}
 .dim-val{font-family:var(--fd);font-size:10px;font-weight:700;color:var(--mu)}
 
-.chart-card{background:var(--sf);border:1px solid var(--brd);border-radius:var(--r);padding:14px 18px;margin-bottom:14px}
+.chart-card{background:var(--sf);border:1px solid var(--brd);border-radius:var(--r);padding:14px 18px;margin-bottom:14px;max-height:150px;overflow:hidden}
 .chart-hdr{font-family:var(--fd);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--dim);margin-bottom:10px;display:flex;justify-content:space-between}
 .chart-area{height:70px;overflow:hidden}
 .chart-svg{width:100%;height:100%;overflow:visible}
@@ -543,7 +543,10 @@ async function init(){
     document.getElementById('scoreHero').style.display='flex';
 
     renderChart(data.evolucao_historico||[]);
-    document.getElementById('chartCard').style.display='block';
+    // Only show chart card on mobile (desktop uses panorama)
+    if(window.innerWidth < 960){
+      document.getElementById('chartCard').style.display='block';
+    }
 
     var hist=data.evolucao_historico||[];
     if(hist.length>=2){

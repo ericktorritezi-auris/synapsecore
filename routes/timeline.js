@@ -61,6 +61,14 @@ router.get('/:paciente_id', verifyToken, async (req, res) => {
       [pid]
     );
 
+    // ── 8. Risco de abandono ──
+    const riscoRes = await db.query(
+      `SELECT nivel, score_clinico, score_basico, explicacao, ultima_analise_leve
+       FROM risco_abandono WHERE paciente_id=$1 AND status='ativo'
+       ORDER BY versao DESC LIMIT 1`,
+      [pid]
+    );
+
     // ── BUILD EVENTOS (marcos da jornada) ──
     var eventos = [];
 
@@ -95,13 +103,29 @@ router.get('/:paciente_id', verifyToken, async (req, res) => {
 
     // Mapeamentos
     mapRes.rows.forEach(function(m) {
+      // Extract critical flags as separate events
+      var FLAGS_CRITICAS = ['risco_suicida','ideacao_suicida','avaliacao_psiquiatrica'];
+      var mFlags = m.flags_json || [];
+      var critFlags = mFlags.filter(function(f){ return FLAGS_CRITICAS.indexOf(f) !== -1; });
+      if (critFlags.length) {
+        critFlags.forEach(function(f) {
+          eventos.push({
+            tipo: 'flag',
+            data: m.created_at,
+            flag_nome: f,
+            versao_mapeamento: m.versao
+          });
+        });
+      }
+
       eventos.push({
         tipo: 'mapeamento',
         data: m.created_at,
         versao: m.versao,
-        flags: m.flags_json || [],
+        flags: mFlags,
         risco_nivel: m.risco_nivel,
-        indices: m.indices_json
+        indices: m.indices_json,
+        risco_abandono: riscoRes.rows[0] || null
       });
     });
 
@@ -162,7 +186,8 @@ router.get('/:paciente_id', verifyToken, async (req, res) => {
         total_mapeamentos: mapRes.rows.length,
         score_inicial: evolRes.rows.length ? parseFloat(evolRes.rows[0].score_global) : null,
         score_atual:   evolRes.rows.length ? parseFloat(evolRes.rows[evolRes.rows.length-1].score_global) : null
-      }
+      },
+      risco_abandono: riscoRes.rows[0] || null
     });
 
   } catch(err) {

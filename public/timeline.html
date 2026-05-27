@@ -138,7 +138,7 @@ body{font-family:var(--fb);background:var(--bg);color:var(--tx);min-height:100vh
 
 .chart-card{background:var(--sf);border:1px solid var(--brd);border-radius:var(--r);padding:14px 18px;margin-bottom:14px}
 .chart-hdr{font-family:var(--fd);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--dim);margin-bottom:10px;display:flex;justify-content:space-between}
-.chart-area{height:70px}
+.chart-area{height:70px;overflow:hidden}
 .chart-svg{width:100%;height:100%;overflow:visible}
 
 .gen-banner{background:rgba(212,175,127,.06);border:1px solid var(--abrd);border-radius:9px;padding:10px 14px;display:flex;align-items:center;gap:9px;margin-bottom:14px;font-family:var(--fd);font-size:11.5px;letter-spacing:.3px;color:rgba(212,175,127,.7)}
@@ -204,6 +204,33 @@ body{font-family:var(--fb);background:var(--bg);color:var(--tx);min-height:100vh
 .empty-state{text-align:center;padding:50px 20px;color:var(--dim)}
 .empty-icon{font-size:36px;margin-bottom:10px;opacity:.3}
 
+/* Risco abandono badge */
+.risco-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:9px;font-family:var(--fd);font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;margin-top:5px}
+.risco-baixo{background:rgba(16,185,129,.1);color:#6ee7b7;border:1px solid rgba(16,185,129,.2)}
+.risco-moderado{background:rgba(245,158,11,.1);color:#fcd34d;border:1px solid rgba(245,158,11,.2)}
+.risco-alto{background:rgba(239,68,68,.1);color:#fca5a5;border:1px solid rgba(239,68,68,.2)}
+.risco-critico{background:rgba(239,68,68,.15);color:#f87171;border:1px solid rgba(239,68,68,.35)}
+
+/* Desktop panorama */
+.dt-panorama{display:none}
+@media(min-width:960px){
+  .chart-card{display:none}
+  .dt-panorama{display:block;background:var(--sf);border:1px solid var(--brd);border-radius:var(--r);padding:16px 20px 12px;margin-bottom:14px;overflow:hidden}
+  .dt-pano-hdr{font-family:var(--fd);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--dim);margin-bottom:12px;display:flex;justify-content:space-between}
+  .dt-scroll{overflow-x:auto;padding-bottom:6px}
+  .dt-scroll::-webkit-scrollbar{height:3px}
+  .dt-scroll::-webkit-scrollbar-thumb{background:rgba(212,175,127,.2);border-radius:2px}
+  .dt-track{position:relative;min-width:600px;height:100px;margin:0 10px}
+  .dt-axis{position:absolute;left:0;right:0;top:50%;height:1px;background:rgba(201,209,217,.07)}
+  .dt-phase-bg{position:absolute;top:0;height:100%;border-radius:5px;border:1px solid}
+  .dt-phase-lbl{position:absolute;top:5px;left:7px;font-family:var(--fd);font-size:10px;font-style:italic;color:rgba(212,175,127,.5);white-space:nowrap;overflow:hidden;max-width:90%}
+  .dt-marker{position:absolute;top:50%;transform:translateY(-50%);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px}
+  .dt-marker:hover .dt-dot{transform:scale(1.4)}
+  .dt-dot{width:11px;height:11px;border-radius:50%;border:2px solid var(--bg);transition:transform .15s;flex-shrink:0}
+  .dt-lbl{font-family:var(--fd);font-size:8px;color:var(--dim);white-space:nowrap;text-align:center;max-width:50px;overflow:hidden;text-overflow:ellipsis}
+  .dt-score-line{position:absolute;inset:0;pointer-events:none;overflow:visible}
+}
+
 @media(min-width:960px){
   .score-dims{grid-template-columns:repeat(8,1fr)}
   .chart-card{display:none}
@@ -219,10 +246,7 @@ body{font-family:var(--fb);background:var(--bg);color:var(--tx);min-height:100vh
 
 <main class="main" id="mainContent">
 
-  <div class="page-header">
-    <div class="page-header-top">
-      <button class="back-btn" onclick="history.back()">← Pacientes</button>
-    </div>
+  <div class="page-header" style="padding-top:8px">
     <div class="pat-nome" id="patNome">Carregando...</div>
     <div class="pat-sub" id="patSub"></div>
   </div>
@@ -247,6 +271,19 @@ body{font-family:var(--fb);background:var(--bg);color:var(--tx);min-height:100vh
       <div class="score-delta same" id="scoreDelta">--</div>
     </div>
     <div class="score-dims" id="scoreDims"></div>
+  </div>
+
+  <!-- DESKTOP PANORAMA -->
+  <div class="dt-panorama" id="dtPanorama">
+    <div class="dt-pano-hdr">
+      <span>Evolução Longitudinal</span>
+      <span id="dtRange">--</span>
+    </div>
+    <div class="dt-scroll">
+      <div class="dt-track" id="dtTrack">
+        <div class="dt-axis"></div>
+      </div>
+    </div>
   </div>
 
   <!-- MINI CHART (mobile) -->
@@ -284,6 +321,7 @@ var FLAG_LBL = {
   vulnerabilidade_relacional:'Vulnerabilidade Relacional',crise_existencial:'Crise Existencial'
 };
 var CRIT_FLAGS   = ['risco_suicida','ideacao_suicida','avaliacao_psiquiatrica'];
+var FLAG_NAMES_CRIT = {risco_suicida:'⚠️ Risco Suicida',ideacao_suicida:'⚠️ Ideação Suicida',avaliacao_psiquiatrica:'🔔 Avaliação Psiquiátrica Indicada'};
 var DOC_LABELS   = {laudo:'Laudo',declaracao:'Declaração',alta:'Alta',encaminhamento_psiq:'Encaminhamento Psiq.',recibo_sessao:'Recibo'};
 var RISCO_COR    = {verde:'#6ee7b7',amarelo:'#fcd34d',vermelho:'#fca5a5'};
 
@@ -336,22 +374,16 @@ function renderFeed(data){
   var total=eventos.length;
 
   if(fases.length){
-    // Sort phases by start_pct
-    var fasesSorted=fases.slice().sort(function(a,b){return(parseFloat(a.inicio_pct)||0)-(parseFloat(b.inicio_pct)||0);});
-    fasesSorted.forEach(function(fase,fi){
-      var startPct=parseFloat(fase.inicio_pct)||0;
-      var endPct=fi<fasesSorted.length-1?(parseFloat(fasesSorted[fi+1].inicio_pct)||100):100;
-      var s=Math.floor(startPct/100*total);
-      var e=fi===fasesSorted.length-1?total:Math.ceil(endPct/100*total);
-      var evs=eventos.slice(s,e);
-      html+='<div class="phase-divider"><span class="phase-icon">'+(fase.emoji||'📍')+'</span>'
-        +'<div><div class="phase-name">'+esc(fase.nome||'')+'</div>'
-        +'<div class="phase-period">'+esc(fase.descricao||'')+'</div></div></div>';
-      evs.forEach(function(ev){html+=renderEvCard(ev);});
-    });
-  }else{
-    eventos.forEach(function(ev){html+=renderEvCard(ev);});
+    // Show phases as intro section, then ALL events in chronological order
+    html+='<div class="phase-divider" style="margin-top:0">'
+      +'<span class="phase-icon">🧩</span>'
+      +'<div><div class="phase-name">Fases Identificadas pela IA</div>'
+      +'<div class="phase-period">'+fases.map(function(f){return(f.emoji||'•')+' '+f.nome;}).join(' · ')+'</div>'
+      +'</div></div>';
   }
+
+  // Render ALL events chronologically — no slicing
+  eventos.forEach(function(ev){html+=renderEvCard(ev);});
 
   feed.querySelectorAll('.ev-card').forEach(function(c){
     c.addEventListener('click',function(){this.classList.toggle('expanded');});
@@ -360,8 +392,8 @@ function renderFeed(data){
 
 function renderEvCard(ev){
   var dotCls=ev.tipo;
-  var badgeTxt={sessao:'Sessão',mapeamento:'Mapeamento',documento:'Documento',cid:'CID',flag:'Flag','score-up':'Sessão ↑','score-down':'Sessão ↓',marco:'Marco'};
-  var badgeCls={sessao:'b-sessao',mapeamento:'b-mapa',documento:'b-doc',cid:'b-cid',flag:'b-flag','score-up':'b-sessao','score-down':'b-flag',marco:'b-marco'};
+  var badgeTxt={sessao:'Sessão',mapeamento:'Mapeamento',documento:'Documento',cid:'CID',flag:'Flag Crítica','score-up':'Sessão ↑','score-down':'Sessão ↓',marco:'Marco'};
+  var badgeCls={sessao:'b-sessao',mapeamento:'b-mapa',documento:'b-doc',cid:'b-cid',flag:'b-flag','score-up':'b-sessao','score-down':'b-flag',marco:'b-marco',flag:'b-flag'};
   var cardCls='ev-card'+(ev.tipo==='flag'?' t-flag':ev.tipo==='marco'?' t-marco':ev.tipo==='score-up'?' t-sup':ev.tipo==='score-down'?' t-sdown':'');
 
   var title='',sub='';
@@ -372,6 +404,9 @@ function renderEvCard(ev){
   }else if(ev.tipo==='mapeamento'){
     title=ev.versao>1?'Mapeamento Atualizado — v'+ev.versao:'Mapeamento Clínico Inicial';
     sub='Análise multidimensional gerada com IA.';
+  }else if(ev.tipo==='flag'){
+    title=FLAG_NAMES_CRIT[ev.flag_nome]||('⚠️ '+(FLAG_LBL[ev.flag_nome]||esc(ev.flag_nome||'')));
+    sub='Indicador crítico identificado no mapeamento v'+(ev.versao_mapeamento||1)+'. Atenção clínica recomendada.';
   }else if(ev.tipo==='cid'){
     title=(ev.cid_codigo||'')+' — '+(ev.cid_nome||'');
     sub='CID confirmado durante o acompanhamento.';
@@ -391,6 +426,12 @@ function renderEvCard(ev){
 
   var detHtml='';
   if(ev.risco_nivel)detHtml+='<div class="det-row"><span class="det-lbl">Risco</span><span class="det-val" style="color:'+(RISCO_COR[ev.risco_nivel]||'#ccc')+'">'+ev.risco_nivel+'</span></div>';
+  // Risco de abandono badge
+  if(ev.risco_abandono&&ev.risco_abandono.nivel){
+    var ra=ev.risco_abandono;
+    var raCls='risco-'+(ra.nivel||'baixo').toLowerCase();
+    detHtml+='<div class="det-row"><span class="det-lbl">Abandono</span><span class="det-val"><span class="risco-badge '+raCls+'">'+esc((ra.nivel||'').toUpperCase())+'</span></span></div>';
+  }
   if(ev.flags&&ev.flags.length){
     detHtml+='<div class="flags-row">'+ev.flags.map(function(f){
       return'<span class="flag-pill'+(CRIT_FLAGS.indexOf(f)>-1?' crit':'')+'">'+esc(FLAG_LBL[f]||f)+'</span>';
@@ -406,6 +447,69 @@ function renderEvCard(ev){
     +scoreHtml
     +'<div class="ev-details">'+detHtml+'</div>'
     +'</div></div>';
+}
+
+function renderDesktopPanorama(data){
+  var track=document.getElementById('dtTrack');
+  var range=document.getElementById('dtRange');
+  if(!track)return;
+  var eventos=data.eventos||[];
+  var fases=data.fases||[];
+  var hist=data.evolucao_historico||[];
+  if(!eventos.length){track.innerHTML='<div class="dt-axis"></div>';return;}
+
+  // Update range label
+  if(hist.length>=2&&range){
+    range.textContent=fmtMs(hist[0].gerado_em)+' — '+fmtMs(hist[hist.length-1].gerado_em);
+  }
+
+  // Phase backgrounds
+  var phaseHtml='<div class="dt-axis"></div>';
+  var phaseColors=[
+    'rgba(59,130,246,.04)','rgba(212,175,127,.04)','rgba(16,185,129,.04)','rgba(139,92,246,.04)'
+  ];
+  var phaseBorders=[
+    'rgba(59,130,246,.12)','rgba(212,175,127,.1)','rgba(16,185,129,.12)','rgba(139,92,246,.12)'
+  ];
+  if(fases.length){
+    var sorted=fases.slice().sort(function(a,b){return(parseFloat(a.inicio_pct)||0)-(parseFloat(b.inicio_pct)||0);});
+    sorted.forEach(function(f,fi){
+      var s=parseFloat(f.inicio_pct)||0;
+      var e=fi<sorted.length-1?(parseFloat(sorted[fi+1].inicio_pct)||100):100;
+      phaseHtml+='<div class="dt-phase-bg" style="left:'+s+'%;width:'+(e-s)+'%;background:'+phaseColors[fi%4]+';border-color:'+phaseBorders[fi%4]+'">'
+        +'<span class="dt-phase-lbl">'+(f.emoji||'')+(f.emoji?' ':'')+esc(f.nome||'')+'</span></div>';
+    });
+  }
+
+  // Score sparkline
+  var svgLine='';
+  if(hist.length>=2){
+    var W=700,H=100,mn=40,mx=100;
+    var xs=hist.map(function(_,i){return(i/(hist.length-1))*W;});
+    var ys=hist.map(function(p){return H-((parseFloat(p.score_global)-mn)/(mx-mn))*(H*0.65)-H*0.15;});
+    var p2='M '+xs[0]+','+ys[0];
+    for(var i=1;i<hist.length;i++){var c=(xs[i-1]+xs[i])/2;p2+=' C '+c+','+ys[i-1]+' '+c+','+ys[i]+' '+xs[i]+','+ys[i];}
+    svgLine='<svg class="dt-score-line" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none">'
+      +'<path d="'+p2+'" fill="none" stroke="rgba(212,175,127,0.45)" stroke-width="1.5" stroke-dasharray="4,3"/></svg>';
+  }
+
+  // Event markers
+  var dotColors={
+    sessao:'rgba(59,130,246,.85)',mapeamento:'rgba(212,175,127,.9)',
+    documento:'rgba(139,92,246,.8)',cid:'rgba(16,185,129,.85)',
+    flag:'rgba(239,68,68,.9)',marco:'#D4AF7F',
+    'score-up':'#10b981','score-down':'rgba(239,68,68,.8)'
+  };
+  var markersHtml=eventos.map(function(ev,i){
+    var xp=eventos.length>1?(i/(eventos.length-1))*94+3:50;
+    var col=dotColors[ev.tipo]||'#ccc';
+    var lbl=ev.tipo==='sessao'?'S'+(ev.sessao_numero||''):fmtD(ev.data).substring(0,5);
+    return'<div class="dt-marker" style="left:'+xp+'%" title="'+esc(fmtD(ev.data))+'">'
+      +'<div class="dt-dot" style="background:'+col+'"></div>'
+      +'<div class="dt-lbl">'+esc(lbl)+'</div></div>';
+  }).join('');
+
+  track.innerHTML='<div class="dt-axis"></div>'+phaseHtml+svgLine+markersHtml;
 }
 
 async function init(){
@@ -461,6 +565,7 @@ async function init(){
     }
 
     renderFeed(data);
+    renderDesktopPanorama(data);
     document.getElementById('genBanner').style.display='none';
 
   }catch(err){

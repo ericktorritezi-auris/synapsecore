@@ -293,14 +293,15 @@ function fmtMs(iso){if(!iso)return'';var d=new Date(iso);return d.toLocaleDateSt
 
 function renderDims(idx){
   var el=document.getElementById('scoreDims');if(!el||!idx)return;
+  var src=idx.dimensoes||idx;
   var dims=[{id:'D1',lbl:'Emocional'},{id:'D2',lbl:'Cognitivo'},{id:'D3',lbl:'Relacional'},
     {id:'D4',lbl:'Funcional'},{id:'D5',lbl:'Existencial'},{id:'D6',lbl:'Físico'},
-    {id:'D7',lbl:'Autoestima'},{id:'D8',lbl:'Comportamental'}];
-  el.innerHTML=dims.map(function(d){var v=parseFloat(idx[d.id])||0;
+    {id:'D7',lbl:'Autoestima'}];
+  el.innerHTML=dims.map(function(d){var v=parseFloat(src[d.id])||0;
     return'<div class="dim-item"><div class="dim-lbl">'+d.lbl+'</div>'
       +'<div class="dim-bar-bg"><div class="dim-bar" style="width:'+v+'%"></div></div>'
       +'<div class="dim-val">'+Math.round(v)+'</div></div>';
-  }).join('');
+  }).join('');;
 }
 
 function renderChart(hist){
@@ -335,21 +336,23 @@ function renderFeed(data){
   var total=eventos.length;
 
   if(fases.length){
-    fases.forEach(function(fase){
-      var s=Math.floor((parseFloat(fase.inicio_pct)||0)/100*total);
-      var e=Math.ceil((parseFloat(fase.fim_pct)||100)/100*total);
+    // Sort phases by start_pct
+    var fasesSorted=fases.slice().sort(function(a,b){return(parseFloat(a.inicio_pct)||0)-(parseFloat(b.inicio_pct)||0);});
+    fasesSorted.forEach(function(fase,fi){
+      var startPct=parseFloat(fase.inicio_pct)||0;
+      var endPct=fi<fasesSorted.length-1?(parseFloat(fasesSorted[fi+1].inicio_pct)||100):100;
+      var s=Math.floor(startPct/100*total);
+      var e=fi===fasesSorted.length-1?total:Math.ceil(endPct/100*total);
       var evs=eventos.slice(s,e);
-      if(!evs.length)return;
       html+='<div class="phase-divider"><span class="phase-icon">'+(fase.emoji||'📍')+'</span>'
         +'<div><div class="phase-name">'+esc(fase.nome||'')+'</div>'
         +'<div class="phase-period">'+esc(fase.descricao||'')+'</div></div></div>';
       evs.forEach(function(ev){html+=renderEvCard(ev);});
     });
-  } else {
+  }else{
     eventos.forEach(function(ev){html+=renderEvCard(ev);});
   }
 
-  feed.innerHTML=html;
   feed.querySelectorAll('.ev-card').forEach(function(c){
     c.addEventListener('click',function(){this.classList.toggle('expanded');});
   });
@@ -427,8 +430,12 @@ async function init(){
         de.textContent=(dTotal>0?'▲ +':dTotal<0?'▼ ':'= ')+Math.abs(Math.round(dTotal))+(dTotal!==0?' pts desde o início':' sem variação');
       }else de.style.display='none';
     }
+    // Use evolucao_historico indices for dims (most accurate), fallback to mapeamento
+    var hist=data.evolucao_historico||[];
+    var lastHist=hist.length?hist[hist.length-1]:null;
     var lastMap=data.mapeamentos&&data.mapeamentos.length?data.mapeamentos[data.mapeamentos.length-1]:null;
-    if(lastMap&&lastMap.indices_json)renderDims(lastMap.indices_json);
+    var idxSource=(lastHist&&lastHist.indices_json)?lastHist.indices_json:(lastMap&&lastMap.indices_json?lastMap.indices_json:null);
+    if(idxSource)renderDims(idxSource);
     document.getElementById('scoreHero').style.display='flex';
 
     renderChart(data.evolucao_historico||[]);

@@ -400,7 +400,7 @@ NÃO diagnostique. Use linguagem de hipóteses ("sugere", "indica", "observa-se 
   return { relatorio, programa: prog };
 }
 
-module.exports = { calcularIndices, detectarFlags, gerarMapeamento, FLAG_LABELS, sugerirPrograma, sugerirProgramaLocal, gerarResumoClinico, gerarEvolucao, sugerirCIDs, registrarAuditoria, gerarBriefingSessao, gerarIntervencoes, atualizarMemoriaTerapeutica, gerarAnaliseEstrutural, gerarHipotesesClinicas, gerarMapaIdentidade, gerarSnapshotEvolutivoLeve, calcularScoreRiscoBasico, gerarRiscoAbandonoClinico, gerarEvolucaoPreditiva, gerarProntuarioInteligente, gerarContextoInicial, gerarResumoEncaminhamento };
+module.exports = { calcularIndices, detectarFlags, gerarMapeamento, FLAG_LABELS, sugerirPrograma, sugerirProgramaLocal, gerarResumoClinico, gerarEvolucao, sugerirCIDs, registrarAuditoria, gerarBriefingSessao, gerarIntervencoes, atualizarMemoriaTerapeutica, gerarAnaliseEstrutural, gerarHipotesesClinicas, gerarMapaIdentidade, gerarSnapshotEvolutivoLeve, calcularScoreRiscoBasico, gerarRiscoAbandonoClinico, gerarEvolucaoPreditiva, gerarProntuarioInteligente, gerarContextoInicial, gerarResumoEncaminhamento, gerarFasesTerapeuticas };
 
 // ══════════════════════════════════════════════
 // v3.0.0 — INTELIGÊNCIA CLÍNICA INTEGRATIVA
@@ -1699,4 +1699,81 @@ async function gerarResumoEncaminhamento({ paciente, sessoes, mapeamento, analis
   }
   resultado._usage = data.usage || null;
   return resultado;
+}
+
+// ══════════════════════════════════════════════
+// GERAR FASES TERAPÊUTICAS — Timeline Evolutiva
+// ══════════════════════════════════════════════
+async function gerarFasesTerapeuticas({ db, paciente, sessoes, mapeamentos, evolucao_historico }) {
+  var nome    = paciente.nome_completo || 'Paciente';
+  var nSessoes = (sessoes || []).length;
+  var nMaps    = (mapeamentos || []).length;
+
+  // Build context
+  var ctx = 'Paciente: ' + nome + '\n'
+    + 'Total de sessões realizadas: ' + nSessoes + '\n'
+    + 'Total de mapeamentos: ' + nMaps + '\n';
+
+  if (evolucao_historico && evolucao_historico.length) {
+    var primeiro = evolucao_historico[0];
+    var ultimo   = evolucao_historico[evolucao_historico.length - 1];
+    ctx += 'Score inicial: ' + (primeiro.score_global || '?') + '\n';
+    ctx += 'Score atual: '   + (ultimo.score_global   || '?') + '\n';
+    ctx += 'Variação: ' + (ultimo.score_global - primeiro.score_global > 0 ? '+' : '') + (ultimo.score_global - primeiro.score_global) + ' pontos\n';
+  }
+
+  if (mapeamentos && mapeamentos.length) {
+    var m = mapeamentos[mapeamentos.length - 1];
+    var flags = m.flags_json || [];
+    if (flags.length) ctx += 'Indicadores clínicos: ' + flags.join(', ') + '\n';
+  }
+
+  var prompt = 'Você é um assistente clínico especializado em psicoterapia. Com base no histórico abaixo, '
+    + 'identifique de 2 a 4 fases terapêuticas distintas da jornada deste paciente.\n\n'
+    + 'Cada fase deve:\n'
+    + '- ter um nome clínico elegante e descritivo (máx 5 palavras)\n'
+    + '- ter uma descrição curta do que caracteriza essa fase (1 frase)\n'
+    + '- indicar o índice aproximado de início e fim nos eventos (0 a 100%)\n\n'
+    + 'IMPORTANTE: Linguagem técnica, respeitosa, não diagnósticante.\n\n'
+    + 'HISTÓRICO:\n' + ctx + '\n\n'
+    + 'Retorne SOMENTE JSON válido, sem markdown:\n'
+    + '[{"nome":"...","descricao":"...","emoji":"...","inicio_pct":0,"fim_pct":40}]';
+
+  var resposta = await fetchIA({
+    model: 'claude-sonnet-4-20250514',
+    max_tokens: 600,
+    messages: [{ role: 'user', content: prompt }]
+  });
+
+  if (!resposta.ok) throw new Error('Anthropic API error: ' + resposta.status);
+  var data  = await resposta.json();
+  var texto = data.content && data.content[0] && data.content[0].text || '[]';
+  var clean = texto.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
+
+  var fases;
+  try {
+    fases = JSON.parse(clean);
+    if (!Array.isArray(fases)) fases = [];
+  } catch(e) {
+    var match = clean.match(/\[[\s\S]*\]/);
+    fases = match ? JSON.parse(match[0]) : [];
+  }
+
+  // Audit
+  if (db) {
+    await registrarAuditoria(db, {
+      paciente_id:    paciente.id,
+      modulo:         'timeline_fases',
+      referencia_tipo:'paciente',
+      referencia_id:  paciente.id,
+      output_resumo:  fases.length + ' fases terapêuticas geradas',
+      tokens_usados:  data.usage && data.usage.output_tokens,
+      input_tokens:   data.usage && data.usage.input_tokens,
+      sucesso:        true,
+      modelo:         'claude-sonnet-4-20250514',
+      modo:           'ia'
+    }).catch(function(e){ console.warn('audit timeline:', e.message); });
+  }
+
+  return fases;
 }

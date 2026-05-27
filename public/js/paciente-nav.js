@@ -8,7 +8,8 @@ var PACIENTE_NAV_ITENS = [
   { id:'mapeamento', label:'Mapeamento', icon:'M4 4h16v12H4zM8 20h8', emoji:'🧠', url:function(pid){ return '/mapeamento/'+pid; } },
   { id:'sessoes',    label:'Sessões',    icon:'M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z', emoji:'📅', url:function(pid){ return '/sessoes/'+pid; } },
   { id:'documentos', label:'Docs',       icon:'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6', emoji:'📄', url:function(pid){ return '/documentos/'+pid; } },
-  { id:'analise',    label:'Análise',    icon:'M9 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9M9 3l6 6M9 3v6h6', emoji:'🔬', url:function(pid){ return '/analise/'+pid; } }
+  { id:'analise',    label:'Análise',    icon:'M9 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9M9 3l6 6M9 3v6h6', emoji:'🔬', url:function(pid){ return '/analise/'+pid; } },
+  { id:'timeline',   label:'Timeline',   icon:'M12 8v4l3 3M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2z', emoji:'🕐', url:function(pid){ return '/timeline/'+pid; } }
 ];
 
 function renderPacienteNav(pacienteId, paginaAtiva) {

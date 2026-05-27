@@ -417,6 +417,143 @@ async function verificarLinksEvolucao() {
 // ─────────────────────────────────────────────
 // FUNÇÃO PRINCIPAL — executa todos os checks
 // ─────────────────────────────────────────────
+
+// ─────────────────────────────────────────────
+// VERIFICAR RADAR CLÍNICO — Scores e Flags
+// ─────────────────────────────────────────────
+async function verificarRadarClinico() {
+  try {
+    const db = require('../db');
+
+    // 1. Queda de score (≥15 pontos entre últimas duas evoluções)
+    const quedaRes = await db.query(`
+      SELECT p.id AS paciente_id, p.nome_completo,
+             e1.score_global AS score_atual,
+             e2.score_global AS score_anterior
+      FROM pacientes p
+      JOIN LATERAL (
+        SELECT score_global FROM evolucao_historico
+        WHERE paciente_id = p.id ORDER BY gerado_em DESC LIMIT 1
+      ) e1 ON true
+      JOIN LATERAL (
+        SELECT score_global FROM evolucao_historico
+        WHERE paciente_id = p.id ORDER BY gerado_em DESC LIMIT 1 OFFSET 1
+      ) e2 ON true
+      WHERE p.status = 'ativo'
+        AND (e2.score_global - e1.score_global) >= 15
+    `);
+
+    for (var r of quedaRes.rows) {
+      var diff = Math.round(parseFloat(r.score_anterior) - parseFloat(r.score_atual));
+      await upsertAlerta({
+        tipo:       'radar_queda_score',
+        prioridade: 'critico',
+        titulo:     '📉 Queda de score: ' + r.nome_completo,
+        corpo:      r.nome_completo + ' teve queda de ' + diff + ' pontos no score clínico ('
+                    + Math.round(parseFloat(r.score_anterior)) + ' → ' + Math.round(parseFloat(r.score_atual)) + '). Atenção clínica recomendada.',
+        paciente_id: r.paciente_id,
+        acao_tipo:   'paciente',
+        acao_url:    '/analise/' + r.paciente_id
+      });
+    }
+
+    // Resolve queda quando score se recupera
+    const recuperouRes = await db.query(`
+      SELECT p.id AS paciente_id
+      FROM pacientes p
+      JOIN LATERAL (
+        SELECT score_global FROM evolucao_historico
+        WHERE paciente_id = p.id ORDER BY gerado_em DESC LIMIT 1
+      ) e1 ON true
+      JOIN LATERAL (
+        SELECT score_global FROM evolucao_historico
+        WHERE paciente_id = p.id ORDER BY gerado_em DESC LIMIT 1 OFFSET 1
+      ) e2 ON true
+      WHERE p.status = 'ativo'
+        AND (e2.score_global - e1.score_global) < 15
+    `);
+    for (var r2 of recuperouRes.rows) {
+      await resolverAlerta('radar_queda_score', r2.paciente_id);
+    }
+
+    // 2. Score crítico (< 40)
+    const criticoRes = await db.query(`
+      SELECT p.id AS paciente_id, p.nome_completo, e.score_global
+      FROM pacientes p
+      JOIN LATERAL (
+        SELECT score_global FROM evolucao_historico
+        WHERE paciente_id = p.id ORDER BY gerado_em DESC LIMIT 1
+      ) e ON true
+      WHERE p.status = 'ativo' AND e.score_global < 40
+    `);
+
+    for (var r3 of criticoRes.rows) {
+      await upsertAlerta({
+        tipo:        'radar_score_critico',
+        prioridade:  'critico',
+        titulo:      '🔴 Score crítico: ' + r3.nome_completo,
+        corpo:       r3.nome_completo + ' apresenta score clínico crítico de ' + Math.round(parseFloat(r3.score_global)) + ' pontos. Intervenção recomendada.',
+        paciente_id: r3.paciente_id,
+        acao_tipo:   'paciente',
+        acao_url:    '/analise/' + r3.paciente_id
+      });
+    }
+
+    // Resolve score crítico quando acima de 40
+    const normalizouRes = await db.query(`
+      SELECT p.id AS paciente_id
+      FROM pacientes p
+      JOIN LATERAL (
+        SELECT score_global FROM evolucao_historico
+        WHERE paciente_id = p.id ORDER BY gerado_em DESC LIMIT 1
+      ) e ON true
+      WHERE p.status = 'ativo' AND e.score_global >= 40
+    `);
+    for (var r4 of normalizouRes.rows) {
+      await resolverAlerta('radar_score_critico', r4.paciente_id);
+    }
+
+    // 3. Flags críticas no último mapeamento
+    const FLAGS_CRITICAS = ['risco_suicida', 'ideacao_suicida', 'avaliacao_psiquiatrica'];
+    const flagsRes = await db.query(`
+      SELECT p.id AS paciente_id, p.nome_completo, m.flags_json, m.created_at
+      FROM pacientes p
+      JOIN LATERAL (
+        SELECT flags_json, created_at FROM mapeamentos
+        WHERE paciente_id = p.id ORDER BY versao DESC LIMIT 1
+      ) m ON true
+      WHERE p.status = 'ativo'
+        AND m.created_at >= NOW() - INTERVAL '48 hours'
+    `);
+
+    var FLAG_LABELS_CRON = {
+      risco_suicida: 'Risco Suicida', ideacao_suicida: 'Ideação Suicida',
+      avaliacao_psiquiatrica: 'Avaliação Psiquiátrica'
+    };
+
+    for (var row of flagsRes.rows) {
+      var flags = row.flags_json || [];
+      for (var flag of FLAGS_CRITICAS) {
+        if (flags.indexOf(flag) !== -1) {
+          await upsertAlerta({
+            tipo:        'radar_flag_critica_' + flag,
+            prioridade:  'critico',
+            titulo:      '⚠️ Flag crítica: ' + row.nome_completo,
+            corpo:       'Indicador clínico crítico identificado no mapeamento de ' + row.nome_completo
+                         + ': ' + (FLAG_LABELS_CRON[flag] || flag) + '. Atenção imediata recomendada.',
+            paciente_id: row.paciente_id,
+            acao_tipo:   'paciente',
+            acao_url:    '/mapeamento/' + row.paciente_id
+          });
+        }
+      }
+    }
+
+  } catch(err) {
+    console.error('verificarRadarClinico:', err.message);
+  }
+}
+
 async function gerarAlertas() {
   console.log('🔔 Cron alertas iniciado — ' + new Date().toLocaleTimeString('pt-BR'));
   await verificarAniversarios();
@@ -426,6 +563,7 @@ async function gerarAlertas() {
   await verificarSemRetorno();
   await verificarLinksMapeamento();
   await verificarLinksEvolucao();
+  await verificarRadarClinico();
   console.log('🔔 Cron alertas concluído');
 }
 

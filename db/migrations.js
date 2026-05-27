@@ -201,6 +201,16 @@ async function runMigrations() {
     await client.query(`ALTER TABLE pacientes ADD COLUMN IF NOT EXISTS responsavel_telefone VARCHAR(30)`);
     await client.query(`ALTER TABLE terapeutas ADD COLUMN IF NOT EXISTS pix_tipo  VARCHAR(20)`);
     await client.query(`ALTER TABLE terapeutas ADD COLUMN IF NOT EXISTS pix_chave VARCHAR(100)`);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS timeline_gerado (
+        id          SERIAL PRIMARY KEY,
+        paciente_id INTEGER REFERENCES pacientes(id) ON DELETE CASCADE,
+        hash_dados  VARCHAR(64) NOT NULL,
+        fases_json  JSONB,
+        gerado_em   TIMESTAMP DEFAULT NOW()
+      )
+    `);
     await client.query(`ALTER TABLE ia_auditoria ADD COLUMN IF NOT EXISTS input_tokens  INTEGER`);
     await client.query(`ALTER TABLE ia_auditoria ADD COLUMN IF NOT EXISTS custo_usd     NUMERIC(10,6)`);
 

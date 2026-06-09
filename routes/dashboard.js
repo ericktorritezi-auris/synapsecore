@@ -55,8 +55,10 @@ router.get('/aniversariantes', verifyToken, async (req, res) => {
 
 // ── GET /api/dashboard/atividade ── últimas ações do sistema
 router.get('/atividade', verifyToken, async (req, res) => {
+  var all = [];
+
+  // Novos cadastros (status pendente — via formulário público)
   try {
-    // Novos cadastros (status pendente — via formulário público)
     const cadastros = await db.query(`
       SELECT 'cadastro' AS tipo, nome_completo, id AS paciente_id,
              created_at AS data_acao
@@ -64,8 +66,11 @@ router.get('/atividade', verifyToken, async (req, res) => {
       WHERE status = 'pendente'
       ORDER BY created_at DESC LIMIT 5
     `);
+    all = all.concat(cadastros.rows);
+  } catch(e) { console.warn('atividade/cadastros:', e.message); }
 
-    // Formulários preenchidos
+  // Formulários preenchidos
+  try {
     const forms = await db.query(`
       SELECT 'formulario' AS tipo, p.nome_completo, p.id AS paciente_id,
              r.created_at AS data_acao
@@ -73,8 +78,11 @@ router.get('/atividade', verifyToken, async (req, res) => {
       JOIN pacientes p ON p.id = r.paciente_id
       ORDER BY r.created_at DESC LIMIT 5
     `);
+    all = all.concat(forms.rows);
+  } catch(e) { console.warn('atividade/formularios:', e.message); }
 
-    // Mapeamentos gerados
+  // Mapeamentos gerados
+  try {
     const maps = await db.query(`
       SELECT 'mapeamento' AS tipo, p.nome_completo, p.id AS paciente_id,
              m.created_at AS data_acao, m.versao
@@ -82,8 +90,11 @@ router.get('/atividade', verifyToken, async (req, res) => {
       JOIN pacientes p ON p.id = m.paciente_id
       ORDER BY m.created_at DESC LIMIT 5
     `);
+    all = all.concat(maps.rows);
+  } catch(e) { console.warn('atividade/mapeamentos:', e.message); }
 
-    // Sessões registradas
+  // Sessões registradas
+  try {
     const sess = await db.query(`
       SELECT 'sessao' AS tipo, p.nome_completo, p.id AS paciente_id,
              s.created_at AS data_acao, s.sessao_numero
@@ -92,22 +103,14 @@ router.get('/atividade', verifyToken, async (req, res) => {
       WHERE s.status = 'realizada'
       ORDER BY s.created_at DESC LIMIT 5
     `);
+    all = all.concat(sess.rows);
+  } catch(e) { console.warn('atividade/sessoes:', e.message); }
 
-    // Merge and sort by date
-    const all = [
-      ...cadastros.rows.map(r => ({ ...r, data_acao: r.data_acao })),
-      ...forms.rows.map(r => ({ ...r, data_acao: r.data_acao })),
-      ...maps.rows.map(r => ({ ...r, data_acao: r.data_acao })),
-      ...sess.rows.map(r => ({ ...r, data_acao: r.data_acao }))
-    ]
+  all = all
     .sort((a,b) => new Date(b.data_acao) - new Date(a.data_acao))
     .slice(0, 8);
 
-    res.json(all);
-  } catch (err) {
-    console.error('GET /dashboard/atividade:', err.message);
-    res.status(500).json({ message: err.message });
-  }
+  res.json(all);
 });
 
 module.exports = router;

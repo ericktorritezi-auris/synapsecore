@@ -235,7 +235,7 @@ Retorne APENAS JSON válido:
   "aderencia_sessoes": "<breve descrição de como as primeiras sessões do programa se adequam ao perfil clínico>"
 }`;
 
-  const resp = await fetchIA(JSON.stringify({ model:'claude-sonnet-4-5', max_tokens:600, messages:[{role:'user',content:prompt}] }));
+  const resp = await fetchIA(JSON.stringify({ model:'claude-sonnet-4-5', max_tokens:800, messages:[{role:'user',content:prompt}] }));
   if (!resp.ok) throw new Error('Anthropic API error: ' + resp.status);
   const data  = await resp.json();
   const text  = (data.content && data.content[0] && data.content[0].text) || '{}';
@@ -572,7 +572,7 @@ Retorne APENAS JSON válido:
 }`;
 
   try {
-    const resp = await fetchIA(JSON.stringify({ model:'claude-sonnet-4-5', max_tokens:2000, messages:[{role:'user',content:prompt}] }));
+    const resp = await fetchIA(JSON.stringify({ model:'claude-sonnet-4-5', max_tokens:3000, messages:[{role:'user',content:prompt}] }));
     const data = await resp.json();
     const text = data.content && data.content[0] && data.content[0].text || '{}';
     const clean = text.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
@@ -627,7 +627,7 @@ Retorne APENAS JSON válido:
 }`;
 
   try {
-    const resp = await fetchIA(JSON.stringify({ model:'claude-sonnet-4-5', max_tokens:1500, messages:[{role:'user',content:prompt}] }));
+    const resp = await fetchIA(JSON.stringify({ model:'claude-sonnet-4-5', max_tokens:2500, messages:[{role:'user',content:prompt}] }));
     const data = await resp.json();
     const text = data.content && data.content[0] && data.content[0].text || '{}';
     const clean = text.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
@@ -821,7 +821,7 @@ FLAGS CLÍNICAS: ${flagsStr}
 
 Este é o PRIMEIRO resumo analítico — baseado exclusivamente nos dados do formulário de avaliação inicial. Gere um resumo clínico de linha de base (3-4 parágrafos) descrevendo o perfil clínico inicial, principais áreas de atenção, pontos de força e direção inicial para o trabalho terapêutico. Use linguagem técnica e clínica.`;
 
-    const resp = await fetchIA(JSON.stringify({ model: 'claude-sonnet-4-5', max_tokens: 1500, messages: [{ role: 'user', content: prompt }] }));
+    const resp = await fetchIA(JSON.stringify({ model: 'claude-sonnet-4-5', max_tokens: 2500, messages: [{ role: 'user', content: prompt }] }));
     if (!resp.ok) throw new Error('Anthropic error: ' + resp.status);
     const d = await resp.json();
     if (db) {
@@ -863,7 +863,7 @@ ${novidades.join('\n\n')}
 
 Atualize o resumo clínico incorporando essas novidades. Mantenha o que já estava correto e preciso. Acrescente e refine com base nas novas informações. Use linguagem técnica e clínica. Retorne apenas o resumo atualizado completo, sem comentários adicionais.`;
 
-    const resp = await fetchIA(JSON.stringify({ model: 'claude-sonnet-4-5', max_tokens: 1800, messages: [{ role: 'user', content: prompt }] }));
+    const resp = await fetchIA(JSON.stringify({ model: 'claude-sonnet-4-5', max_tokens: 2500, messages: [{ role: 'user', content: prompt }] }));
     if (!resp.ok) throw new Error('Anthropic error: ' + resp.status);
     const d = await resp.json();
     if (db) {
@@ -1001,7 +1001,7 @@ Retorne APENAS JSON válido:
 }`;
 
   try {
-    const resp = await fetchIA(JSON.stringify({ model:'claude-sonnet-4-5', max_tokens:2000, messages:[{role:'user',content:prompt}] }));
+    const resp = await fetchIA(JSON.stringify({ model:'claude-sonnet-4-5', max_tokens:3000, messages:[{role:'user',content:prompt}] }));
     if (!resp.ok) { const errTxt = await resp.text().catch(function(){return '';}); throw new Error('Anthropic 400: '+errTxt.substring(0,400)); }
     const data = await resp.json();
     const text = data.content && data.content[0] && data.content[0].text||'{}';
@@ -1117,7 +1117,7 @@ Retorne APENAS JSON válido:
 }`;
 
   try {
-    const resp = await fetchIA(JSON.stringify({ model:'claude-sonnet-4-5', max_tokens:2000, messages:[{role:'user',content:prompt}] }));
+    const resp = await fetchIA(JSON.stringify({ model:'claude-sonnet-4-5', max_tokens:3000, messages:[{role:'user',content:prompt}] }));
     if (!resp.ok) { const errTxt = await resp.text().catch(function(){return '';}); throw new Error('Anthropic 400: '+errTxt.substring(0,400)); }
     const data = await resp.json();
     const text = data.content && data.content[0] && data.content[0].text||'{}';
@@ -1275,7 +1275,7 @@ Retorne APENAS JSON válido:
 }`;
 
   try {
-    const resp = await fetchIA(JSON.stringify({model:'claude-sonnet-4-5',max_tokens:1000,messages:[{role:'user',content:prompt}]}));
+    const resp = await fetchIA(JSON.stringify({model:'claude-sonnet-4-5',max_tokens:2500,messages:[{role:'user',content:prompt}]}));
     if (!resp.ok) { const e=await resp.text().catch(function(){return '';}); throw new Error('Anthropic 400: '+e.substring(0,300)); }
     const data = await resp.json();
     const text = (data.content&&data.content[0]&&data.content[0].text)||'{}';
@@ -1373,7 +1373,7 @@ Retorne APENAS JSON válido:
 }`;
 
   try {
-    const resp = await fetchIA(JSON.stringify({model:'claude-sonnet-4-5',max_tokens:1500,messages:[{role:'user',content:prompt}]}));
+    const resp = await fetchIA(JSON.stringify({model:'claude-sonnet-4-5',max_tokens:2500,messages:[{role:'user',content:prompt}]}));
     if (!resp.ok) { const e=await resp.text().catch(function(){return '';}); throw new Error('Anthropic 400: '+e.substring(0,300)); }
     const data = await resp.json();
     const text = (data.content&&data.content[0]&&data.content[0].text)||'{}';
@@ -1542,13 +1542,14 @@ Retorne APENAS JSON válido com esta estrutura exata:
 }`;
 
   try {
-    const resp = await fetchIA(JSON.stringify({model:'claude-sonnet-4-5',max_tokens:3500,messages:[{role:'user',content:prompt}]}));
-    if (!resp.ok) { const e=await resp.text().catch(function(){return '';}); throw new Error('Anthropic 400: '+e.substring(0,300)); }
+    const resp = await fetchIA(JSON.stringify({model:'claude-sonnet-4-5',max_tokens:5000,messages:[{role:'user',content:prompt}]}));
+    if (!resp.ok) { const e=await resp.text().catch(function(){return '';}); throw new Error('Anthropic erro: '+e.substring(0,300)); }
     const data = await resp.json();
     const text = (data.content&&data.content[0]&&data.content[0].text)||'{}';
     const clean = text.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
     const m = clean.match(/\{[\s\S]*\}/);
-    const json = m ? JSON.parse(m[0]) : {};
+    if (!m) throw new Error('Prontuário: resposta da IA truncada (JSON incompleto). Tente novamente.');
+    const json = JSON.parse(m[0]);
     const duracao = Date.now()-inicio;
     await registrarAuditoria(db,{paciente_id:paciente.id,modulo:'prontuario_inteligente',referencia_tipo:'paciente',referencia_id:paciente.id,prompt_resumo:prompt,input_hash:crypto.createHash('md5').update(prompt).digest('hex'),output_resumo:text,tokens_usados:data.usage&&data.usage.output_tokens,input_tokens:data.usage&&data.usage.input_tokens,duracao_ms:duracao,sucesso:true,modelo:'claude-sonnet-4-5',modo:'ia'});
     return {

@@ -43,8 +43,20 @@ router.post('/:paciente_id/gerar', verifyToken, async (req, res) => {
     // Check if context changed since last briefing
     const lastRes  = await db.query('SELECT * FROM briefings WHERE paciente_id=$1 ORDER BY gerado_em DESC LIMIT 1', [pid]);
     const last     = lastRes.rows[0];
-    if (last && last.hash_contexto === hashCtx && !req.body.force) {
-      return res.json({ ...last, sem_mudancas: true, message: 'Briefing não atualizado pois não houve alterações desde o último.' });
+
+    // Verificar se o conteudo_json salvo é vazio ou inválido
+    var lastJson = null;
+    if (last && last.conteudo_json) {
+      try {
+        var parsed = typeof last.conteudo_json === 'string' ? JSON.parse(last.conteudo_json) : last.conteudo_json;
+        lastJson = (parsed && Object.keys(parsed).length > 0) ? parsed : null;
+      } catch(e) { lastJson = null; }
+    }
+    const briefingValido = last && lastJson !== null;
+
+    // Só retorna cache se hash igual, não forçado E briefing tem conteúdo válido
+    if (briefingValido && last.hash_contexto === hashCtx && !req.body.force) {
+      return res.json({ ...last, conteudo_json: lastJson, sem_mudancas: true, message: 'Briefing não atualizado pois não houve alterações desde o último.' });
     }
 
     const result = await gerarBriefingSessao({ db, paciente, sessoes, feedbacks, mapeamento, resumoAtual, riscoNivel });

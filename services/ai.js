@@ -235,7 +235,7 @@ Retorne APENAS JSON válido:
   "aderencia_sessoes": "<breve descrição de como as primeiras sessões do programa se adequam ao perfil clínico>"
 }`;
 
-  const resp = await fetchIA(JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:600, messages:[{role:'user',content:prompt}] }));
+  const resp = await fetchIA(JSON.stringify({ model:'claude-sonnet-4-5', max_tokens:600, messages:[{role:'user',content:prompt}] }));
   if (!resp.ok) throw new Error('Anthropic API error: ' + resp.status);
   const data  = await resp.json();
   const text  = (data.content && data.content[0] && data.content[0].text) || '{}';
@@ -362,7 +362,7 @@ NÃO diagnostique. Use linguagem de hipóteses ("sugere", "indica", "observa-se 
 }`;
 
   const resp = await fetchIA(JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-5',
       max_tokens: 4000,
       messages: [{ role: 'user', content: prompt }]
     }));
@@ -394,7 +394,7 @@ NÃO diagnostique. Use linguagem de hipóteses ("sugere", "indica", "observa-se 
       output_resumo: 'Mapeamento gerado',
       tokens_usados: data.usage && data.usage.output_tokens,
       input_tokens:  data.usage && data.usage.input_tokens,
-      sucesso: true, modelo: 'claude-sonnet-4-20250514', modo: 'ia'
+      sucesso: true, modelo: 'claude-sonnet-4-5', modo: 'ia'
     }).catch(function(e){ console.warn('audit mapeamento:', e.message); });
   }
   return { relatorio, programa: prog };
@@ -425,7 +425,7 @@ async function registrarAuditoria(db, { paciente_id, modulo, referencia_tipo, re
        (prompt_resumo||'').substring(0,500), input_hash||null,
        (output_resumo||'').substring(0,500), tokens_usados||null, input_tokens||null,
        custo, duracao_ms||null,
-       sucesso !== false, erro_msg||null, modelo||'claude-sonnet-4-20250514', modo||'ia']
+       sucesso !== false, erro_msg||null, modelo||'claude-sonnet-4-5', modo||'ia']
     );
   } catch(e) {
     console.warn('ia_auditoria insert failed:', e.message);
@@ -491,16 +491,23 @@ Retorne APENAS JSON válido:
 }`;
 
   try {
-    const resp = await fetchIA(JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:1200, messages:[{role:'user',content:prompt}] }));
+    const resp = await fetchIA(JSON.stringify({ model:'claude-sonnet-4-5', max_tokens:1200, messages:[{role:'user',content:prompt}] }));
     const data = await resp.json();
+    if (!resp.ok) {
+      const apiErr = (data.error && data.error.message) || JSON.stringify(data);
+      console.error('briefing/IA HTTP erro:', resp.status, apiErr);
+      throw new Error('API erro ' + resp.status + ': ' + apiErr);
+    }
     const text = data.content && data.content[0] && data.content[0].text || '{}';
     const clean = text.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
     const m = clean.match(/\{[\s\S]*\}/);
     const json = m ? JSON.parse(m[0]) : {};
+    if (!json || Object.keys(json).length === 0) throw new Error('IA retornou JSON vazio');
     const duracao = Date.now() - inicio;
     await registrarAuditoria(db, { paciente_id: paciente.id, modulo:'briefing', referencia_tipo:'paciente', referencia_id: paciente.id, prompt_resumo: prompt, input_hash: crypto.createHash('md5').update(prompt).digest('hex'), output_resumo: text, tokens_usados: data.usage && data.usage.output_tokens, input_tokens: data.usage && data.usage.input_tokens, duracao_ms: duracao, sucesso: true, modo:'ia' });
     return { json, texto: text, modo: 'ia' };
   } catch(e) {
+    console.error('briefing/gerarBriefingSessao erro:', e.message);
     await registrarAuditoria(db, { paciente_id: paciente.id, modulo:'briefing', sucesso: false, erro_msg: e.message, modo:'fallback' });
     // Fallback local
     const fb = {
@@ -565,7 +572,7 @@ Retorne APENAS JSON válido:
 }`;
 
   try {
-    const resp = await fetchIA(JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:2000, messages:[{role:'user',content:prompt}] }));
+    const resp = await fetchIA(JSON.stringify({ model:'claude-sonnet-4-5', max_tokens:2000, messages:[{role:'user',content:prompt}] }));
     const data = await resp.json();
     const text = data.content && data.content[0] && data.content[0].text || '{}';
     const clean = text.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
@@ -620,7 +627,7 @@ Retorne APENAS JSON válido:
 }`;
 
   try {
-    const resp = await fetchIA(JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:1500, messages:[{role:'user',content:prompt}] }));
+    const resp = await fetchIA(JSON.stringify({ model:'claude-sonnet-4-5', max_tokens:1500, messages:[{role:'user',content:prompt}] }));
     const data = await resp.json();
     const text = data.content && data.content[0] && data.content[0].text || '{}';
     const clean = text.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
@@ -681,7 +688,7 @@ Retorne APENAS JSON válido, sem texto antes ou depois:
 ]`;
 
   const resp = await fetchIA(JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-5',
       max_tokens: 2000,
       messages: [{ role: 'user', content: prompt }]
     }));
@@ -705,7 +712,7 @@ Retorne APENAS JSON válido, sem texto antes ou depois:
       output_resumo: 'Sugestao CIDs gerada (' + cidsArr.length + ' itens)',
       tokens_usados: data.usage && data.usage.output_tokens,
       input_tokens:  data.usage && data.usage.input_tokens,
-      sucesso: true, modelo: 'claude-sonnet-4-20250514', modo: 'ia'
+      sucesso: true, modelo: 'claude-sonnet-4-5', modo: 'ia'
     }).catch(function(e){ console.warn('audit cids:', e.message); });
   }
   return cidsArr;
@@ -765,7 +772,7 @@ Analise a evolução e retorne APENAS um JSON válido, sem texto antes ou depois
 Regras: indices_atuais devem refletir a evolução observada nas sessões (podem subir ou descer). Seja realista — não infle os números sem evidência nas sessões.`;
 
   const resp = await fetchIA(JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-5',
       max_tokens: 3000,
       messages: [{ role: 'user', content: prompt }]
     }));
@@ -789,7 +796,7 @@ Regras: indices_atuais devem refletir a evolução observada nas sessões (podem
       output_resumo: 'Relatório de evolução gerado',
       tokens_usados: data.usage && data.usage.output_tokens,
       input_tokens:  data.usage && data.usage.input_tokens,
-      sucesso: true, modelo: 'claude-sonnet-4-20250514', modo: 'ia'
+      sucesso: true, modelo: 'claude-sonnet-4-5', modo: 'ia'
     }).catch(function(e){ console.warn('audit evolucao:', e.message); });
   }
   return conteudoEv;
@@ -814,7 +821,7 @@ FLAGS CLÍNICAS: ${flagsStr}
 
 Este é o PRIMEIRO resumo analítico — baseado exclusivamente nos dados do formulário de avaliação inicial. Gere um resumo clínico de linha de base (3-4 parágrafos) descrevendo o perfil clínico inicial, principais áreas de atenção, pontos de força e direção inicial para o trabalho terapêutico. Use linguagem técnica e clínica.`;
 
-    const resp = await fetchIA(JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1500, messages: [{ role: 'user', content: prompt }] }));
+    const resp = await fetchIA(JSON.stringify({ model: 'claude-sonnet-4-5', max_tokens: 1500, messages: [{ role: 'user', content: prompt }] }));
     if (!resp.ok) throw new Error('Anthropic error: ' + resp.status);
     const d = await resp.json();
     if (db) {
@@ -824,7 +831,7 @@ Este é o PRIMEIRO resumo analítico — baseado exclusivamente nos dados do for
         output_resumo: 'Resumo clínico atualizado',
         tokens_usados: d.usage && d.usage.output_tokens,
         input_tokens:  d.usage && d.usage.input_tokens,
-        sucesso: true, modelo: 'claude-sonnet-4-20250514', modo: 'ia'
+        sucesso: true, modelo: 'claude-sonnet-4-5', modo: 'ia'
       }).catch(function(e){ console.warn('audit resumo:', e.message); });
     }
     return (d.content && d.content[0] && d.content[0].text) || 'Resumo inicial não gerado.';
@@ -856,7 +863,7 @@ ${novidades.join('\n\n')}
 
 Atualize o resumo clínico incorporando essas novidades. Mantenha o que já estava correto e preciso. Acrescente e refine com base nas novas informações. Use linguagem técnica e clínica. Retorne apenas o resumo atualizado completo, sem comentários adicionais.`;
 
-    const resp = await fetchIA(JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1800, messages: [{ role: 'user', content: prompt }] }));
+    const resp = await fetchIA(JSON.stringify({ model: 'claude-sonnet-4-5', max_tokens: 1800, messages: [{ role: 'user', content: prompt }] }));
     if (!resp.ok) throw new Error('Anthropic error: ' + resp.status);
     const d = await resp.json();
     if (db) {
@@ -866,7 +873,7 @@ Atualize o resumo clínico incorporando essas novidades. Mantenha o que já esta
         output_resumo: 'Resumo clínico atualizado',
         tokens_usados: d.usage && d.usage.output_tokens,
         input_tokens:  d.usage && d.usage.input_tokens,
-        sucesso: true, modelo: 'claude-sonnet-4-20250514', modo: 'ia'
+        sucesso: true, modelo: 'claude-sonnet-4-5', modo: 'ia'
       }).catch(function(e){ console.warn('audit resumo:', e.message); });
     }
     return (d.content && d.content[0] && d.content[0].text) || resumoAtual;
@@ -913,7 +920,7 @@ Escreva em prosa contínua, 4-6 parágrafos, cobrindo:
 Retorne APENAS o texto do resumo, sem JSON, sem títulos, sem marcadores.`;
 
   const resp = await fetchIA(JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-5',
       max_tokens: 2000,
       messages: [{ role: 'user', content: prompt }]
     }));
@@ -994,7 +1001,7 @@ Retorne APENAS JSON válido:
 }`;
 
   try {
-    const resp = await fetchIA(JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:2000, messages:[{role:'user',content:prompt}] }));
+    const resp = await fetchIA(JSON.stringify({ model:'claude-sonnet-4-5', max_tokens:2000, messages:[{role:'user',content:prompt}] }));
     if (!resp.ok) { const errTxt = await resp.text().catch(function(){return '';}); throw new Error('Anthropic 400: '+errTxt.substring(0,400)); }
     const data = await resp.json();
     const text = data.content && data.content[0] && data.content[0].text||'{}';
@@ -1002,8 +1009,8 @@ Retorne APENAS JSON válido:
     const m = clean.match(/\{[\s\S]*\}/);
     const json = m ? JSON.parse(m[0]) : {};
     const duracao = Date.now()-inicio;
-    await registrarAuditoria(db,{paciente_id:paciente.id,modulo:'analise_estrutural',referencia_tipo:'mapeamento',referencia_id:mapeamento && mapeamento.id,prompt_resumo:prompt,input_hash:crypto.createHash('md5').update(prompt).digest('hex'),output_resumo:text,tokens_usados:data.usage && data.usage.output_tokens,input_tokens:data.usage && data.usage.input_tokens,duracao_ms:duracao,sucesso:true,modelo:'claude-sonnet-4-20250514',modo:'ia'});
-    return { json, resumo_executivo: json.resumo_executivo||'', modo:'ia', modelo:'claude-sonnet-4-20250514' };
+    await registrarAuditoria(db,{paciente_id:paciente.id,modulo:'analise_estrutural',referencia_tipo:'mapeamento',referencia_id:mapeamento && mapeamento.id,prompt_resumo:prompt,input_hash:crypto.createHash('md5').update(prompt).digest('hex'),output_resumo:text,tokens_usados:data.usage && data.usage.output_tokens,input_tokens:data.usage && data.usage.input_tokens,duracao_ms:duracao,sucesso:true,modelo:'claude-sonnet-4-5',modo:'ia'});
+    return { json, resumo_executivo: json.resumo_executivo||'', modo:'ia', modelo:'claude-sonnet-4-5' };
   } catch(e) {
     await registrarAuditoria(db,{paciente_id:paciente.id,modulo:'analise_estrutural',sucesso:false,erro_msg:e.message,modo:'fallback'});
     throw e;
@@ -1057,7 +1064,7 @@ Retorne APENAS JSON válido:
 }`;
 
   try {
-    const resp = await fetchIA(JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:2500, messages:[{role:'user',content:prompt}] }));
+    const resp = await fetchIA(JSON.stringify({ model:'claude-sonnet-4-5', max_tokens:2500, messages:[{role:'user',content:prompt}] }));
     if (!resp.ok) { const errTxt = await resp.text().catch(function(){return '';}); throw new Error('Anthropic 400: '+errTxt.substring(0,400)); }
     const data = await resp.json();
     const text = data.content && data.content[0] && data.content[0].text||'{}';
@@ -1065,7 +1072,7 @@ Retorne APENAS JSON válido:
     const m = clean.match(/\{[\s\S]*\}/);
     const json = m ? JSON.parse(m[0]) : { hipoteses:[] };
     const duracao = Date.now()-inicio;
-    await registrarAuditoria(db,{paciente_id:paciente.id,modulo:'hipoteses_clinicas',referencia_tipo:'mapeamento',referencia_id:mapeamento && mapeamento.id,prompt_resumo:prompt,input_hash:crypto.createHash('md5').update(prompt).digest('hex'),output_resumo:text,tokens_usados:data.usage && data.usage.output_tokens,input_tokens:data.usage && data.usage.input_tokens,duracao_ms:duracao,sucesso:true,modelo:'claude-sonnet-4-20250514',modo:'ia'});
+    await registrarAuditoria(db,{paciente_id:paciente.id,modulo:'hipoteses_clinicas',referencia_tipo:'mapeamento',referencia_id:mapeamento && mapeamento.id,prompt_resumo:prompt,input_hash:crypto.createHash('md5').update(prompt).digest('hex'),output_resumo:text,tokens_usados:data.usage && data.usage.output_tokens,input_tokens:data.usage && data.usage.input_tokens,duracao_ms:duracao,sucesso:true,modelo:'claude-sonnet-4-5',modo:'ia'});
     return { hipoteses: json.hipoteses||[], modo:'ia' };
   } catch(e) {
     await registrarAuditoria(db,{paciente_id:paciente.id,modulo:'hipoteses_clinicas',sucesso:false,erro_msg:e.message,modo:'fallback'});
@@ -1110,7 +1117,7 @@ Retorne APENAS JSON válido:
 }`;
 
   try {
-    const resp = await fetchIA(JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:2000, messages:[{role:'user',content:prompt}] }));
+    const resp = await fetchIA(JSON.stringify({ model:'claude-sonnet-4-5', max_tokens:2000, messages:[{role:'user',content:prompt}] }));
     if (!resp.ok) { const errTxt = await resp.text().catch(function(){return '';}); throw new Error('Anthropic 400: '+errTxt.substring(0,400)); }
     const data = await resp.json();
     const text = data.content && data.content[0] && data.content[0].text||'{}';
@@ -1118,8 +1125,8 @@ Retorne APENAS JSON válido:
     const m = clean.match(/\{[\s\S]*\}/);
     const json = m ? JSON.parse(m[0]) : {};
     const duracao = Date.now()-inicio;
-    await registrarAuditoria(db,{paciente_id:paciente.id,modulo:'mapa_identidade',referencia_tipo:'mapeamento',referencia_id:mapeamento && mapeamento.id,prompt_resumo:prompt,input_hash:crypto.createHash('md5').update(prompt).digest('hex'),output_resumo:text,tokens_usados:data.usage && data.usage.output_tokens,input_tokens:data.usage && data.usage.input_tokens,duracao_ms:duracao,sucesso:true,modelo:'claude-sonnet-4-20250514',modo:'ia'});
-    return { json, frase_identitaria: json.frase_identitaria||'', praticas_sustentacao: json.praticas_sustentacao||[], modo:'ia', modelo:'claude-sonnet-4-20250514' };
+    await registrarAuditoria(db,{paciente_id:paciente.id,modulo:'mapa_identidade',referencia_tipo:'mapeamento',referencia_id:mapeamento && mapeamento.id,prompt_resumo:prompt,input_hash:crypto.createHash('md5').update(prompt).digest('hex'),output_resumo:text,tokens_usados:data.usage && data.usage.output_tokens,input_tokens:data.usage && data.usage.input_tokens,duracao_ms:duracao,sucesso:true,modelo:'claude-sonnet-4-5',modo:'ia'});
+    return { json, frase_identitaria: json.frase_identitaria||'', praticas_sustentacao: json.praticas_sustentacao||[], modo:'ia', modelo:'claude-sonnet-4-5' };
   } catch(e) {
     await registrarAuditoria(db,{paciente_id:paciente.id,modulo:'mapa_identidade',sucesso:false,erro_msg:e.message,modo:'fallback'});
     throw e;
@@ -1268,7 +1275,7 @@ Retorne APENAS JSON válido:
 }`;
 
   try {
-    const resp = await fetchIA(JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:prompt}]}));
+    const resp = await fetchIA(JSON.stringify({model:'claude-sonnet-4-5',max_tokens:1000,messages:[{role:'user',content:prompt}]}));
     if (!resp.ok) { const e=await resp.text().catch(function(){return '';}); throw new Error('Anthropic 400: '+e.substring(0,300)); }
     const data = await resp.json();
     const text = (data.content&&data.content[0]&&data.content[0].text)||'{}';
@@ -1276,7 +1283,7 @@ Retorne APENAS JSON válido:
     const m = clean.match(/\{[\s\S]*\}/);
     const json = m ? JSON.parse(m[0]) : {};
     const duracao = Date.now()-inicio;
-    await registrarAuditoria(db,{paciente_id:paciente.id,modulo:'risco_abandono',referencia_tipo:'paciente',referencia_id:paciente.id,prompt_resumo:prompt,input_hash:crypto.createHash('md5').update(prompt).digest('hex'),output_resumo:text,tokens_usados:data.usage&&data.usage.output_tokens,input_tokens:data.usage&&data.usage.input_tokens,duracao_ms:duracao,sucesso:true,modelo:'claude-sonnet-4-20250514',modo:'clinico'});
+    await registrarAuditoria(db,{paciente_id:paciente.id,modulo:'risco_abandono',referencia_tipo:'paciente',referencia_id:paciente.id,prompt_resumo:prompt,input_hash:crypto.createHash('md5').update(prompt).digest('hex'),output_resumo:text,tokens_usados:data.usage&&data.usage.output_tokens,input_tokens:data.usage&&data.usage.input_tokens,duracao_ms:duracao,sucesso:true,modelo:'claude-sonnet-4-5',modo:'clinico'});
     return { score:parseInt(json.score)||0, nivel:json.nivel||'baixo', nivel_confianca:json.nivel_confianca||'moderado', fatores:json.fatores||[], explicacao:json.explicacao||'', sugestao_estrategica:json.sugestao_estrategica||'', acao_recomendada:json.acao_recomendada||'', modo:'clinico' };
   } catch(e) {
     await registrarAuditoria(db,{paciente_id:paciente.id,modulo:'risco_abandono',sucesso:false,erro_msg:e.message,modo:'fallback'});
@@ -1366,7 +1373,7 @@ Retorne APENAS JSON válido:
 }`;
 
   try {
-    const resp = await fetchIA(JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1500,messages:[{role:'user',content:prompt}]}));
+    const resp = await fetchIA(JSON.stringify({model:'claude-sonnet-4-5',max_tokens:1500,messages:[{role:'user',content:prompt}]}));
     if (!resp.ok) { const e=await resp.text().catch(function(){return '';}); throw new Error('Anthropic 400: '+e.substring(0,300)); }
     const data = await resp.json();
     const text = (data.content&&data.content[0]&&data.content[0].text)||'{}';
@@ -1374,7 +1381,7 @@ Retorne APENAS JSON válido:
     const m = clean.match(/\{[\s\S]*\}/);
     const json = m ? JSON.parse(m[0]) : {};
     const duracao = Date.now()-inicio;
-    await registrarAuditoria(db,{paciente_id:paciente.id,modulo:'evolucao_preditiva',referencia_tipo:'paciente',referencia_id:paciente.id,prompt_resumo:prompt,input_hash:crypto.createHash('md5').update(prompt).digest('hex'),output_resumo:text,tokens_usados:data.usage&&data.usage.output_tokens,input_tokens:data.usage&&data.usage.input_tokens,duracao_ms:duracao,sucesso:true,modelo:'claude-sonnet-4-20250514',modo:'ia'});
+    await registrarAuditoria(db,{paciente_id:paciente.id,modulo:'evolucao_preditiva',referencia_tipo:'paciente',referencia_id:paciente.id,prompt_resumo:prompt,input_hash:crypto.createHash('md5').update(prompt).digest('hex'),output_resumo:text,tokens_usados:data.usage&&data.usage.output_tokens,input_tokens:data.usage&&data.usage.input_tokens,duracao_ms:duracao,sucesso:true,modelo:'claude-sonnet-4-5',modo:'ia'});
     return { nivel_dados:nivelDados, nivel_confianca:nivelConfianca, horizonte_sessoes:horizSessoes, tendencia_predominante:json.tendencia_predominante||'', fatores_favoraveis:json.fatores_favoraveis||[], fatores_risco:json.fatores_risco||[], dimensoes_frageis:json.dimensoes_frageis||[], dimensoes_fortalecidas:json.dimensoes_fortalecidas||[], proximos_focos:json.proximos_focos||[], ajustes_recomendados:json.ajustes_recomendados||[], modo:'ia' };
   } catch(e) {
     await registrarAuditoria(db,{paciente_id:paciente.id,modulo:'evolucao_preditiva',sucesso:false,erro_msg:e.message,modo:'fallback'});
@@ -1535,7 +1542,7 @@ Retorne APENAS JSON válido com esta estrutura exata:
 }`;
 
   try {
-    const resp = await fetchIA(JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:3500,messages:[{role:'user',content:prompt}]}));
+    const resp = await fetchIA(JSON.stringify({model:'claude-sonnet-4-5',max_tokens:3500,messages:[{role:'user',content:prompt}]}));
     if (!resp.ok) { const e=await resp.text().catch(function(){return '';}); throw new Error('Anthropic 400: '+e.substring(0,300)); }
     const data = await resp.json();
     const text = (data.content&&data.content[0]&&data.content[0].text)||'{}';
@@ -1543,7 +1550,7 @@ Retorne APENAS JSON válido com esta estrutura exata:
     const m = clean.match(/\{[\s\S]*\}/);
     const json = m ? JSON.parse(m[0]) : {};
     const duracao = Date.now()-inicio;
-    await registrarAuditoria(db,{paciente_id:paciente.id,modulo:'prontuario_inteligente',referencia_tipo:'paciente',referencia_id:paciente.id,prompt_resumo:prompt,input_hash:crypto.createHash('md5').update(prompt).digest('hex'),output_resumo:text,tokens_usados:data.usage&&data.usage.output_tokens,input_tokens:data.usage&&data.usage.input_tokens,duracao_ms:duracao,sucesso:true,modelo:'claude-sonnet-4-20250514',modo:'ia'});
+    await registrarAuditoria(db,{paciente_id:paciente.id,modulo:'prontuario_inteligente',referencia_tipo:'paciente',referencia_id:paciente.id,prompt_resumo:prompt,input_hash:crypto.createHash('md5').update(prompt).digest('hex'),output_resumo:text,tokens_usados:data.usage&&data.usage.output_tokens,input_tokens:data.usage&&data.usage.input_tokens,duracao_ms:duracao,sucesso:true,modelo:'claude-sonnet-4-5',modo:'ia'});
     return {
       paciente: {
         nome: paciente.nome_completo, perfil: paciente.perfil_tipo||'adulto',
@@ -1620,7 +1627,7 @@ async function gerarContextoInicial({ paciente, mapeamento, cids }) {
     + 'Retorne APENAS o texto dos 5 parágrafos, sem títulos, sem numeração, sem markdown.';
 
   const resp = await fetchIA(JSON.stringify({
-      model:      'claude-sonnet-4-20250514',
+      model:      'claude-sonnet-4-5',
       max_tokens: 900,
       messages:   [{ role: 'user', content: prompt }]
     }));
@@ -1681,7 +1688,7 @@ async function gerarResumoEncaminhamento({ paciente, sessoes, mapeamento, analis
     + '{"motivo":"...","sintomas":"...","objetivo":"...","resumo":"..."}';
 
   var resp = await fetchIA(JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-5',
       max_tokens: 600,
       messages: [{ role: 'user', content: prompt }]
     }));
@@ -1740,7 +1747,7 @@ async function gerarFasesTerapeuticas({ db, paciente, sessoes, mapeamentos, evol
     + '[{"nome":"...","descricao":"...","emoji":"...","inicio_pct":0,"fim_pct":40}]';
 
   var resposta = await fetchIA({
-    model: 'claude-sonnet-4-20250514',
+    model: 'claude-sonnet-4-5',
     max_tokens: 600,
     messages: [{ role: 'user', content: prompt }]
   });
@@ -1770,7 +1777,7 @@ async function gerarFasesTerapeuticas({ db, paciente, sessoes, mapeamentos, evol
       tokens_usados:  data.usage && data.usage.output_tokens,
       input_tokens:   data.usage && data.usage.input_tokens,
       sucesso:        true,
-      modelo:         'claude-sonnet-4-20250514',
+      modelo:         'claude-sonnet-4-5',
       modo:           'ia'
     }).catch(function(e){ console.warn('audit timeline:', e.message); });
   }

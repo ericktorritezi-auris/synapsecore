@@ -711,82 +711,30 @@ async function runMigrations() {
     `);
 
     // ══════════════════════════════════════════════
-    // v3.3.0 — CENTRAL DE ALERTAS
+    // v3.3.0 — CENTRAL INTELIGENTE DE ALERTAS
     // ══════════════════════════════════════════════
     await client.query(`
       CREATE TABLE IF NOT EXISTS alertas (
-        id             SERIAL PRIMARY KEY,
-        tipo           VARCHAR(40) NOT NULL,
-        prioridade     VARCHAR(20) NOT NULL DEFAULT 'operacional',
-        titulo         TEXT NOT NULL,
-        corpo          TEXT,
-        paciente_id    INTEGER REFERENCES pacientes(id) ON DELETE CASCADE,
-        lido           BOOLEAN DEFAULT false,
-        lido_em        TIMESTAMP,
-        lembrar_depois BOOLEAN DEFAULT false,
-        lembrar_em     TIMESTAMP,
-        resolvido      BOOLEAN DEFAULT false,
-        gerado_em      TIMESTAMP DEFAULT NOW(),
-        acao_tipo      VARCHAR(30),
-        acao_url       TEXT,
-        acao_whatsapp  TEXT
+        id               SERIAL PRIMARY KEY,
+        tipo             VARCHAR(40) NOT NULL,
+        prioridade       VARCHAR(20) NOT NULL DEFAULT 'informativo',
+        titulo           TEXT NOT NULL,
+        corpo            TEXT,
+        paciente_id      INTEGER REFERENCES pacientes(id) ON DELETE CASCADE,
+        lido             BOOLEAN DEFAULT false,
+        lido_em          TIMESTAMP,
+        lembrar_depois   BOOLEAN DEFAULT false,
+        lembrar_em       TIMESTAMP,
+        resolvido        BOOLEAN DEFAULT false,
+        gerado_em        TIMESTAMP DEFAULT NOW(),
+        acao_tipo        VARCHAR(30),
+        acao_url         TEXT,
+        acao_whatsapp    TEXT
       )
     `);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_alertas_lido ON alertas(lido, resolvido)`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_alertas_paciente ON alertas(paciente_id)`);
-
-    // ══════════════════════════════════════════════
-    // v3.3.0 — CENTRAL INTELIGENTE DE ALERTAS
-    // ══════════════════════════════════════════════
-
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS alertas (
-        id               SERIAL PRIMARY KEY,
-        tipo             VARCHAR(40) NOT NULL,
-        prioridade       VARCHAR(20) NOT NULL DEFAULT 'informativo',
-        titulo           TEXT NOT NULL,
-        corpo            TEXT,
-        paciente_id      INTEGER REFERENCES pacientes(id) ON DELETE CASCADE,
-        lido             BOOLEAN DEFAULT false,
-        lido_em          TIMESTAMP,
-        lembrar_depois   BOOLEAN DEFAULT false,
-        lembrar_em       TIMESTAMP,
-        resolvido        BOOLEAN DEFAULT false,
-        gerado_em        TIMESTAMP DEFAULT NOW(),
-        acao_tipo        VARCHAR(30),
-        acao_url         TEXT,
-        acao_whatsapp    TEXT
-      )
-    `);
-
-    // ══════════════════════════════════════════════
-    // v3.3.0 — CENTRAL INTELIGENTE DE ALERTAS
-    // ══════════════════════════════════════════════
-
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS alertas (
-        id               SERIAL PRIMARY KEY,
-        tipo             VARCHAR(40) NOT NULL,
-        prioridade       VARCHAR(20) NOT NULL DEFAULT 'informativo',
-        titulo           TEXT NOT NULL,
-        corpo            TEXT,
-        paciente_id      INTEGER REFERENCES pacientes(id) ON DELETE CASCADE,
-        lido             BOOLEAN DEFAULT false,
-        lido_em          TIMESTAMP,
-        lembrar_depois   BOOLEAN DEFAULT false,
-        lembrar_em       TIMESTAMP,
-        resolvido        BOOLEAN DEFAULT false,
-        gerado_em        TIMESTAMP DEFAULT NOW(),
-        acao_tipo        VARCHAR(30),
-        acao_url         TEXT,
-        acao_whatsapp    TEXT
-      )
-    `);
-
-    await client.query(`
-      CREATE INDEX IF NOT EXISTS idx_alertas_ativo
-      ON alertas(lido, resolvido, paciente_id)
-    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_alertas_ativo ON alertas(lido, resolvido, paciente_id)`);
 
     console.log('✅ Banco de dados pronto');
   } catch (err) {

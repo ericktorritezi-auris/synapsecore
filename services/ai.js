@@ -491,7 +491,7 @@ Retorne APENAS JSON válido:
 }`;
 
   try {
-    const resp = await fetchIA(JSON.stringify({ model:'claude-sonnet-4-5', max_tokens:1200, messages:[{role:'user',content:prompt}] }));
+    const resp = await fetchIA(JSON.stringify({ model:'claude-sonnet-4-5', max_tokens:2000, messages:[{role:'user',content:prompt}] }));
     const data = await resp.json();
     if (!resp.ok) {
       const apiErr = (data.error && data.error.message) || JSON.stringify(data);

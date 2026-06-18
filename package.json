@@ -1,6 +1,6 @@
 {
   "name": "synapse-core",
-  "version": "4.0.1g",
+  "version": "4.0.1h",
   "description": "Synapse Core \u2014 Plataforma de Intelig\u00eancia Cl\u00ednica Integrativa",
   "main": "server.js",
   "scripts": {

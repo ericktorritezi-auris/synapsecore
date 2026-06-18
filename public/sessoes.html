@@ -766,7 +766,8 @@ function gerarBriefingSess(e) {
 }
 
 function renderBriefingSess(d) {
-  var j = d.conteudo_json || {};
+  var raw = d.conteudo_json || {};
+  var j = (typeof raw === 'string') ? (function(){ try{ return JSON.parse(raw); }catch(e){ return {}; } })() : raw;
   var body = document.getElementById('briefingBodySess');
   if (j.proxima_sessao_numero) document.getElementById('briefingSessNumBadge').textContent = 'Sessão ' + j.proxima_sessao_numero;
   var html = '';

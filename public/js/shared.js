@@ -19,7 +19,7 @@ function logout() {
 async function api(url, method = 'GET', data = null) {
   const token = localStorage.getItem('sc_token');
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 120000); // 120s timeout
+  const timer = setTimeout(() => controller.abort(), 210000); // 210s timeout
   const opts = {
     method,
     headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },

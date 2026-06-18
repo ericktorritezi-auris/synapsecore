@@ -4,7 +4,7 @@
 // ── FETCH COM TIMEOUT 45s ──
 async function fetchIA(body) {
   var controller = new AbortController();
-  var timer = setTimeout(function(){ controller.abort(); }, 90000);
+  var timer = setTimeout(function(){ controller.abort(); }, 180000);
   try {
     var resp = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',

@@ -7,7 +7,7 @@ const { runMigrations } = require('./db/migrations');
 
 const app     = express();
 const PORT    = process.env.PORT || 3000;
-const VERSION = '4.0.2';
+const VERSION = '4.0.3';
 
 // ── MIDDLEWARE ──
 app.use(cors());
@@ -124,6 +124,7 @@ app.get('/cadastro',       (req, res) => res.sendFile(path.join(__dirname, 'publ
 app.use('/api/alertas',    require('./routes/alertas'));
 app.use('/api/consumo',   require('./routes/consumo'));
 app.use('/api/timeline',  require('./routes/timeline'));
+app.use('/api/pacientes', require('./routes/cobranca'));
 app.get('/consumo',       (req, res) => res.sendFile(path.join(__dirname, 'public', 'consumo.html')));
 app.get('/timeline/:paciente_id', (req, res) => res.sendFile(path.join(__dirname, 'public', 'timeline.html')));
 app.post('/api/webhooks/agenda', (req, res, next) => {

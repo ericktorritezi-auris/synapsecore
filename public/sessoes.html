@@ -162,6 +162,7 @@ body{font-family:var(--fb);background:var(--bg);color:var(--tx);min-height:100vh
     <button class="btn btn-primary" onclick="toggleForm()">&#43; Registrar Sessão</button>
     <button class="btn btn-ghost" id="btnResumo" onclick="verResumo()">&#9654; Resumo Clínico IA</button>
     <button class="btn btn-ghost" onclick="abrirEvolucao()" id="btnEvolSess">&#9651; Relatório de Evolução</button>
+    <button class="btn btn-ghost" id="btnCobranca" onclick="enviarCobranca()" style="display:none;background:rgba(212,175,127,.08);border-color:rgba(212,175,127,.3);color:#D4AF7F">&#9993; Cobrança</button>
   </div>
 
   <!-- Evolution link panel (inside sessoes) -->
@@ -396,6 +397,7 @@ window.addEventListener('DOMContentLoaded', function() {
     terapeuta = results[2];
     renderPatient();
     renderSessoes();
+    atualizarBtnCobranca();
     loadResumo();
     carregarFeedbacks();
     // v3.0
@@ -583,6 +585,44 @@ function renderSessoes() {
     card.appendChild(hdr); card.appendChild(body);
     wrap.appendChild(card);
   });
+}
+
+// ── COBRANÇA POR EMAIL ──
+function atualizarBtnCobranca() {
+  var abertas = sessoes.filter(function(s) {
+    return s.status === 'realizada' && !s.pago;
+  });
+  var btn = document.getElementById('btnCobranca');
+  if (btn) btn.style.display = abertas.length ? 'inline-flex' : 'none';
+}
+
+function enviarCobranca() {
+  if (!paciente) return;
+  if (!paciente.email) {
+    showToast('Paciente não possui email cadastrado.', 'error');
+    return;
+  }
+  var abertas = sessoes.filter(function(s) { return s.status === 'realizada' && !s.pago; });
+  if (!abertas.length) {
+    showToast('Nenhuma sessão em aberto para este paciente.', 'error');
+    return;
+  }
+  var btn = document.getElementById('btnCobranca');
+  var orig = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Enviando...';
+
+  api('/api/pacientes/' + PACIENTE_ID + '/cobrar-email', 'POST', {})
+    .then(function(d) {
+      btn.disabled = false;
+      btn.textContent = orig;
+      showToast('✅ Email de cobrança enviado para ' + d.email + ' (' + d.sessoes + ' sessão(ões) · ' + d.total + ')', 'success');
+    })
+    .catch(function(e) {
+      btn.disabled = false;
+      btn.textContent = orig;
+      showToast('Erro ao enviar email: ' + e.message, 'error');
+    });
 }
 
 // ── FORM TOGGLE ──

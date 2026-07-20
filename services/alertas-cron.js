@@ -536,7 +536,7 @@ async function verificarRadarClinico() {
       for (var flag of FLAGS_CRITICAS) {
         if (flags.indexOf(flag) !== -1) {
           await upsertAlerta({
-            tipo:        'radar_flag_critica_' + flag,
+            tipo:        ('radar_flag_' + flag).substring(0, 40),
             prioridade:  'critico',
             titulo:      '⚠️ Flag crítica: ' + row.nome_completo,
             corpo:       'Indicador clínico crítico identificado no mapeamento de ' + row.nome_completo

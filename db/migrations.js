@@ -732,6 +732,7 @@ async function runMigrations() {
         acao_whatsapp    TEXT
       )
     `);
+    await client.query(`ALTER TABLE alertas ALTER COLUMN tipo TYPE VARCHAR(60)`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_alertas_lido ON alertas(lido, resolvido)`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_alertas_paciente ON alertas(paciente_id)`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_alertas_ativo ON alertas(lido, resolvido, paciente_id)`);

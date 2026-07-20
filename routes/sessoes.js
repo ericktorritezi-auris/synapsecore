@@ -247,7 +247,7 @@ async function gerarSnapshotLeve(paciente_id, sessao_id) {
     const basic = calcularScoreRiscoBasico({sessoes,feedbacks,paciente});
     const lastRisco = await db.query('SELECT id FROM risco_abandono WHERE paciente_id=$1 ORDER BY gerado_em DESC LIMIT 1',[paciente_id]);
     if (lastRisco.rows.length) {
-      await db.query('UPDATE risco_abandono SET score_basico=$1, nivel=CASE WHEN $1>=60 THEN \'critico\' WHEN $1>=40 THEN \'alto\' WHEN $1>=20 THEN \'moderado\' ELSE \'baixo\' END, ultima_analise_leve=NOW() WHERE id=$2',
+      await db.query('UPDATE risco_abandono SET score_basico=$1::numeric, nivel=CASE WHEN $1::numeric>=60 THEN \'critico\' WHEN $1::numeric>=40 THEN \'alto\' WHEN $1::numeric>=20 THEN \'moderado\' ELSE \'baixo\' END, ultima_analise_leve=NOW() WHERE id=$2',
         [basic.score, lastRisco.rows[0].id]);
     }
   } catch(e) {

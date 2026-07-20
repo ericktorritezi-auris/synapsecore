@@ -964,7 +964,7 @@ FLAGS CLÍNICAS: ${flags.map(f=>FLAG_L[f]||f).join(', ')||'Nenhuma'}
 ÍNDICES: Emocional=${ind.D1||'N/D'} Cognitivo=${ind.D2||'N/D'} Relacional=${ind.D3||'N/D'} Existencial=${ind.D4||'N/D'} Corporal=${ind.D5||'N/D'}
 
 RESUMO CLÍNICO ATUAL:
-${resumoAtual||'Não disponível'}
+${(resumoAtual||'Não disponível').substring(0,800)}
 
 ÚLTIMAS SESSÕES:
 ${sessStr||'Sem sessões registradas'}
@@ -1032,7 +1032,7 @@ FLAGS: ${flags.map(f=>FLAG_L[f]||f).join(', ')||'Nenhuma'}
 ÍNDICES: D1=${ind.D1||'N/D'} D2=${ind.D2||'N/D'} D3=${ind.D3||'N/D'} D4=${ind.D4||'N/D'} D5=${ind.D5||'N/D'}
 
 RESUMO CLÍNICO:
-${resumoAtual||'Não disponível'}
+${(resumoAtual||'Não disponível').substring(0,800)}
 
 ${analiseEstrutural ? 'MAPA ESTRUTURAL:\nNúcleo: '+(analiseEstrutural.nucleo_emocional||'')+'\nConflito: '+(analiseEstrutural.conflito_central||'')+'\nEstilo: '+(analiseEstrutural.estilo_relacional||'')+'\n' : ''}
 
@@ -1091,7 +1091,7 @@ Terapeuta: Erick Torritezi — especialista em Protocolo ESSÊNCIA, metodologia 
 PACIENTE: ${paciente.nome_completo} | ${paciente.perfil_tipo||'adulto'}
 
 RESUMO CLÍNICO:
-${resumoAtual||'Não disponível'}
+${(resumoAtual||'Não disponível').substring(0,800)}
 
 ${analiseEstrutural ? 'MAPA ESTRUTURAL:\nNúcleo emocional: '+(analiseEstrutural.nucleo_emocional||'')
   +'\nConflito central: '+(analiseEstrutural.conflito_central||'')
@@ -1246,7 +1246,7 @@ FEEDBACKS EXTERNOS:
 ${feedStr||'Nenhum feedback registrado'}
 
 RESUMO CLÍNICO ATUAL:
-${resumoAtual||'Não disponível'}
+${(resumoAtual||'Não disponível').substring(0,800)}
 
 ${aeStr ? 'LEITURA ESTRUTURAL:\n'+aeStr+'\n' : ''}
 
@@ -1347,7 +1347,7 @@ LINHA EVOLUTIVA (snapshots recentes):
 ${snapshotStr||'Sem snapshots disponíveis'}
 
 RESUMO CLÍNICO ATUAL:
-${resumoAtual||'Não disponível'}
+${(resumoAtual||'Não disponível').substring(0,800)}
 
 ${aeStr ? 'MAPA ESTRUTURAL:\n'+aeStr+'\n' : ''}
 ${memoriaStr ? 'MEMÓRIA TERAPÊUTICA:\n'+memoriaStr+'\n' : ''}
@@ -1407,16 +1407,16 @@ async function gerarProntuarioInteligente({ db, paciente, mapeamento, sessoes, f
   const pred   = preditiva||null;
 
   const ultimaSessao = sessoes.length ? sessoes[sessoes.length-1] : null;
-  const ultimasSessoes = sessoes.slice(-3).map(function(s){
+  const ultimasSessoes = sessoes.slice(-2).map(function(s){
     return 'S'+s.sessao_numero+' ('+new Date(s.data_sessao).toLocaleDateString('pt-BR')+'): '+(s.resumo_terapeuta||'sem resumo');
   }).join('\n');
-  const feedbacksStr = feedbacks.slice(0,5).map(function(f){
+  const feedbacksStr = feedbacks.slice(0,3).map(function(f){
     return new Date(f.data_feedback).toLocaleDateString('pt-BR')+': '+f.conteudo;
   }).join('\n');
-  const hipStr = (hipoteses||[]).slice(0,5).map(function(h,i){
+  const hipStr = (hipoteses||[]).slice(0,3).map(function(h,i){
     return (i+1)+'. ['+h.tipo+' / confiança '+h.nivel_confianca+'] '+h.hipotese_ia;
   }).join('\n');
-  const intervStr = (intervencoes||[]).filter(function(i){return i.status==='utilizada';}).slice(0,6).map(function(i){
+  const intervStr = (intervencoes||[]).filter(function(i){return i.status==='utilizada';}).slice(0,4).map(function(i){
     return i.titulo+(i.avaliacao?' → '+i.avaliacao:'');
   }).join(', ');
 
@@ -1459,7 +1459,7 @@ FLAGS CLÍNICAS: ${flags.map(function(f){return FLAG_L[f]||f;}).join(', ')||'Nen
 ${manejo_seguranca?'⚠️ ATENÇÃO: RISCO ELEVADO — priorize manejo de segurança\n':''}
 
 ═══ RESUMO CLÍNICO ATUAL ═══
-${resumoAtual||'Não disponível'}
+${(resumoAtual||'Não disponível').substring(0,800)}
 
 ═══ MAPA ESTRUTURAL ═══
 Núcleo emocional: ${ae.nucleo_emocional||'não mapeado'}

@@ -627,12 +627,15 @@ Retorne APENAS JSON válido:
 }`;
 
   try {
-    const resp = await fetchIA(JSON.stringify({ model:'claude-sonnet-4-5', max_tokens:2500, messages:[{role:'user',content:prompt}] }));
+    const resp = await fetchIA(JSON.stringify({ model:'claude-sonnet-4-5', max_tokens:4000, messages:[{role:'user',content:prompt}] }));
+    if (!resp.ok) { const e=await resp.text().catch(function(){return '';}); throw new Error('API erro '+resp.status+': '+e.substring(0,200)); }
     const data = await resp.json();
     const text = data.content && data.content[0] && data.content[0].text || '{}';
     const clean = text.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
     const m = clean.match(/\{[\s\S]*\}/);
-    const json = m ? JSON.parse(m[0]) : {};
+    if (!m) throw new Error('Memoria: resposta truncada (JSON incompleto). Tente novamente.');
+    const json = JSON.parse(m[0]);
+    if (!json || Object.keys(json).length === 0) throw new Error('Memoria: JSON vazio retornado pela IA.');
     const duracao = Date.now() - inicio;
     await registrarAuditoria(db, { paciente_id: paciente.id, modulo:'memoria', referencia_tipo:'paciente', referencia_id: paciente.id, prompt_resumo: prompt, input_hash: crypto.createHash('md5').update(prompt).digest('hex'), output_resumo: text, tokens_usados: data.usage && data.usage.output_tokens, input_tokens: data.usage && data.usage.input_tokens, duracao_ms: duracao, sucesso: true, modo:'ia' });
     return { json, texto: text, modo: 'ia' };

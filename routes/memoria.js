@@ -64,6 +64,22 @@ router.post('/:paciente_id/gerar', verifyToken, async (req, res) => {
 
     const result = await atualizarMemoriaTerapeutica({ db, paciente, sessoes, feedbacks, intervencoes, resumoAtual, memoriaAnterior });
 
+    // Garantir que conteudo_json tem dados — fallback: extrair do texto
+    var jsonFinal = result.json;
+    if (!jsonFinal || Object.keys(jsonFinal).length === 0) {
+      try {
+        var clean = (result.texto || '').replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
+        var m = clean.match(/\{[\s\S]*\}/);
+        if (m) jsonFinal = JSON.parse(m[0]);
+      } catch(parseErr) {
+        console.error('memoria/parse-fallback:', parseErr.message);
+        jsonFinal = {};
+      }
+    }
+    if (!jsonFinal || Object.keys(jsonFinal).length === 0) {
+      return res.status(500).json({ message: 'IA não retornou dados estruturados válidos. Tente novamente.' });
+    }
+
     // Mark all previous as inactive
     await db.query('UPDATE memoria_terapeutica SET ativa=false WHERE paciente_id=$1', [pid]);
 
@@ -71,7 +87,7 @@ router.post('/:paciente_id/gerar', verifyToken, async (req, res) => {
     const saved = await db.query(
       `INSERT INTO memoria_terapeutica (paciente_id, versao, ativa, conteudo_json, conteudo_texto, sessoes_base, feedbacks_base, intervencoes_base, hash_contexto)
        VALUES ($1,$2,true,$3,$4,$5,$6,$7,$8) RETURNING *`,
-      [pid, versaoAnterior + 1, JSON.stringify(result.json), result.texto,
+      [pid, versaoAnterior + 1, JSON.stringify(jsonFinal), result.texto,
        JSON.stringify(sessoes.map(s=>s.id)), JSON.stringify(feedbacks.map(f=>f.id)),
        JSON.stringify(intervencoes.map(i=>i.id)), hashCtx]
     );

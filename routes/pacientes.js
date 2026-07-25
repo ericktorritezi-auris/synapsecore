@@ -122,14 +122,52 @@ router.get('/:id', verifyToken, async (req, res) => {
         (SELECT COUNT(*) FROM sessoes s WHERE s.paciente_id = p.id)::int AS total_sessoes,
         (SELECT COUNT(*) FROM mapeamentos m WHERE m.paciente_id = p.id)::int AS total_mapeamentos,
         (SELECT COUNT(*) FROM form_tokens ft
-          WHERE ft.paciente_id = p.id AND ft.usado = false AND ft.expira_em > NOW())::int AS link_ativo
-      FROM pacientes p LEFT JOIN pacotes pk ON pk.id = p.pacote_id
+          WHERE ft.paciente_id = p.id AND ft.usado = false AND ft.expira_em > NOW())::int AS link_ativo,
+        c.nome_completo AS conjuge_nome,
+        c.id AS conjuge_id_ref
+      FROM pacientes p
+      LEFT JOIN pacotes pk ON pk.id = p.pacote_id
+      LEFT JOIN pacientes c ON c.id = p.conjuge_id
       WHERE p.id = $1
     `, [req.params.id]);
     if (r.rows.length === 0) return res.status(404).json({ message: 'Paciente não encontrado.' });
     res.json(r.rows[0]);
   } catch (err) {
     res.status(500).json({ message: 'Erro ao buscar paciente.' });
+  }
+});
+
+// POST /api/pacientes/:id/vincular-conjuge
+router.post('/:id/vincular-conjuge', verifyToken, async (req, res) => {
+  try {
+    var id = parseInt(req.params.id);
+    var conjugeId = parseInt(req.body.conjuge_id);
+    if (!conjugeId || conjugeId === id) return res.status(400).json({ message: 'ID do cônjuge inválido.' });
+    var pac = await db.query('SELECT id, nome_completo FROM pacientes WHERE id=$1', [id]);
+    var conj = await db.query('SELECT id, nome_completo FROM pacientes WHERE id=$1', [conjugeId]);
+    if (!pac.rows.length || !conj.rows.length) return res.status(404).json({ message: 'Paciente não encontrado.' });
+    await db.query('UPDATE pacientes SET conjuge_id=$1 WHERE id=$2', [conjugeId, id]);
+    await db.query('UPDATE pacientes SET conjuge_id=$1 WHERE id=$2', [id, conjugeId]);
+    res.json({ ok: true, message: pac.rows[0].nome_completo + ' e ' + conj.rows[0].nome_completo + ' vinculados como casal.' });
+  } catch (err) {
+    console.error('vincular-conjuge:', err.message);
+    res.status(500).json({ message: 'Erro ao vincular cônjuge.' });
+  }
+});
+
+// POST /api/pacientes/:id/desvincular-conjuge
+router.post('/:id/desvincular-conjuge', verifyToken, async (req, res) => {
+  try {
+    var id = parseInt(req.params.id);
+    var pac = await db.query('SELECT conjuge_id FROM pacientes WHERE id=$1', [id]);
+    if (!pac.rows.length) return res.status(404).json({ message: 'Paciente não encontrado.' });
+    var conjugeId = pac.rows[0].conjuge_id;
+    await db.query('UPDATE pacientes SET conjuge_id=NULL WHERE id=$1', [id]);
+    if (conjugeId) await db.query('UPDATE pacientes SET conjuge_id=NULL WHERE id=$1', [conjugeId]);
+    res.json({ ok: true, message: 'Vínculo removido.' });
+  } catch (err) {
+    console.error('desvincular-conjuge:', err.message);
+    res.status(500).json({ message: 'Erro ao desvincular cônjuge.' });
   }
 });
 

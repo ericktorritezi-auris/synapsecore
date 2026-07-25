@@ -155,6 +155,25 @@ body{font-family:var(--fb);background:var(--bg);color:var(--tx);min-height:100vh
       </div>
       <div class="prog-dots" id="progDots"></div>
     </div>
+
+    <!-- Vínculo cônjuge -->
+    <div id="conjugeBlock" style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(212,175,127,.12)">
+      <div id="conjugeVinculado" style="display:none;align-items:center;gap:8px;font-size:12.5px;color:var(--muted)">
+        <span style="font-size:14px">💑</span>
+        <span>Cônjuge vinculado: <strong id="conjugeNome" style="color:var(--ac)"></strong></span>
+        <button onclick="desvincularConjuge()" style="background:none;border:none;color:rgba(239,68,68,.7);font-size:11px;cursor:pointer;padding:2px 6px;border-radius:4px;border:1px solid rgba(239,68,68,.2)">Desvincular</button>
+      </div>
+      <div id="conjugeForm" style="display:none;gap:8px;align-items:center;flex-wrap:wrap">
+        <span style="font-size:12px;color:var(--muted)">💑 Vincular cônjuge:</span>
+        <div style="position:relative;flex:1;min-width:180px">
+          <input id="conjugeBusca" type="text" placeholder="Buscar paciente..." autocomplete="off"
+            style="width:100%;padding:6px 10px;background:rgba(255,255,255,.05);border:1px solid rgba(212,175,127,.2);border-radius:6px;color:var(--tx);font-size:12px"
+            oninput="buscarConjuge(this.value)">
+          <div id="conjugeSugestoes" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--sf);border:1px solid rgba(212,175,127,.2);border-radius:6px;z-index:100;max-height:160px;overflow-y:auto;margin-top:2px"></div>
+        </div>
+      </div>
+      <button id="btnVincularConjuge" onclick="toggleFormConjuge()" style="background:none;border:none;color:rgba(212,175,127,.6);font-size:11px;cursor:pointer;padding:0;margin-top:4px;display:none">+ Vincular cônjuge / parceiro(a)</button>
+    </div>
   </div>
 
   <!-- Action row -->
@@ -241,12 +260,26 @@ body{font-family:var(--fb);background:var(--bg);color:var(--tx);min-height:100vh
         </label>
       </div>
       <div class="field">
+        <label>Tipo de Sessão</label>
+        <select id="fTipo" onchange="onTipoSessaoChange(this.value)">
+          <option value="individual">Individual</option>
+          <option value="casal">Casal</option>
+          <option value="familiar">Familiar</option>
+        </select>
+      </div>
+      <div class="field">
         <label>Status</label>
         <select id="fStatus">
           <option value="realizada">Realizada</option>
           <option value="cancelada">Cancelada</option>
           <option value="remarcada">Remarcada</option>
         </select>
+      </div>
+      <div id="avisoCasal" class="field full" style="display:none">
+        <div style="background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.25);border-radius:8px;padding:10px 14px;font-size:12.5px;color:#c4b5fd;display:flex;align-items:center;gap:8px">
+          <span>💑</span>
+          <span id="avisoCasalTexto">Esta sessão será registrada automaticamente para o cônjuge vinculado.</span>
+        </div>
       </div>
       <div class="field full">
         <label>Resumo da Sessão</label>
@@ -398,6 +431,7 @@ window.addEventListener('DOMContentLoaded', function() {
     renderPatient();
     renderSessoes();
     atualizarBtnCobranca();
+    renderConjuge();
     loadResumo();
     carregarFeedbacks();
     // v3.0
@@ -488,6 +522,18 @@ function renderSessoes() {
     });
     var numEl = document.createElement('div'); numEl.className='sess-num';
     numEl.textContent = 'Sessão ' + s.sessao_numero;
+    if (s.tipo_sessao && s.tipo_sessao !== 'individual') {
+      var badge = document.createElement('span');
+      badge.textContent = s.tipo_sessao === 'casal' ? '💑 Casal' : s.tipo_sessao === 'familiar' ? '👨‍👩‍👧 Familiar' : s.tipo_sessao;
+      badge.style.cssText = 'font-size:10px;background:rgba(139,92,246,.15);color:#c4b5fd;padding:2px 7px;border-radius:10px;margin-left:6px;font-weight:600;vertical-align:middle';
+      numEl.appendChild(badge);
+    }
+    if (s.titular_cobranca === false) {
+      var tagEsp = document.createElement('span');
+      tagEsp.textContent = '⟷ espelho';
+      tagEsp.style.cssText = 'font-size:10px;background:rgba(212,175,127,.08);color:rgba(212,175,127,.6);padding:2px 7px;border-radius:10px;margin-left:4px;font-weight:400;vertical-align:middle';
+      numEl.appendChild(tagEsp);
+    }
     var info = document.createElement('div'); info.className='sess-info';
     var dateEl = document.createElement('div'); dateEl.className='sess-date';
     dateEl.textContent = formatDate(s.data_sessao);
@@ -625,6 +671,96 @@ function enviarCobranca() {
     });
 }
 
+// ── CÔNJUGE ──
+function renderConjuge() {
+  if (!paciente) return;
+  var btnVincular = document.getElementById('btnVincularConjuge');
+  var divVinculado = document.getElementById('conjugeVinculado');
+  var divForm = document.getElementById('conjugeForm');
+  if (!btnVincular) return;
+
+  if (paciente.conjuge_id && paciente.conjuge_nome) {
+    divVinculado.style.display = 'flex';
+    divForm.style.display = 'none';
+    btnVincular.style.display = 'none';
+    document.getElementById('conjugeNome').textContent = paciente.conjuge_nome;
+  } else {
+    divVinculado.style.display = 'none';
+    divForm.style.display = 'none';
+    btnVincular.style.display = 'block';
+  }
+}
+
+function toggleFormConjuge() {
+  var divForm = document.getElementById('conjugeForm');
+  divForm.style.display = divForm.style.display === 'flex' ? 'none' : 'flex';
+}
+
+var _conjugeTimer = null;
+function buscarConjuge(q) {
+  clearTimeout(_conjugeTimer);
+  var sug = document.getElementById('conjugeSugestoes');
+  if (!q || q.length < 2) { sug.style.display = 'none'; return; }
+  _conjugeTimer = setTimeout(function() {
+    api('/api/pacientes?search=' + encodeURIComponent(q))
+      .then(function(lista) {
+        var filtrado = lista.filter(function(p) { return p.id !== parseInt(PACIENTE_ID); });
+        if (!filtrado.length) { sug.style.display = 'none'; return; }
+        sug.innerHTML = filtrado.slice(0,6).map(function(p) {
+          return '<div onclick="selecionarConjuge(' + p.id + ',\'' + escH(p.nome_completo) + '\')" '
+            + 'style="padding:8px 12px;cursor:pointer;font-size:12.5px;color:var(--tx);border-bottom:1px solid rgba(255,255,255,.04)" '
+            + 'onmouseover="this.style.background=\'rgba(212,175,127,.08)\'" '
+            + 'onmouseout="this.style.background=\'\'">'
+            + escH(p.nome_completo) + '</div>';
+        }).join('');
+        sug.style.display = 'block';
+      }).catch(function() { sug.style.display = 'none'; });
+  }, 300);
+}
+
+function selecionarConjuge(id, nome) {
+  document.getElementById('conjugeSugestoes').style.display = 'none';
+  document.getElementById('conjugeBusca').value = nome;
+  if (!confirm('Vincular ' + nome + ' como cônjuge de ' + paciente.nome_completo + '?\n\nO vínculo será criado nos dois perfis automaticamente.')) return;
+  api('/api/pacientes/' + PACIENTE_ID + '/vincular-conjuge', 'POST', { conjuge_id: id })
+    .then(function(r) {
+      paciente.conjuge_id = id;
+      paciente.conjuge_nome = nome;
+      renderConjuge();
+      showToast('💑 ' + r.message, 'success');
+    })
+    .catch(function(e) { showToast('Erro: ' + e.message, 'error'); });
+}
+
+function desvincularConjuge() {
+  if (!confirm('Remover vínculo de cônjuge?\n\nO vínculo será removido nos dois perfis.')) return;
+  api('/api/pacientes/' + PACIENTE_ID + '/desvincular-conjuge', 'POST', {})
+    .then(function() {
+      paciente.conjuge_id = null;
+      paciente.conjuge_nome = null;
+      renderConjuge();
+      showToast('Vínculo removido.', 'success');
+    })
+    .catch(function(e) { showToast('Erro: ' + e.message, 'error'); });
+}
+
+function onTipoSessaoChange(val) {
+  var aviso = document.getElementById('avisoCasal');
+  if (val === 'casal') {
+    if (paciente && paciente.conjuge_id && paciente.conjuge_nome) {
+      document.getElementById('avisoCasalTexto').textContent =
+        'Esta sessão será registrada automaticamente para ' + paciente.conjuge_nome + '.';
+      aviso.style.display = 'block';
+    } else {
+      document.getElementById('avisoCasalTexto').textContent =
+        'Nenhum cônjuge vinculado. Vincule um cônjuge na ficha do paciente para registrar sessões de casal.';
+      aviso.style.display = 'block';
+    }
+  } else {
+    aviso.style.display = 'none';
+  }
+}
+
 // ── FORM TOGGLE ──
 function toggleForm() {
   formOpen = !formOpen;
@@ -647,7 +783,8 @@ function salvarSessao() {
     pago:             document.getElementById('fPago').checked,
     resumo_terapeuta: document.getElementById('fResumo').value || null,
     status:           document.getElementById('fStatus').value || 'realizada',
-    pacote_id:        pacoteId || null
+    pacote_id:        pacoteId || null,
+    tipo_sessao:      document.getElementById('fTipo').value || 'individual'
   };
   api('/api/sessoes/' + PACIENTE_ID, 'POST', payload)
     .then(function(s) {

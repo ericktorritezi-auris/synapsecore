@@ -28,13 +28,15 @@ router.post('/:paciente_id', verifyToken, async (req, res) => {
     const {
       sessao_numero, pacote_id, data_sessao,
       duracao_minutos, valor_cobrado, forma_pagamento,
-      resumo_terapeuta, status, paciente_2_id, pago
+      resumo_terapeuta, status, paciente_2_id, pago,
+      tipo_sessao
     } = req.body;
 
     if (!data_sessao) return res.status(400).json({ message: 'Data da sessão é obrigatória.' });
 
+    const tipoSessao = tipo_sessao || 'individual';
+
     // Auto-calculate session number if not provided
-    // sessao_numero in DB is always relative (1,2,3...) — sessoes_anteriores offset applied on display
     let numSessao = sessao_numero;
     if (!numSessao) {
       const cnt = await db.query(
@@ -47,8 +49,9 @@ router.post('/:paciente_id', verifyToken, async (req, res) => {
     const result = await db.query(`
       INSERT INTO sessoes
         (paciente_id, paciente_2_id, pacote_id, sessao_numero, data_sessao,
-         duracao_minutos, valor_cobrado, forma_pagamento, resumo_terapeuta, status, pago)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+         duracao_minutos, valor_cobrado, forma_pagamento, resumo_terapeuta,
+         status, pago, tipo_sessao, titular_cobranca)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
       RETURNING *
     `, [
       paciente_id, paciente_2_id || null, pacote_id || null,
@@ -58,10 +61,58 @@ router.post('/:paciente_id', verifyToken, async (req, res) => {
       forma_pagamento || null,
       resumo_terapeuta || null,
       status || 'realizada',
-      pago === true || pago === 'true' ? true : false
+      pago === true || pago === 'true' ? true : false,
+      tipoSessao,
+      true
     ]);
 
     const sessao = result.rows[0];
+
+    // Se sessão de casal — criar espelho automático no cônjuge
+    if (tipoSessao === 'casal') {
+      try {
+        var pacRes = await db.query('SELECT conjuge_id FROM pacientes WHERE id=$1', [paciente_id]);
+        var conjugeId = pacRes.rows[0] && pacRes.rows[0].conjuge_id;
+        if (conjugeId) {
+          var cntConj = await db.query(
+            'SELECT COALESCE(MAX(sessao_numero),0)+1 AS prox FROM sessoes WHERE paciente_id=$1', [conjugeId]
+          );
+          var numConj = cntConj.rows[0].prox;
+          var espelho = await db.query(`
+            INSERT INTO sessoes
+              (paciente_id, pacote_id, sessao_numero, data_sessao, duracao_minutos,
+               resumo_terapeuta, status, pago, tipo_sessao, titular_cobranca, sessao_espelho_id)
+            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+            RETURNING id
+          `, [
+            conjugeId, pacote_id || null, numConj, data_sessao,
+            duracao_minutos || 50, resumo_terapeuta || null,
+            status || 'realizada', false,
+            'casal', false, sessao.id
+          ]);
+          // Atualizar sessão principal com o ID do espelho
+          await db.query(
+            'UPDATE sessoes SET sessao_espelho_id=$1 WHERE id=$2',
+            [espelho.rows[0].id, sessao.id]
+          );
+          // Atualizar sessao atual do conjuge
+          if (status === 'realizada' || !status) {
+            await db.query(
+              'UPDATE pacientes SET programa_sessao_atual=$1, updated_at=NOW() WHERE id=$2',
+              [numConj, conjugeId]
+            );
+          }
+          // Resumo IA para o cônjuge também
+          if (resumo_terapeuta && resumo_terapeuta.trim()) {
+            gerarEAtualizarResumo(conjugeId).catch(e => console.error('Resumo cônjuge:', e.message));
+            gerarSnapshotLeve(conjugeId, espelho.rows[0].id).catch(e => console.error('Snapshot cônjuge:', e.message));
+          }
+        }
+      } catch(espErr) {
+        console.error('sessao-espelho:', espErr.message);
+        // Não falha a sessão principal por erro no espelho
+      }
+    }
 
     // Update patient current session
     if (status === 'realizada' || !status) {
@@ -71,10 +122,9 @@ router.post('/:paciente_id', verifyToken, async (req, res) => {
       );
     }
 
-    // Generate clinical summary in background (don't block response)
+    // Generate clinical summary in background
     if (resumo_terapeuta && resumo_terapeuta.trim()) {
       gerarEAtualizarResumo(paciente_id).catch(e => console.error('Resumo IA erro:', e.message));
-      // v3.2.0 — snapshot leve + score básico de risco (sem IA)
       gerarSnapshotLeve(paciente_id, sessao.id).catch(e => console.error('Snapshot leve erro:', e.message));
     }
 
@@ -124,9 +174,19 @@ router.put('/:sessao_id/pago', verifyToken, async (req, res) => {
 // DELETE /api/sessoes/:sessao_id
 router.delete('/:sessao_id', verifyToken, async (req, res) => {
   try {
-    await db.query('DELETE FROM sessoes WHERE id = $1', [req.params.sessao_id]);
+    var sid = req.params.sessao_id;
+    // Se for sessão de casal, remover espelho também
+    var sessRes = await db.query('SELECT sessao_espelho_id, tipo_sessao FROM sessoes WHERE id=$1', [sid]);
+    if (sessRes.rows.length && sessRes.rows[0].tipo_sessao === 'casal' && sessRes.rows[0].sessao_espelho_id) {
+      var espId = sessRes.rows[0].sessao_espelho_id;
+      // Limpar referência cruzada antes de deletar
+      await db.query('UPDATE sessoes SET sessao_espelho_id=NULL WHERE id=$1 OR id=$2', [sid, espId]);
+      await db.query('DELETE FROM sessoes WHERE id=$1', [espId]);
+    }
+    await db.query('DELETE FROM sessoes WHERE id = $1', [sid]);
     res.json({ message: 'Sessão removida.' });
   } catch (err) {
+    console.error('DELETE /sessoes:', err.message);
     res.status(500).json({ message: 'Erro ao remover sessão.' });
   }
 });

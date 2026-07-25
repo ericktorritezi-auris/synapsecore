@@ -737,6 +737,26 @@ async function runMigrations() {
     await client.query(`CREATE INDEX IF NOT EXISTS idx_alertas_paciente ON alertas(paciente_id)`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_alertas_ativo ON alertas(lido, resolvido, paciente_id)`);
 
+    // ══════════════════════════════════════════════
+    // v4.0.4 — TERAPIA DE CASAL
+    // ══════════════════════════════════════════════
+
+    // Vínculo cônjuge entre pacientes
+    await client.query(`ALTER TABLE pacientes ADD COLUMN IF NOT EXISTS conjuge_id INTEGER REFERENCES pacientes(id)`);
+
+    // Tipo de sessão — default 'individual' para todas as existentes
+    await client.query(`ALTER TABLE sessoes ADD COLUMN IF NOT EXISTS tipo_sessao VARCHAR(20) DEFAULT 'individual'`);
+
+    // Sessão espelho — aponta para sessão correspondente no cônjuge
+    await client.query(`ALTER TABLE sessoes ADD COLUMN IF NOT EXISTS sessao_espelho_id INTEGER REFERENCES sessoes(id)`);
+
+    // Titular de cobrança — true = quem paga, false = cônjuge (não cobra)
+    await client.query(`ALTER TABLE sessoes ADD COLUMN IF NOT EXISTS titular_cobranca BOOLEAN DEFAULT true`);
+
+    // Índice para busca de espelhos
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_sessoes_espelho ON sessoes(sessao_espelho_id) WHERE sessao_espelho_id IS NOT NULL`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_pacientes_conjuge ON pacientes(conjuge_id) WHERE conjuge_id IS NOT NULL`);
+
     console.log('✅ Banco de dados pronto');
   } catch (err) {
     console.error('❌ Erro nas migrations:', err.message);

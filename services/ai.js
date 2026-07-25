@@ -1059,7 +1059,7 @@ ${analiseEstrutural ? 'MAPA ESTRUTURAL:\nNúcleo: '+(analiseEstrutural.nucleo_em
 ÚLTIMAS SESSÕES:
 ${sessoes.slice(-3).map(s=>`S${s.sessao_numero}: ${sanit(sanit(s.resumo_terapeuta||'sem resumo'))}`).join('\n')||'Sem sessões'}
 
-Gere de 4 a 7 hipóteses clínicas sobre o funcionamento deste paciente.
+Gere de 4 a 5 hipóteses clínicas sobre o funcionamento deste paciente.
 Tipos disponíveis: emocional, cognitiva, relacional, existencial, comportamental, defesa, identidade, risco.
 
 REGRAS:
@@ -1068,6 +1068,8 @@ REGRAS:
 - Cada hipótese deve ter nível de confiança (0-10) baseado nas evidências disponíveis
 - Inclua evidências favoráveis, contrárias e perguntas para validação em sessão
 - As perguntas devem ser usáveis diretamente pelo terapeuta durante a sessão
+- Máximo 3 evidências favoráveis, 2 contrárias e 3 perguntas por hipótese
+- Cada campo de texto: máximo 150 caracteres
 
 Retorne APENAS JSON válido:
 {
@@ -1084,13 +1086,14 @@ Retorne APENAS JSON válido:
 }`;
 
   try {
-    const resp = await fetchIA(JSON.stringify({ model:'claude-sonnet-4-5', max_tokens:2500, messages:[{role:'user',content:prompt}] }));
+    const resp = await fetchIA(JSON.stringify({ model:'claude-sonnet-4-5', max_tokens:4000, messages:[{role:'user',content:prompt}] }));
     if (!resp.ok) { const errTxt = await resp.text().catch(function(){return '';}); throw new Error('Anthropic 400: '+errTxt.substring(0,400)); }
     const data = await resp.json();
     const text = data.content && data.content[0] && data.content[0].text||'{}';
     const clean = text.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
     const m = clean.match(/\{[\s\S]*\}/);
-    const json = m ? JSON.parse(m[0]) : { hipoteses:[] };
+    if (!m) throw new Error('Hipoteses: resposta truncada (JSON incompleto). Tente novamente.');
+    const json = JSON.parse(m[0]);
     const duracao = Date.now()-inicio;
     await registrarAuditoria(db,{paciente_id:paciente.id,modulo:'hipoteses_clinicas',referencia_tipo:'mapeamento',referencia_id:mapeamento && mapeamento.id,prompt_resumo:prompt,input_hash:crypto.createHash('md5').update(prompt).digest('hex'),output_resumo:text,tokens_usados:data.usage && data.usage.output_tokens,input_tokens:data.usage && data.usage.input_tokens,duracao_ms:duracao,sucesso:true,modelo:'claude-sonnet-4-5',modo:'ia'});
     return { hipoteses: json.hipoteses||[], modo:'ia' };

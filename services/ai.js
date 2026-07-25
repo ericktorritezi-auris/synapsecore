@@ -306,10 +306,11 @@ async function gerarMapeamento({ db, paciente, respostas, indices, flags, pacote
   const prog = sugerirPrograma(paciente.perfil_tipo, indices, flags, pacotes);
   const flagLabels = flags.map(f => FLAG_LABELS[f] && FLAG_LABELS[f].l || f).join(', ') || 'Nenhuma';
 
-  // Respostas abertas
-  const ra82 = respostas.Q82 || 'Não informado';
+  // Respostas abertas — escapar aspas para não quebrar o JSON do prompt
+  function escJson(s) { return String(s || '').replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, ' ').replace(/\r/g, ''); }
+  const ra82 = escJson(respostas.Q82 || 'Não informado');
   const ra83 = respostas.Q83 !== 'sim' ? 'Não relatado' : 'Paciente indica que sim';
-  const ra84 = respostas.Q84 || 'Não informado';
+  const ra84 = escJson(respostas.Q84 || 'Não informado');
 
   const prompt = `Você é um assistente de inteligência clínica do Synapse Core — plataforma da Evolution Therapy.
 Terapeuta: Erick Torritezi — Psicanalista e Psicoterapeuta Estratégico Integrativo.
@@ -657,8 +658,9 @@ Retorne APENAS JSON válido, sem texto antes ou depois, sem markdown:
 // ── SUGERE CIDs (ICD-10) ──
 async function sugerirCIDs({ db, paciente, respostas, indices, flags }) {
   const flagLabels = flags.map(f => FLAG_LABELS[f] && FLAG_LABELS[f].l || f).join(', ') || 'Nenhuma';
-  const ra82 = respostas.Q82 || '';
-  const ra84 = respostas.Q84 || '';
+  function escJson2(s) { return String(s || '').replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, ' ').replace(/\r/g, ''); }
+  const ra82 = escJson2(respostas.Q82 || '');
+  const ra84 = escJson2(respostas.Q84 || '');
   const sent = {
     S1: respostas.S1, S2: respostas.S2, S3: respostas.S3, S4: respostas.S4,
     S5: respostas.S5, S6: respostas.S6, S7: respostas.S7, S8: respostas.S8

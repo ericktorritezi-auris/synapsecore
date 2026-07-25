@@ -38,6 +38,12 @@ function avg(arr) {
 }
 
 // ── CALCULA 10 ÍNDICES ──
+// ── Sanitização de texto livre para uso em prompts ──
+function sanit(s) {
+  if (!s) return '';
+  return String(s).replace(/[\r\n\t]/g, ' ').replace(/`/g, "'").trim().substring(0, 500);
+}
+
 function calcularIndices(r) {
   const d1 = avg([
     sn(r.Q01), sf(r.Q02),
@@ -445,7 +451,7 @@ async function gerarBriefingSessao({ db, paciente, sessoes, feedbacks, mapeament
   const flagLabels = { risco_depressivo:'Risco Depressivo', burnout_provavel:'Burnout Provável', ansiedade_elevada:'Ansiedade Elevada', trauma_indicado:'Trauma Indicado', isolamento_social:'Isolamento Social', instabilidade_emocional:'Instabilidade Emocional', conflito_relacional:'Conflito Relacional', baixa_autoestima:'Baixa Autoestima', neurodivergencia:'Neurodivergência', crise_existencial:'Crise Existencial', ideacao_suicida:'Ideação Suicida' };
 
   const ultimasSessoes = sessoes.slice(-3).map(s =>
-    `Sessão ${s.sessao_numero} (${new Date(s.data_sessao).toLocaleDateString('pt-BR')}): ${s.resumo_terapeuta || 'Sem resumo.'}`
+    `Sessão ${s.sessao_numero} (${new Date(s.data_sessao).toLocaleDateString('pt-BR')}): ${sanit(sanit(s.resumo_terapeuta || 'Sem resumo.'))}`
   ).join('\n');
 
   const feedbacksRecentes = feedbacks.slice(-3).map(f =>
@@ -513,7 +519,7 @@ Retorne APENAS JSON válido:
     // Fallback local
     const fb = {
       estado_atual: `${paciente.nome_completo} está em acompanhamento com ${totalSessoes} sessões realizadas. ${flags.length ? 'Flags ativas: ' + flags.map(f=>flagLabels[f]||f).join(', ') + '.' : 'Sem flags críticas no momento.'}`,
-      ultima_sessao: { tema: 'Consultar registro da última sessão', emocao: '—', ponto_trabalhado: (ultimaSessao && ultimaSessao.resumo_terapeuta) || '—', resistencia: '—', tarefa: '—' },
+      ultima_sessao: { tema: 'Consultar registro da última sessão', emocao: '—', ponto_trabalhado: sanit((ultimaSessao && ultimaSessao.resumo_terapeuta) || '—'), resistencia: '—', tarefa: '—' },
       desde_ultima_sessao: feedbacks.length ? feedbacks.slice(-1)[0].conteudo.substring(0,150) : 'Sem feedbacks recentes.',
       pontos_atencao: flags.slice(0,3).map(f=>flagLabels[f]||f),
       sugestoes_conducao: ['Consultar resumo clínico atualizado', 'Verificar feedbacks recentes', 'Revisar última sessão registrada'],
@@ -591,7 +597,7 @@ Retorne APENAS JSON válido:
 // ── MEMÓRIA TERAPÊUTICA ──
 async function atualizarMemoriaTerapeutica({ db, paciente, sessoes, feedbacks, intervencoes, resumoAtual, memoriaAnterior }) {
   const inicio = Date.now();
-  const ultimasSessoes = sessoes.slice(-5).map(s => `S${s.sessao_numero}: ${s.resumo_terapeuta||'sem resumo'}`).join('\n');
+  const ultimasSessoes = sessoes.slice(-5).map(s => `S${s.sessao_numero}: ${sanit(s.resumo_terapeuta||'sem resumo')}`).join('\n');
   const feedbacksTexto = feedbacks.slice(-5).map(f => `${new Date(f.data_feedback).toLocaleDateString('pt-BR')}: ${f.conteudo}`).join('\n');
   const intervTexto = intervencoes.filter(i=>i.avaliacao).slice(-5).map(i=>`${i.titulo} → ${i.avaliacao||''} ${i.observacao?'('+i.observacao+')':''}`).join('\n');
 
@@ -743,7 +749,7 @@ async function gerarEvolucao({ db, paciente, mapeamento, sessoes, resumoClinico,
   const flagsText      = ((mapeamento && mapeamento.flags_json) || []).join(', ') || 'Nenhuma';
 
   const sessoesStr = sessoes.map(s =>
-    'Sessão ' + s.sessao_numero + ' (' + new Date(s.data_sessao).toLocaleDateString('pt-BR') + '): ' + (s.resumo_terapeuta || 'Sem resumo.')
+    'Sessão ' + s.sessao_numero + ' (' + new Date(s.data_sessao).toLocaleDateString('pt-BR') + '): ' + (sanit(s.resumo_terapeuta || 'Sem resumo.'))
   ).join('\n');
 
   const totalSessoes = sessoes.length;
@@ -857,7 +863,7 @@ Este é o PRIMEIRO resumo analítico — baseado exclusivamente nos dados do for
     if (novosObsBlock) novidades.push('NOVA OBSERVAÇÃO DO TERAPEUTA:\n' + novosObsBlock);
     if (novasSessoes && novasSessoes.length) {
       novidades.push('NOVA(S) SESSÃO(ÕES) REGISTRADA(S):\n' +
-        novasSessoes.map(s => 'Sessão ' + s.sessao_numero + ' (' + new Date(s.data_sessao).toLocaleDateString('pt-BR') + '): ' + (s.resumo_terapeuta || 'Sem resumo registrado.')).join('\n'));
+        novasSessoes.map(s => 'Sessão ' + s.sessao_numero + ' (' + new Date(s.data_sessao).toLocaleDateString('pt-BR') + '): ' + (sanit(s.resumo_terapeuta || 'Sem resumo registrado.'))).join('\n'));
     }
     if (novosFeedbacks && novosFeedbacks.length) {
       novidades.push('NOVO(S) FEEDBACK(S) DO PACIENTE:\n' +
@@ -903,7 +909,7 @@ Atualize o resumo clínico incorporando essas novidades. Mantenha o que já esta
   ].filter(Boolean).join('\n\n');
 
   const sessoesStr = sessoes.map(s =>
-    'Sessão ' + s.sessao_numero + ' (' + new Date(s.data_sessao).toLocaleDateString('pt-BR') + '): ' + (s.resumo_terapeuta || 'Sem resumo.')
+    'Sessão ' + s.sessao_numero + ' (' + new Date(s.data_sessao).toLocaleDateString('pt-BR') + '): ' + (sanit(s.resumo_terapeuta || 'Sem resumo.'))
   ).join('\n');
 
   const prompt = `Você é um assistente de inteligência clínica do Synapse Core — Evolution Therapy.
@@ -955,7 +961,7 @@ async function gerarAnaliseEstrutural({ db, paciente, mapeamento, sessoes, feedb
   const ind    = mapeamento ? (mapeamento.indices_json || {}) : {};
   const proto  = mapeamento ? (mapeamento.protocolo_json || {}) : {};
   const FLAG_L = { risco_depressivo:'Risco Depressivo', burnout_provavel:'Burnout Provável', ansiedade_elevada:'Ansiedade Elevada', trauma_indicado:'Trauma Indicado', isolamento_social:'Isolamento Social', instabilidade_emocional:'Instabilidade Emocional', conflito_relacional:'Conflito Relacional', baixa_autoestima:'Baixa Autoestima', neurodivergencia:'Neurodivergência', crise_existencial:'Crise Existencial', ideacao_suicida:'Ideação Suicida' };
-  const sessStr = sessoes.slice(-5).map(function(s){ return 'S'+s.sessao_numero+': '+(s.resumo_terapeuta||'sem resumo'); }).join('\n');
+  const sessStr = sessoes.slice(-5).map(function(s){ return 'S'+s.sessao_numero+': '+(sanit(s.resumo_terapeuta||'sem resumo')); }).join('\n');
   const feedStr = feedbacks.slice(-4).map(function(f){ return new Date(f.data_feedback).toLocaleDateString('pt-BR')+': '+f.conteudo; }).join('\n');
   // Sanitize memoriaAtual — remove control chars that could cause Anthropic 400
   var memoriaStr = '';
@@ -978,7 +984,7 @@ FLAGS CLÍNICAS: ${flags.map(f=>FLAG_L[f]||f).join(', ')||'Nenhuma'}
 ÍNDICES: Emocional=${ind.D1||'N/D'} Cognitivo=${ind.D2||'N/D'} Relacional=${ind.D3||'N/D'} Existencial=${ind.D4||'N/D'} Corporal=${ind.D5||'N/D'}
 
 RESUMO CLÍNICO ATUAL:
-${(resumoAtual||'Não disponível').substring(0,800)}
+${sanit(resumoAtual||'Não disponível').substring(0,800)}
 
 ÚLTIMAS SESSÕES:
 ${sessStr||'Sem sessões registradas'}
@@ -1046,12 +1052,12 @@ FLAGS: ${flags.map(f=>FLAG_L[f]||f).join(', ')||'Nenhuma'}
 ÍNDICES: D1=${ind.D1||'N/D'} D2=${ind.D2||'N/D'} D3=${ind.D3||'N/D'} D4=${ind.D4||'N/D'} D5=${ind.D5||'N/D'}
 
 RESUMO CLÍNICO:
-${(resumoAtual||'Não disponível').substring(0,800)}
+${sanit(resumoAtual||'Não disponível').substring(0,800)}
 
 ${analiseEstrutural ? 'MAPA ESTRUTURAL:\nNúcleo: '+(analiseEstrutural.nucleo_emocional||'')+'\nConflito: '+(analiseEstrutural.conflito_central||'')+'\nEstilo: '+(analiseEstrutural.estilo_relacional||'')+'\n' : ''}
 
 ÚLTIMAS SESSÕES:
-${sessoes.slice(-3).map(s=>`S${s.sessao_numero}: ${s.resumo_terapeuta||'sem resumo'}`).join('\n')||'Sem sessões'}
+${sessoes.slice(-3).map(s=>`S${s.sessao_numero}: ${sanit(sanit(s.resumo_terapeuta||'sem resumo'))}`).join('\n')||'Sem sessões'}
 
 Gere de 4 a 7 hipóteses clínicas sobre o funcionamento deste paciente.
 Tipos disponíveis: emocional, cognitiva, relacional, existencial, comportamental, defesa, identidade, risco.
@@ -1105,7 +1111,7 @@ Terapeuta: Erick Torritezi — especialista em Protocolo ESSÊNCIA, metodologia 
 PACIENTE: ${paciente.nome_completo} | ${paciente.perfil_tipo||'adulto'}
 
 RESUMO CLÍNICO:
-${(resumoAtual||'Não disponível').substring(0,800)}
+${sanit(resumoAtual||'Não disponível').substring(0,800)}
 
 ${analiseEstrutural ? 'MAPA ESTRUTURAL:\nNúcleo emocional: '+(analiseEstrutural.nucleo_emocional||'')
   +'\nConflito central: '+(analiseEstrutural.conflito_central||'')
@@ -1224,7 +1230,7 @@ async function gerarRiscoAbandonoClinico({ db, paciente, sessoes, feedbacks, map
   const FLAG_L = {risco_depressivo:'Risco Depressivo',burnout_provavel:'Burnout',ansiedade_elevada:'Ansiedade Elevada',trauma_indicado:'Trauma',isolamento_social:'Isolamento Social',instabilidade_emocional:'Instabilidade Emocional',conflito_relacional:'Conflito Relacional',baixa_autoestima:'Baixa Autoestima',crise_existencial:'Crise Existencial'};
 
   const sessStr = sessoes.slice(-5).map(function(s,i){
-    return 'S'+s.sessao_numero+' ('+new Date(s.data_sessao).toLocaleDateString('pt-BR')+'): '+(s.resumo_terapeuta||'sem resumo registrado');
+    return 'S'+s.sessao_numero+' ('+new Date(s.data_sessao).toLocaleDateString('pt-BR')+'): '+(sanit(s.resumo_terapeuta||'sem resumo registrado'));
   }).join('\n');
 
   const feedStr = feedbacks.slice(-5).map(function(f){
@@ -1260,7 +1266,7 @@ FEEDBACKS EXTERNOS:
 ${feedStr||'Nenhum feedback registrado'}
 
 RESUMO CLÍNICO ATUAL:
-${(resumoAtual||'Não disponível').substring(0,800)}
+${sanit(resumoAtual||'Não disponível').substring(0,800)}
 
 ${aeStr ? 'LEITURA ESTRUTURAL:\n'+aeStr+'\n' : ''}
 
@@ -1361,7 +1367,7 @@ LINHA EVOLUTIVA (snapshots recentes):
 ${snapshotStr||'Sem snapshots disponíveis'}
 
 RESUMO CLÍNICO ATUAL:
-${(resumoAtual||'Não disponível').substring(0,800)}
+${sanit(resumoAtual||'Não disponível').substring(0,800)}
 
 ${aeStr ? 'MAPA ESTRUTURAL:\n'+aeStr+'\n' : ''}
 ${memoriaStr ? 'MEMÓRIA TERAPÊUTICA:\n'+memoriaStr+'\n' : ''}
@@ -1422,7 +1428,7 @@ async function gerarProntuarioInteligente({ db, paciente, mapeamento, sessoes, f
 
   const ultimaSessao = sessoes.length ? sessoes[sessoes.length-1] : null;
   const ultimasSessoes = sessoes.slice(-2).map(function(s){
-    return 'S'+s.sessao_numero+' ('+new Date(s.data_sessao).toLocaleDateString('pt-BR')+'): '+(s.resumo_terapeuta||'sem resumo');
+    return 'S'+s.sessao_numero+' ('+new Date(s.data_sessao).toLocaleDateString('pt-BR')+'): '+(sanit(s.resumo_terapeuta||'sem resumo'));
   }).join('\n');
   const feedbacksStr = feedbacks.slice(0,3).map(function(f){
     return new Date(f.data_feedback).toLocaleDateString('pt-BR')+': '+f.conteudo;
@@ -1473,7 +1479,7 @@ FLAGS CLÍNICAS: ${flags.map(function(f){return FLAG_L[f]||f;}).join(', ')||'Nen
 ${manejo_seguranca?'⚠️ ATENÇÃO: RISCO ELEVADO — priorize manejo de segurança\n':''}
 
 ═══ RESUMO CLÍNICO ATUAL ═══
-${(resumoAtual||'Não disponível').substring(0,800)}
+${sanit(resumoAtual||'Não disponível').substring(0,800)}
 
 ═══ MAPA ESTRUTURAL ═══
 Núcleo emocional: ${ae.nucleo_emocional||'não mapeado'}

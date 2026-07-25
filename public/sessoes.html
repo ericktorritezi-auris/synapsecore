@@ -393,19 +393,6 @@ body{font-family:var(--fb);background:var(--bg);color:var(--tx);min-height:100vh
 
 <script src="/js/shared.js"></script>
 
-<!-- Modal: Memória Terapêutica Completa -->
-<div class="modal-overlay" id="memoriaModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:100;align-items:flex-start;justify-content:center;padding:16px;backdrop-filter:blur(4px);overflow-y:auto">
-  <div style="background:#1a2540;border:1px solid rgba(212,175,127,.25);border-radius:18px;padding:22px 20px;width:100%;max-width:520px;margin:auto;position:relative">
-    <button onclick="fecharMemoriaModal()" style="position:absolute;top:14px;right:16px;background:none;border:none;color:rgba(201,209,217,.4);cursor:pointer;font-size:18px">&#10005;</button>
-    <div style="font-family:var(--f-display);font-size:15px;font-weight:700;margin-bottom:4px">&#129504; Memória Terapêutica</div>
-    <div style="font-size:11.5px;color:var(--muted);margin-bottom:16px" id="memoriaModalMeta">--</div>
-    <div id="memoriaModalBody"></div>
-    <div style="margin-top:16px;border-top:1px solid rgba(201,209,217,.1);padding-top:12px">
-      <div style="font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px">Histórico de versões</div>
-      <div id="memoriaHistoricoList" style="font-size:12px;color:rgba(201,209,217,.4)">Carregando...</div>
-    </div>
-  </div>
-</div>
 <script>
 renderNav();
 checkAuth();
@@ -1080,11 +1067,28 @@ function carregarMemoria() {
 }
 
 function renderMemoriaResumo(d) {
-  var j = d.conteudo_json || {};
+  // Parse conteudo_json se vier como string do banco
+  var raw = d.conteudo_json || {};
+  var j = (typeof raw === 'string') ? (function(){ try{ return JSON.parse(raw); }catch(e){ return {}; } })() : raw;
   var wrap = document.getElementById('memoriaResumo');
   var btn  = document.getElementById('btnVerMemoriaCompleta');
-  btn.style.display = 'inline-flex';
-  btn.dataset.memoriaId = d.id;
+  if (btn) { btn.style.display = 'inline-flex'; btn.dataset.memoriaId = d.id; }
+
+  // Detectar memória vazia
+  var temConteudo = j && (
+    (j.temas_recorrentes && j.temas_recorrentes.length) ||
+    j.movimento_terapeutico ||
+    j.resumo_processo ||
+    (j.pontos_de_atencao && j.pontos_de_atencao.length)
+  );
+
+  if (!temConteudo) {
+    wrap.innerHTML = '<div style="background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.18);border-radius:8px;padding:10px 14px;font-size:12.5px;color:#fca5a5;display:flex;align-items:center;justify-content:space-between;gap:10px">'
+      + '<span>&#9888; Memória sem dados — clique para regenerar.</span>'
+      + '<button onclick="forcarMemoria()" style="background:rgba(139,92,246,.2);border:1px solid rgba(139,92,246,.4);color:#c4b5fd;border-radius:7px;padding:4px 12px;font-size:12px;cursor:pointer;white-space:nowrap">↻ Regenerar</button>'
+      + '</div>';
+    return;
+  }
 
   var html = '<div style="font-size:11px;color:var(--dim);margin-bottom:10px">v'+d.versao+' · '+new Date(d.gerado_em).toLocaleDateString('pt-BR')+'</div>';
   if (j.temas_recorrentes && j.temas_recorrentes.length) {
@@ -1104,57 +1108,24 @@ function renderMemoriaResumo(d) {
   wrap.innerHTML = html;
 }
 
+function forcarMemoria() {
+  var wrap = document.getElementById('memoriaResumo');
+  wrap.innerHTML = '<div style="display:flex;align-items:center;gap:8px;color:var(--muted);font-size:12.5px">'
+    + '<div style="width:14px;height:14px;border:2px solid rgba(139,92,246,.3);border-top-color:#c4b5fd;border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0"></div>'
+    + 'Regenerando memória...</div>';
+  api('/api/memoria/' + PACIENTE_ID + '/gerar', 'POST', { force: true })
+    .then(function(d) {
+      renderMemoriaResumo(d);
+      showToast('Memória terapêutica regenerada!', 'success');
+    })
+    .catch(function(e) {
+      wrap.innerHTML = '<div style="color:#fca5a5;font-size:12.5px">Erro: ' + escH(e.message) + '</div>';
+    });
+}
+
 var memoriaAtualData = null;
 
-function abrirMemoriaCompleta() {
-  var modal = document.getElementById('memoriaModal');
-  modal.style.display = 'flex';
-  api('/api/memoria/' + PACIENTE_ID + '/atual').then(function(d) {
-    if (!d) { document.getElementById('memoriaModalBody').innerHTML='<div style="color:var(--dim);font-size:13px">Nenhuma memória gerada ainda.</div>'; return; }
-    memoriaAtualData = d;
-    var j = d.conteudo_json || {};
-    document.getElementById('memoriaModalMeta').textContent = 'Versão '+d.versao+' · Gerada em '+new Date(d.gerado_em).toLocaleDateString('pt-BR');
-    var html = '';
-    var secs = [
-      ['Resumo do Processo', j.resumo_processo, '#c4b5fd'],
-      ['Temas Recorrentes', j.temas_recorrentes && j.temas_recorrentes.join(' · '), 'var(--accent)'],
-      ['Padrões Identificados', j.padroes_identificados && j.padroes_identificados.join('\n'), '#93c5fd'],
-      ['Pontos de Atenção', j.pontos_de_atencao && j.pontos_de_atencao.map(function(p){return '⚑ '+p;}).join('\n'), '#fca5a5'],
-      ['Recursos Identificados', j.recursos_identificados && j.recursos_identificados.join('\n'), '#6ee7b7'],
-      ['Movimento Terapêutico', j.movimento_terapeutico, '#6ee7b7'],
-      ['Próximos Focos', j.proximos_focos && j.proximos_focos.map(function(f,i){return (i+1)+'. '+f;}).join('\n'), '#fcd34d'],
-    ];
-    secs.forEach(function(s) {
-      if (!s[1]) return;
-      html += '<div style="margin-bottom:14px">'
-        +'<div style="font-size:10.5px;font-weight:700;color:'+s[2]+';text-transform:uppercase;letter-spacing:.7px;margin-bottom:5px">'+escH(s[0])+'</div>'
-        +'<div style="font-size:13px;color:var(--muted);line-height:1.7;white-space:pre-wrap">'+escH(String(s[1]))+'</div>'
-        +'</div>';
-    });
-    document.getElementById('memoriaModalBody').innerHTML = html || '<div style="color:var(--dim)">Sem conteúdo.</div>';
-  }).catch(function(){});
 
-  // Load history
-  api('/api/memoria/' + PACIENTE_ID + '/historico').then(function(hist) {
-    var hl = document.getElementById('memoriaHistoricoList');
-    if (!hist.length) { hl.textContent='Nenhuma versão anterior.'; return; }
-    hl.innerHTML = hist.map(function(h) {
-      return '<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid rgba(201,209,217,.06)">'
-        +'<span style="font-weight:600;color:'+(h.ativa?'var(--accent)':'rgba(201,209,217,.3)')+'">v'+h.versao+'</span>'
-        +'<span style="color:rgba(201,209,217,.4)">'+new Date(h.gerado_em).toLocaleDateString('pt-BR')+'</span>'
-        +(h.ativa?'<span style="font-size:10px;background:rgba(16,185,129,.1);color:#6ee7b7;padding:1px 7px;border-radius:10px">ativa</span>':'')
-        +'</div>';
-    }).join('');
-  }).catch(function(){});
-}
-
-function fecharMemoriaModal() {
-  document.getElementById('memoriaModal').style.display = 'none';
-}
-
-function fecharMemoriaModal() {
-  document.getElementById('memoriaModal').style.display = 'none';
-}
 
 function abrirMemoriaCompleta() {
   var modal = document.getElementById('memoriaModal');
@@ -1163,17 +1134,29 @@ function abrirMemoriaCompleta() {
   document.getElementById('memoriaHistorico').innerHTML = '';
 
   api('/api/memoria/' + PACIENTE_ID + '/atual').then(function(d) {
-    if (!d) { document.getElementById('memoriaModalBody').innerHTML='<div style="color:var(--dim);font-size:13px">Nenhuma memória gerada ainda.</div>'; return; }
+    if (!d) {
+      document.getElementById('memoriaModalBody').innerHTML =
+        '<div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:16px 0">'
+        + '<div style="color:var(--dim);font-size:13px">Nenhuma memória gerada ainda.</div>'
+        + '<button onclick="forcarMemoria();fecharMemoriaModal();" style="background:rgba(139,92,246,.15);border:1px solid rgba(139,92,246,.35);color:#c4b5fd;border-radius:8px;padding:8px 18px;font-size:13px;cursor:pointer">↻ Gerar agora</button>'
+        + '</div>';
+      return;
+    }
+    // Parse conteudo_json se vier como string
+    var raw = d.conteudo_json || {};
+    var j = (typeof raw === 'string') ? (function(){ try{ return JSON.parse(raw); }catch(e){ return {}; } })() : raw;
     document.getElementById('memoriaModalMeta').textContent = 'v' + d.versao + ' · ' + new Date(d.gerado_em).toLocaleDateString('pt-BR') + ' · Versão ativa';
-    renderMemoriaCompleta(d.conteudo_json || {});
-  }).catch(function(e){ document.getElementById('memoriaModalBody').innerHTML='<div style="color:#fca5a5;font-size:13px">'+escH(e.message)+'</div>'; });
+    renderMemoriaCompleta(j);
+  }).catch(function(e) {
+    document.getElementById('memoriaModalBody').innerHTML = '<div style="color:#fca5a5;font-size:13px">'+escH(e.message)+'</div>';
+  });
 
   api('/api/memoria/' + PACIENTE_ID + '/historico').then(function(hist) {
     var wrap = document.getElementById('memoriaHistorico');
-    if (!hist.length) { wrap.innerHTML='<div style="font-size:12px;color:var(--dim)">Apenas uma versão registrada.</div>'; return; }
+    if (!hist || !hist.length) { wrap.innerHTML='<div style="font-size:12px;color:var(--dim)">Apenas uma versão registrada.</div>'; return; }
     wrap.innerHTML = hist.map(function(h) {
       return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px;color:var(--muted)">'
-        +'<span style="font-family:var(--f-display);font-weight:700;color:'+( h.ativa?'var(--accent)':'var(--dim)')+'"">v'+h.versao+'</span>'
+        +'<span style="font-family:var(--f-display);font-weight:700;color:'+(h.ativa?'var(--accent)':'var(--dim)')+'">v'+h.versao+'</span>'
         +'<span>'+new Date(h.gerado_em).toLocaleDateString('pt-BR')+'</span>'
         +(h.ativa?'<span style="font-size:10.5px;background:rgba(16,185,129,.1);color:#6ee7b7;padding:1px 7px;border-radius:10px;font-weight:600">Ativa</span>':'')
         +'</div>';
@@ -1181,8 +1164,13 @@ function abrirMemoriaCompleta() {
   }).catch(function(){});
 }
 
+
+function fecharMemoriaModal() {
+  document.getElementById('memoriaModal').style.display = 'none';
+}
+
 function renderMemoriaCompleta(j) {
-  var SECTIONS = [
+  if (typeof j === 'string') { try { j = JSON.parse(j); } catch(e) { j = {}; } }  var SECTIONS = [
     ['Temas Recorrentes', j.temas_recorrentes, 'var(--accent)', 'tags'],
     ['Padrões Identificados', j.padroes_identificados, '#c4b5fd', 'list'],
     ['Pontos de Atenção', j.pontos_de_atencao, '#fca5a5', 'list'],

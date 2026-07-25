@@ -615,7 +615,16 @@ ${intervTexto || 'Sem avaliações'}
 Consolide a memória terapêutica identificando padrões estruturais do processo.
 Use linguagem de hipótese. Não diagnostique. Preserve o que estava na memória anterior e adicione o que é novo.
 
-Retorne APENAS JSON válido:
+REGRAS DE TAMANHO — OBRIGATÓRIO:
+- temas_recorrentes: máximo 6 itens (priorize os mais relevantes)
+- padroes_identificados: máximo 6 itens (os mais estruturais)
+- pontos_de_atencao: máximo 5 itens (apenas os críticos)
+- recursos_identificados: máximo 4 itens
+- proximos_focos: máximo 3 itens
+- Cada item dos arrays: máximo 120 caracteres
+- movimento_terapeutico e resumo_processo: máximo 3 linhas cada
+
+Retorne APENAS JSON válido, sem texto antes ou depois, sem markdown:
 {
   "temas_recorrentes": ["tema 1", "tema 2"],
   "padroes_identificados": ["padrão 1", "padrão 2"],

@@ -750,7 +750,8 @@ function onTipoSessaoChange(val) {
 }
 
 function abrirDossie() {
-  window.open('/api/pacientes/' + PACIENTE_ID + '/dossie', '_blank');
+  var token = localStorage.getItem('sc_token');
+  window.open('/api/pacientes/' + PACIENTE_ID + '/dossie?token=' + encodeURIComponent(token), '_blank');
 }
 
 // ── FORM TOGGLE ──

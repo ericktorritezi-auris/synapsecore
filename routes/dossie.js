@@ -5,8 +5,17 @@ const db      = require('../db');
 const { verifyToken } = require('../middleware/auth');
 
 // ── GET /api/pacientes/:id/dossie ── Dossiê Clínico Completo
-router.get('/:id/dossie', verifyToken, async (req, res) => {
+router.get('/:id/dossie', async (req, res) => {
   try {
+    // Aceitar token via query param (abertura em nova aba) ou header
+    var token = req.query.token || (req.headers.authorization && req.headers.authorization.replace('Bearer ',''));
+    if (!token) return res.status(401).json({ message: 'Acesso não autorizado.' });
+    try {
+      var jwt = require('jsonwebtoken');
+      jwt.verify(token, process.env.JWT_SECRET);
+    } catch(e) {
+      return res.status(401).json({ message: 'Token inválido.' });
+    }
     var pid = parseInt(req.params.id);
 
     // ── Buscar todos os dados em paralelo ──

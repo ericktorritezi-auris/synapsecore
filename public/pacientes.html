@@ -127,6 +127,8 @@ body{font-family:var(--f-b);background:var(--bg);color:var(--text);min-height:10
     <div class="chip" data-filter="pendente" style="border-color:rgba(245,158,11,.3);color:#fcd34d">Pendentes</div>
     <div class="chip" data-filter="inativo" style="border-color:rgba(239,68,68,.3);color:#fca5a5">Inativos</div>
   </div>
+  <!-- Filtro por letra inicial -->
+  <div id="letrasFiltro" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:12px;min-height:28px"></div>
   <div id="listWrap">
     <div class="loading"><span></span><span></span><span></span></div>
   </div>
@@ -239,6 +241,7 @@ renderUserPill();
 
 var currentFilter = '';
 var filtroAtual   = 'ativo';
+var letraAtual    = '';
 var searchTimer   = null;
 var currentLink = '';
 
@@ -247,6 +250,7 @@ document.querySelectorAll('.chip').forEach(function(chip) {
   chip.addEventListener('click', function() {
     currentFilter = this.dataset.filter;
     filtroAtual   = currentFilter;
+    letraAtual    = '';
     document.querySelectorAll('.chip').forEach(function(c) { c.classList.remove('active'); });
     this.classList.add('active');
     loadPatients(document.getElementById('searchInput').value, currentFilter);
@@ -276,11 +280,46 @@ function loadPatients(search, tipo) {
   api(url).then(function(data) {
     var badge = document.getElementById('badgePacientes');
     if (badge) badge.textContent = data.length;
-    document.getElementById('phSub').textContent = data.length + ' paciente' + (data.length !== 1 ? 's' : '') + ' encontrado' + (data.length !== 1 ? 's' : '');
-    renderList(data);
+
+    // ── Montar filtro de letras dinamicamente ──
+    var letrasDisp = {};
+    data.forEach(function(p) {
+      var l = (p.nome_completo||'').trim().charAt(0).toUpperCase();
+      if (l >= 'A' && l <= 'Z') letrasDisp[l] = true;
+    });
+    var letrasOrdem = Object.keys(letrasDisp).sort();
+    var letraWrap = document.getElementById('letrasFiltro');
+    if (letrasOrdem.length > 1) {
+      var html = '<button onclick="selecionarLetra(\'\')" style="'
+        + 'padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid;'
+        + (letraAtual==='' ? 'background:var(--acc);border-color:var(--acc);color:#0B132B;' : 'background:transparent;border-color:var(--border);color:var(--dim);')
+        + '">Todas</button>';
+      letrasOrdem.forEach(function(l) {
+        html += '<button onclick="selecionarLetra(\''+l+'\')" style="'
+          + 'padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid;'
+          + (letraAtual===l ? 'background:var(--acc);border-color:var(--acc);color:#0B132B;' : 'background:transparent;border-color:var(--border);color:var(--dim);')
+          + '">'+l+'</button>';
+      });
+      letraWrap.innerHTML = html;
+    } else {
+      letraWrap.innerHTML = '';
+    }
+
+    // ── Filtrar por letra se selecionada ──
+    var filtrado = letraAtual
+      ? data.filter(function(p){ return (p.nome_completo||'').trim().charAt(0).toUpperCase() === letraAtual; })
+      : data;
+
+    document.getElementById('phSub').textContent = filtrado.length + ' paciente' + (filtrado.length !== 1 ? 's' : '') + ' encontrado' + (filtrado.length !== 1 ? 's' : '');
+    renderList(filtrado);
   }).catch(function(err) {
     wrap.innerHTML = '<div class="empty"><div class="empty-title">Erro ao carregar</div><div class="empty-sub">' + (err.message || 'Tente novamente') + '</div></div>';
   });
+}
+
+function selecionarLetra(l) {
+  letraAtual = l;
+  loadPatients(document.getElementById('searchInput').value, filtroAtual);
 }
 
 function renderList(patients) {

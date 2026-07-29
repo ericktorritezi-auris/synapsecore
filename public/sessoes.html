@@ -182,6 +182,7 @@ body{font-family:var(--fb);background:var(--bg);color:var(--tx);min-height:100vh
     <button class="btn btn-ghost" id="btnResumo" onclick="verResumo()">&#9654; Resumo Clínico IA</button>
     <button class="btn btn-ghost" onclick="abrirEvolucao()" id="btnEvolSess">&#9651; Relatório de Evolução</button>
     <button class="btn btn-ghost" id="btnCobranca" onclick="enviarCobranca()" style="display:none;background:rgba(212,175,127,.08);border-color:rgba(212,175,127,.3);color:#D4AF7F">&#9993; Cobrança</button>
+    <button class="btn btn-ghost" onclick="abrirDossie()" style="background:rgba(99,102,241,.08);border-color:rgba(99,102,241,.25);color:#a5b4fc">&#128196; Dossiê</button>
   </div>
 
   <!-- Evolution link panel (inside sessoes) -->
@@ -746,6 +747,10 @@ function onTipoSessaoChange(val) {
   } else {
     aviso.style.display = 'none';
   }
+}
+
+function abrirDossie() {
+  window.open('/api/pacientes/' + PACIENTE_ID + '/dossie', '_blank');
 }
 
 // ── FORM TOGGLE ──

@@ -240,7 +240,7 @@ checkAuth();
 renderUserPill();
 
 var currentFilter = '';
-var filtroAtual   = 'ativo';
+var filtroAtual   = '';
 var letraAtual    = '';
 var searchTimer   = null;
 var currentLink = '';
@@ -319,7 +319,7 @@ function loadPatients(search, tipo) {
 
 function selecionarLetra(l) {
   letraAtual = l;
-  loadPatients(document.getElementById('searchInput').value, filtroAtual);
+  loadPatients(document.getElementById('searchInput').value, currentFilter);
 }
 
 function renderList(patients) {

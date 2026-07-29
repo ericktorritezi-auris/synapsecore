@@ -38,12 +38,12 @@ router.get('/:id/dossie', async (req, res) => {
       db.query(`SELECT * FROM memoria_terapeutica WHERE paciente_id=$1 AND ativa=true ORDER BY versao DESC LIMIT 1`, [pid]),
       db.query(`SELECT * FROM analise_estrutural WHERE paciente_id=$1 AND ativa=true ORDER BY versao DESC LIMIT 1`, [pid]),
       db.query(`SELECT * FROM hipoteses_clinicas WHERE paciente_id=$1 AND ativa=true ORDER BY nivel_confianca DESC NULLS LAST`, [pid]),
-      db.query(`SELECT * FROM mapa_identidade WHERE paciente_id=$1 AND ativo=true ORDER BY versao DESC LIMIT 1`, [pid]),
+      db.query(`SELECT * FROM mapa_identidade WHERE paciente_id=$1 AND ativa=true ORDER BY versao DESC LIMIT 1`, [pid]),
       db.query(`SELECT * FROM cids_paciente WHERE paciente_id=$1 ORDER BY created_at ASC`, [pid]),
       db.query(`SELECT * FROM documentos WHERE paciente_id=$1 ORDER BY created_at ASC`, [pid]),
       db.query(`SELECT * FROM feedbacks_paciente WHERE paciente_id=$1 ORDER BY created_at ASC`, [pid]),
       db.query(`SELECT * FROM evolucao_historico WHERE paciente_id=$1 ORDER BY gerado_em ASC`, [pid]),
-      db.query(`SELECT * FROM intervencoes WHERE paciente_id=$1 ORDER BY criado_em DESC LIMIT 10`, [pid]),
+      db.query(`SELECT * FROM intervencoes WHERE paciente_id=$1 ORDER BY gerado_em DESC LIMIT 10`, [pid]),
     ]);
 
     if (!pacRes.rows.length) return res.status(404).json({ message: 'Paciente não encontrado.' });
@@ -589,7 +589,7 @@ ${sessoesRealizadas.some(function(s){ return s.resumo_terapeuta && s.resumo_tera
 ${analise ? `<h2 class="secao-titulo">6. Análise Estrutural</h2>
 <div class="no-break">
   <div class="card" style="margin-bottom:8px">
-    <div class="card-titulo">v${analise.versao} · Gerado em ${fmtData(analise.created_at)}</div>
+    <div class="card-titulo">v${analise.versao} · Gerado em ${fmtData(analise.gerado_em)}</div>
   </div>
   ${analise.resumo_executivo ? `<div class="card no-break">
     <div class="card-titulo">Resumo Executivo</div>
@@ -684,7 +684,7 @@ ${feedbacks.length ? `<h2 class="secao-titulo">11. Feedbacks do Paciente</h2>
 <div>
 ${feedbacks.map(function(f) {
   return `<div class="card no-break" style="margin-bottom:8px">
-    <div class="card-titulo">${fmtData(f.created_at)} · ${escH(f.tipo_feedback||'Feedback')}</div>
+    <div class="card-titulo">${fmtData(f.data_feedback||f.created_at)}</div>
     <div class="card-valor">${escH(f.conteudo||'—')}</div>
     ${f.nota ? `<div style="margin-top:4px;font-size:10px;color:#D4AF7F;font-weight:700">Nota: ${f.nota}/10</div>` : ''}
   </div>`;

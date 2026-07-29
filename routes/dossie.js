@@ -34,7 +34,7 @@ router.get('/:id/dossie', async (req, res) => {
         WHERE p.id=$1`, [pid]),
       db.query(`SELECT * FROM sessoes WHERE paciente_id=$1 ORDER BY data_sessao ASC`, [pid]),
       db.query(`SELECT * FROM mapeamentos WHERE paciente_id=$1 ORDER BY versao DESC LIMIT 1`, [pid]),
-      db.query(`SELECT * FROM resumos_clinicos WHERE paciente_id=$1 AND ativo=true ORDER BY versao DESC LIMIT 1`, [pid]),
+      db.query(`SELECT * FROM resumos_clinicos WHERE paciente_id=$1 ORDER BY gerado_em DESC LIMIT 1`, [pid]),
       db.query(`SELECT * FROM memoria_terapeutica WHERE paciente_id=$1 AND ativa=true ORDER BY versao DESC LIMIT 1`, [pid]),
       db.query(`SELECT * FROM analise_estrutural WHERE paciente_id=$1 AND ativa=true ORDER BY versao DESC LIMIT 1`, [pid]),
       db.query(`SELECT * FROM hipoteses_clinicas WHERE paciente_id=$1 AND ativa=true ORDER BY nivel_confianca DESC NULLS LAST`, [pid]),
@@ -502,8 +502,8 @@ ${map ? `
 <!-- ── SEÇÃO 3: RESUMO CLÍNICO ── -->
 <h2 class="secao-titulo">3. Resumo Clínico</h2>
 ${resumo ? `<div class="card no-break">
-  <div class="card-titulo">v${resumo.versao} · Gerado em ${fmtData(resumo.gerado_em)}</div>
-  <div class="card-valor" style="white-space:pre-wrap;line-height:1.7">${escH(resumo.conteudo_texto||'—')}</div>
+  <div class="card-titulo">Gerado em ${fmtData(resumo.gerado_em)}</div>
+  <div class="card-valor" style="white-space:pre-wrap;line-height:1.7">${escH(resumo.conteudo_ia||'—')}</div>
 </div>` : '<div class="card"><div class="card-valor" style="color:#8b95a8">Resumo clínico não gerado ainda.</div></div>'}
 
 <!-- ── SEÇÃO 4: MEMÓRIA TERAPÊUTICA ── -->
